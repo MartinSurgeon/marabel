@@ -45,6 +45,15 @@ class DB {
     }
 
     /**
+     * Run a prepared SELECT query and return a single value from the first column.
+     */
+    public static function queryValue(string $sql, array $params = []): mixed {
+        $stmt = self::getInstance()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    }
+
+    /**
      * Run INSERT / UPDATE / DELETE and return affected rows count.
      */
     public static function execute(string $sql, array $params = []): int {

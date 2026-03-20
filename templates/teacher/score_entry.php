@@ -1,0 +1,347 @@
+<?php
+/**
+ * Score Entry Grid Template
+ */
+
+$pageTitle = 'Score Entry';
+include __DIR__ . '/../layout/header.php';
+
+global $classSub, $studentList, $sbaData, $examData;
+$base = defined('APP_BASE') ? APP_BASE : '';
+?>
+
+<!-- ── Grid Header ────────────────────────────────────────── -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+  <div>
+    <div class="flex items-center gap-2 mb-1">
+      <a href="<?= $base ?>/teacher" class="btn btn-ghost btn-xs" style="padding:4px; margin-left:-8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">
+        <?= htmlspecialchars($classSub['subject_name']) ?>
+      </h1>
+    </div>
+    <p class="text-muted m-0" style="font-size:var(--text-sm);">
+      Class: <strong><?= htmlspecialchars($classSub['class_name'] . ' ' . ($classSub['section'] ?? '')) ?></strong> 
+      · Term: <strong><?= Session::get('active_term', 'Current') ?></strong>
+    </p>
+  </div>
+  
+  <div id="save-indicator" class="flex items-center gap-2 px-4 py-2 rounded-full border border-transparent transition-all" style="font-size:12px; font-weight:700;">
+     <!-- Dynamically filled by JS -->
+  </div>
+</div>
+
+<!-- ── Score Grid ─────────────────────────────────────────── -->
+<div class="card" style="padding:0; overflow:hidden; border:1px solid var(--clr-border);">
+  <div style="overflow-x:auto; max-height:calc(100vh - 280px); overflow-y:auto;">
+    <table class="table-sba" style="width:100%; border-collapse:collapse; min-width:1000px;">
+      <thead style="position:sticky; top:0; z-index:10; background:var(--clr-surface-2); box-shadow:0 1px 0 var(--clr-border);">
+        <tr>
+          <th style="width:50px; text-align:center; padding:1rem;">#</th>
+          <th style="width:280px; text-align:left; padding:1rem; position:sticky; left:0; background:inherit; z-index:11;">Student Name</th>
+          <th style="width:100px; text-align:center; padding:1rem;">Class Test (15)</th>
+          <th style="width:100px; text-align:center; padding:1rem;">Group Work (15)</th>
+          <th style="width:100px; text-align:center; padding:1rem;">Project (15)</th>
+          <th style="width:100px; text-align:center; padding:1rem;">Indiv. Test (15)</th>
+          <th style="width:100px; text-align:center; padding:1rem; background:rgba(var(--clr-primary-rgb), 0.03);">SBA (60)</th>
+          <th style="width:100px; text-align:center; padding:1rem; background:rgba(var(--clr-primary-rgb), 0.06);">SBA (50%)</th>
+          <th style="width:120px; text-align:center; padding:1rem; border-left:2px solid var(--clr-border);">Exam (100)</th>
+          <th style="width:100px; text-align:center; padding:1rem; background:rgba(var(--clr-primary-rgb), 0.1);">Exam (50%)</th>
+          <th style="width:100px; text-align:center; padding:1rem; font-weight:900; background:var(--clr-primary); color:white;">Total (100)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($studentList as $index => $s): 
+            $sba = $sbaData[$s['id']] ?? [];
+            $exam = $examData[$s['id']] ?? [];
+        ?>
+        <tr data-student-id="<?= $s['id'] ?>" class="score-row hover:bg-slate-50 transition-colors">
+          <td style="text-align:center; color:var(--clr-text-muted); font-size:12px;"><?= $index + 1 ?></td>
+          <td style="padding:0.75rem 1rem; position:sticky; left:0; background:white; z-index:5; border-right:1px solid var(--clr-border);">
+            <div style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($s['surname'] . ' ' . $s['full_name']) ?></div>
+            <div style="font-size:10px; color:var(--clr-text-muted); font-weight:600;"><?= $s['student_id_number'] ?></div>
+          </td>
+          
+          <td style="padding:0;">
+            <input type="number" step="0.5" min="0" max="15" 
+                   class="score-input" data-field="class_test" 
+                   value="<?= $sba['class_test'] ?? '' ?>" 
+                   onfocus="this.select()">
+          </td>
+          <td style="padding:0;">
+            <input type="number" step="0.5" min="0" max="15" 
+                   class="score-input" data-field="group_work" 
+                   value="<?= $sba['group_work'] ?? '' ?>" 
+                   onfocus="this.select()">
+          </td>
+          <td style="padding:0;">
+            <input type="number" step="0.5" min="0" max="15" 
+                   class="score-input" data-field="project" 
+                   value="<?= $sba['project'] ?? '' ?>" 
+                   onfocus="this.select()">
+          </td>
+          <td style="padding:0;">
+            <input type="number" step="0.5" min="0" max="15" 
+                   class="score-input" data-field="individual_test" 
+                   value="<?= $sba['individual_test'] ?? '' ?>" 
+                   onfocus="this.select()">
+          </td>
+          
+          <!-- SBA Totals (Readonly) -->
+          <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.03); font-weight:700;">
+            <span class="sub-total"><?= $sba['sub_total'] ?? '0' ?></span>
+          </td>
+          <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.06); font-weight:800; color:var(--clr-primary);">
+            <span class="scaled-sba"><?= $sba['class_score'] ?? '0' ?></span>
+          </td>
+          
+          <!-- Exam -->
+          <td style="padding:0; border-left:2px solid var(--clr-border);">
+            <input type="number" step="0.5" min="0" max="100" 
+                   class="score-input" data-field="raw_score" 
+                   value="<?= $exam['raw_score'] ?? '' ?>" 
+                   onfocus="this.select()">
+          </td>
+          <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.1); font-weight:800; color:var(--clr-primary-300);">
+            <span class="scaled-exam"><?= $exam['exam_score'] ?? '0' ?></span>
+          </td>
+          
+          <!-- Overall -->
+          <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.03); font-weight:900; font-size:1.1rem; border-left:1px solid var(--clr-border);">
+            <span class="overall-total"><?= number_format((($sba['class_score'] ?? 0) + ($exam['exam_score'] ?? 0)), 1) ?></span>
+          </td>
+        </tr>
+        <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Custom Styles for Grid ─────────────────────────────────── -->
+<style>
+.table-sba input.score-input {
+  width: 100%;
+  display: block;
+  padding: 0.75rem 0.25rem;
+  border: 1.5px solid #cbd5e1 !important; /* Explicit light blue-gray border */
+  border-radius: 6px;
+  background-color: #ffffff !important;   /* Force white background */
+  text-align: center;
+  font-weight: 700;
+  font-size: 15px;
+  font-family: inherit;
+  color: #000000 !important;              /* Force black text */
+  margin: 4px auto;
+  max-width: 80px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.table-sba input.score-input:focus {
+  outline: none !important;
+  border-color: var(--clr-primary, #9633cc) !important;
+  box-shadow: 0 0 0 3px rgba(150, 51, 204, 0.2) !important;
+  background-color: #ffffff !important;
+}
+.table-sba input.score-input::-webkit-inner-spin-button,
+.table-sba input.score-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.score-row td {
+  border-bottom: 1px solid var(--clr-border);
+}
+.score-row.saving {
+  background: rgba(var(--clr-primary-rgb), 0.05);
+}
+.score-row.error {
+  background: rgba(var(--clr-danger-rgb), 0.05);
+}
+.alert-float {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+}
+/* Fired for ~1 second when the user enters a value above the max */
+@keyframes shake-red {
+  0%,100% { outline-color: var(--clr-danger); transform: translateX(0); }
+  25%      { transform: translateX(-3px); }
+  75%      { transform: translateX(3px); }
+}
+.table-sba input.score-input.input-over-limit {
+  outline: 2px solid var(--clr-danger) !important;
+  background: rgba(var(--clr-danger-rgb), 0.08) !important;
+  animation: shake-red 0.4s ease;
+}
+</style>
+
+<!-- ── Grid Logic (JS) ────────────────────────────────────────── -->
+<script>
+const CONFIG = {
+  classSubjectId: <?= (int)$classSub['id'] ?>,
+  termId: <?= (int)$classSub['term_id'] ?>,
+  base: '<?= $base ?>',
+  csrf: '<?= CSRF::token() ?>'
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  const inputs = document.querySelectorAll('.score-input');
+  const indicator = document.getElementById('save-indicator');
+  
+  let saveQueue = 0;
+
+  function updateIndicator(status, message) {
+    if (status === 'saving') {
+      indicator.style.color = 'var(--clr-primary)';
+      indicator.style.background = 'rgba(var(--clr-primary-rgb), 0.1)';
+      indicator.innerHTML = `<svg class="animate-spin" viewBox="0 0 24 24" fill="none" width="14" height="14" style="border:2px solid currentColor; border-top-color:transparent; border-radius:50%;"></svg> Saving...`;
+    } else if (status === 'saved') {
+      indicator.style.color = 'var(--clr-success)';
+      indicator.style.background = 'rgba(22, 163, 74, 0.1)';
+      indicator.innerHTML = `✓ All changes saved`;
+      setTimeout(() => { if(saveQueue === 0) indicator.style.opacity = '0.5'; }, 2000);
+    } else if (status === 'error') {
+      indicator.style.color = 'var(--clr-danger)';
+      indicator.style.background = 'rgba(var(--clr-danger-rgb), 0.1)';
+      indicator.innerHTML = `⚠ Error: ${message}`;
+      indicator.style.opacity = '1';
+    }
+  }
+
+  // Optimistic Calculation on Input
+  const calculateRow = (row) => {
+    const sbaFields = ['class_test', 'group_work', 'project', 'individual_test'];
+    let subTotal = 0;
+    
+    sbaFields.forEach(f => {
+      const input = row.querySelector(`[data-field="${f}"]`);
+      if (input) {
+        const val = parseFloat(input.value) || 0;
+        subTotal += val;
+      }
+    });
+
+    const scaledSba = parseFloat(((subTotal / 60) * 50).toFixed(2));
+    const rawExamInput = row.querySelector('[data-field="raw_score"]');
+    const rawExam = rawExamInput ? (parseFloat(rawExamInput.value) || 0) : 0;
+    const scaledExam = parseFloat(((rawExam / 100) * 50).toFixed(2));
+    const overall = parseFloat((scaledSba + scaledExam).toFixed(2));
+
+    const subTotalEl = row.querySelector('.sub-total');
+    if (subTotalEl) subTotalEl.textContent = subTotal % 1 === 0 ? subTotal : subTotal.toFixed(1);
+    
+    const scaledSbaEl = row.querySelector('.scaled-sba');
+    if (scaledSbaEl) scaledSbaEl.textContent = scaledSba;
+    
+    const scaledExamEl = row.querySelector('.scaled-exam');
+    if (scaledExamEl) scaledExamEl.textContent = scaledExam;
+    
+    const overallEl = row.querySelector('.overall-total');
+    if (overallEl) overallEl.textContent = overall.toFixed(1);
+  };
+
+  inputs.forEach(input => {
+    // Immediate feedback + max-value enforcement
+    input.addEventListener('input', (e) => {
+      const el = e.target;
+      const max = parseFloat(el.max);
+      const min = parseFloat(el.min) || 0;
+      let val = parseFloat(el.value);
+
+      if (!isNaN(val)) {
+        if (val > max) {
+          el.value = max;
+          el.classList.add('input-over-limit');
+          el.title = `Max allowed: ${max}`;
+          setTimeout(() => el.classList.remove('input-over-limit'), 1000);
+        } else if (val < min) {
+          el.value = min;
+        } else {
+          el.classList.remove('input-over-limit');
+          el.title = '';
+        }
+      }
+      calculateRow(e.target.closest('.score-row'));
+    });
+
+    input.addEventListener('change', async (e) => {
+      const field = e.target.dataset.field;
+      const value = e.target.value;
+      const row = e.target.closest('.score-row');
+      const studentId = row.dataset.studentId;
+
+      saveQueue++;
+      updateIndicator('saving');
+      row.classList.add('saving');
+      row.classList.remove('error');
+
+      try {
+        const formData = new FormData();
+        formData.append('student_id', studentId);
+        formData.append('class_subject_id', CONFIG.classSubjectId);
+        formData.append('term_id', CONFIG.termId);
+        formData.append('field', field);
+        formData.append('value', value);
+        formData.append('_csrf_token', CONFIG.csrf);
+
+        const response = await fetch(`${CONFIG.base}/teacher/scores`, {
+          method: 'POST',
+          body: formData,
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+           throw new Error(`Server ${response.status}`);
+        }
+
+        const result = await response.json();
+        saveQueue--;
+
+        if (result.success) {
+          row.classList.remove('saving');
+          if (saveQueue === 0) updateIndicator('saved');
+        } else {
+          row.classList.remove('saving');
+          row.classList.add('error');
+          updateIndicator('error', result.message || 'Validation failed');
+        }
+      } catch (err) {
+        saveQueue--;
+        console.error('Save error:', err);
+        row.classList.remove('saving');
+        row.classList.add('error');
+        updateIndicator('error', err.message || 'Connection lost');
+      }
+    });
+
+    // Keyboard Navigation
+    input.addEventListener('keydown', (e) => {
+      const idx = Array.from(inputs).indexOf(input);
+      const rowCount = <?= count($studentList) ?>;
+      const colCount = 5; // fields: class_test, group_work, project, indiv_test, raw_score
+
+      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = inputs[idx + colCount];
+        if (next) next.focus();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const prev = inputs[idx - colCount];
+        if (prev) prev.focus();
+      } else if (e.key === 'ArrowRight' && (input.selectionEnd === input.value.length || input.value === '')) {
+        const next = inputs[idx + 1];
+        if (next) next.focus();
+      } else if (e.key === 'ArrowLeft' && (input.selectionStart === 0 || input.value === '')) {
+        const prev = inputs[idx - 1];
+        if (prev) prev.focus();
+      }
+    });
+  });
+
+  function updateCalculations(row) {
+    calculateRow(row);
+  }
+});
+</script>
+
+<?php include __DIR__ . '/../layout/footer.php'; ?>
