@@ -1,0 +1,40 @@
+Options -Indexes
+RewriteEngine On
+RewriteBase /marabel
+
+# ── Deny access to private directory ────────────────────────────
+RewriteRule ^private(/|$) - [F,L]
+RewriteRule ^\.env - [F,L]
+RewriteRule ^\.git(/|$) - [F,L]
+
+# ── Deny access to raw PHP upload files ─────────────────────────
+RewriteRule ^uploads/.*\.php$ - [F,L]
+
+# ── Route all requests to index.php (except real files/dirs) ────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# ── Security headers ─────────────────────────────────────────────
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set X-XSS-Protection "1; mode=block"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ── PHP settings for shared hosting ─────────────────────────────
+<IfModule mod_php.c>
+  php_value max_execution_time 120
+  php_value memory_limit 128M
+  php_value upload_max_filesize 12M
+  php_value post_max_size 14M
+  php_value session.cookie_httponly 1
+  php_value session.use_strict_mode 1
+</IfModule>
+
+# ── Block sensitive files ────────────────────────────────────────
+<FilesMatch "\.(sql|log|env|md|json|lock|bak)$">
+  Order deny,allow
+  Deny from all
+</FilesMatch>
