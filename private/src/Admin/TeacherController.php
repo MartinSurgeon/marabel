@@ -31,7 +31,16 @@ class TeacherController {
         $teachersList = DB::query(
             "SELECT u.*, 
                     (SELECT COUNT(*) FROM classes c WHERE c.class_teacher_id = u.id) as class_count,
-                    (SELECT COUNT(*) FROM class_subjects cs WHERE cs.teacher_id = u.id) as subject_count
+                    (SELECT COUNT(*) FROM class_subjects cs WHERE cs.teacher_id = u.id) as subject_count,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' (', s.subject_name, ')') SEPARATOR ', ')
+                     FROM class_subjects cs 
+                     JOIN classes c ON c.id = cs.class_id
+                     JOIN subjects s ON s.id = cs.subject_id
+                     JOIN academic_years ay ON ay.id = c.academic_year_id
+                     WHERE cs.teacher_id = u.id AND ay.is_active = 1) as assignment_summary,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' ', c.section) SEPARATOR ', ')
+                     FROM classes c 
+                     WHERE c.class_teacher_id = u.id) as lead_classes
              FROM users u 
              WHERE u.role = 'teacher' 
              ORDER BY u.full_name"

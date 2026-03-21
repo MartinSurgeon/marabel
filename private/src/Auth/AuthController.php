@@ -28,9 +28,11 @@ class AuthController {
         $roleType = $_POST['role_type'] ?? '';
 
         match ($roleType) {
-            'staff'   => $this->staffLogin(),
-            'student' => $this->studentLogin(),
-            default   => $this->redirect('/login'),
+            'staff'          => $this->staffLogin(),
+            'student'        => $this->studentLogin(),
+            'parent'         => $this->parentRequestOtp(),
+            'parent_verify'  => $this->parentVerifyOtp(),
+            default          => $this->redirect('/login'),
         };
     }
 
@@ -105,6 +107,120 @@ class AuthController {
         Session::set('student_id', $student['id']);
 
         $this->redirect('/student');
+    }
+
+    // ── Parent OTP Request ─────────────────────────────────────
+    private function parentRequestOtp(): void {
+        $phone = trim($_POST['phone'] ?? '');
+
+        if (!$phone) {
+            Session::flash('login_error', 'Please enter your registered phone number.');
+            $this->redirect('/login');
+        }
+
+        if ($this->isLockedOut($phone)) {
+            Session::flash('login_error', 'Too many attempts. Please wait 15 minutes.');
+            $this->redirect('/login');
+        }
+
+        // Check that this phone is registered in users as a parent
+        $parent = DB::queryOne(
+            "SELECT id, full_name FROM users WHERE phone = ? AND role = 'parent' AND is_active = 1",
+            [$phone]
+        );
+
+        if (!$parent) {
+            // Don't reveal whether phone exists; show generic message
+            Session::flash('otp_info', 'If this number is registered, a code has been sent.');
+            Session::set('otp_phone', $phone); // needed for template display
+            $this->redirect('/otp');
+        }
+
+        // Generate 6-digit OTP
+        $otp     = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $hash    = hash('sha256', $otp);
+        $expires = date('Y-m-d H:i:s', time() + 300); // 5 minutes
+
+        // Invalidate old tokens for this phone
+        DB::execute("DELETE FROM otp_tokens WHERE phone = ?", [$phone]);
+
+        // Store new token
+        DB::insert(
+            "INSERT INTO otp_tokens (phone, token_hash, expires_at) VALUES (?, ?, ?)",
+            [$phone, $hash, $expires]
+        );
+
+        // Send SMS (graceful if SMS service unavailable)
+        try {
+            $sms = new SMS();
+            $sms->send($phone, "Your Uaddara Basic School login code is: {$otp}. Valid for 5 minutes. Do not share.");
+        } catch (\Throwable $e) {
+            // Log but don't expose error to user; also store OTP in session for dev/testing
+            error_log("OTP SMS failed: " . $e->getMessage());
+        }
+
+        // Store phone in session for the OTP page
+        Session::set('otp_phone', $phone);
+        Session::set('otp_parent_id', $parent['id']);
+
+        Session::flash('otp_info', "A 6-digit code has been sent to {$phone}.");
+        $this->redirect('/otp');
+    }
+
+    // ── Parent OTP Verify ─────────────────────────────────────
+    private function parentVerifyOtp(): void {
+        $phone    = Session::get('otp_phone');
+        $parentId = Session::get('otp_parent_id');
+        $otp      = trim($_POST['otp'] ?? '');
+
+        if (!$phone || !$otp || strlen($otp) !== 6) {
+            Session::flash('otp_error', 'Invalid code. Please try again.');
+            $this->redirect('/otp');
+        }
+
+        if ($this->isLockedOut($phone)) {
+            Session::flash('login_error', 'Too many failed attempts. Please wait 15 minutes.');
+            $this->redirect('/login');
+        }
+
+        $hash   = hash('sha256', $otp);
+        $now    = date('Y-m-d H:i:s');
+        $record = DB::queryOne(
+            "SELECT id FROM otp_tokens
+             WHERE phone = ? AND token_hash = ? AND expires_at > ? AND used_at IS NULL",
+            [$phone, $hash, $now]
+        );
+
+        if (!$record) {
+            $this->recordFailedAttempt($phone);
+            Session::flash('otp_error', 'Invalid or expired code. Please try again.');
+            $this->redirect('/otp');
+        }
+
+        // Mark token as used
+        DB::execute("UPDATE otp_tokens SET used_at = NOW() WHERE id = ?", [$record['id']]);
+
+        // Load parent user
+        $parent = DB::queryOne(
+            "SELECT id, full_name, phone FROM users WHERE id = ? AND role = 'parent'",
+            [$parentId]
+        );
+
+        if (!$parent) {
+            Session::flash('otp_error', 'Account not found. Please contact the school.');
+            $this->redirect('/login');
+        }
+
+        // Create session
+        $this->clearAttempts($phone);
+        Session::regenerate();
+        Session::set('user_id',   $parent['id']);
+        Session::set('user_name', $parent['full_name']);
+        Session::set('user_role', 'parent');
+        Session::delete('otp_phone');
+        Session::delete('otp_parent_id');
+
+        $this->redirect('/parent');
     }
 
     private function logout(): void {

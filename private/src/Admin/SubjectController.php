@@ -27,7 +27,11 @@ class SubjectController {
         global $subjectsList, $levelsList;
         $levelsList   = DB::query("SELECT id, name, code FROM school_levels ORDER BY sort_order");
         $subjectsList = DB::query(
-            "SELECT s.*, sl.name as level_name, sl.code as level_code 
+            "SELECT s.*, sl.name as level_name, sl.code as level_code,
+                    (SELECT GROUP_CONCAT(DISTINCT u.full_name SEPARATOR ', ')
+                     FROM class_subjects cs
+                     JOIN users u ON u.id = cs.teacher_id
+                     WHERE cs.subject_id = s.id) as assigned_teachers
              FROM subjects s
              JOIN school_levels sl ON sl.id = s.level_id
              ORDER BY sl.sort_order, s.sort_order, s.subject_name"

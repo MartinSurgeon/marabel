@@ -39,7 +39,14 @@ $base = defined('APP_BASE') ? APP_BASE : '';
       <thead style="position:sticky; top:0; z-index:10; background:var(--clr-surface-2); box-shadow:0 1px 0 var(--clr-border);">
         <tr>
           <th style="width:50px; text-align:center; padding:1rem;">#</th>
-          <th style="width:280px; text-align:left; padding:1rem; position:sticky; left:0; background:inherit; z-index:11;">Student Name</th>
+          <th style="width:280px; text-align:left; padding:1rem; position:sticky; left:0; background:inherit; z-index:11; border-right:1px solid var(--clr-border);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span>Student Name</span>
+              <button id="sort-names" class="text-primary hover:bg-slate-200/50 p-1 rounded transition-colors" title="Toggle Name Sort" style="border:none; background:transparent; cursor:pointer; color:var(--clr-primary);">
+                <i class="fas fa-sort"></i>
+              </button>
+            </div>
+          </th>
           <th style="width:100px; text-align:center; padding:1rem;">Class Test (15)</th>
           <th style="width:100px; text-align:center; padding:1rem;">Group Work (15)</th>
           <th style="width:100px; text-align:center; padding:1rem;">Project (15)</th>
@@ -57,9 +64,9 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             $exam = $examData[$s['id']] ?? [];
         ?>
         <tr data-student-id="<?= $s['id'] ?>" class="score-row hover:bg-slate-50 transition-colors">
-          <td style="text-align:center; color:var(--clr-text-muted); font-size:12px;"><?= $index + 1 ?></td>
+          <td class="row-index" style="text-align:center; color:var(--clr-text-muted); font-size:12px;"><?= $index + 1 ?></td>
           <td style="padding:0.75rem 1rem; position:sticky; left:0; background:white; z-index:5; border-right:1px solid var(--clr-border);">
-            <div style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($s['surname'] . ' ' . $s['full_name']) ?></div>
+            <div class="student-name" style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($s['full_name']) ?></div>
             <div style="font-size:10px; color:var(--clr-text-muted); font-weight:600;"><?= $s['student_id_number'] ?></div>
           </td>
           
@@ -209,6 +216,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Optimistic Calculation on Input
+  // Sorting Logic
+  const sortBtn = document.getElementById('sort-names');
+  let sortOrder = 'asc';
+
+  if (sortBtn) {
+    sortBtn.addEventListener('click', () => {
+      const tbody = document.querySelector('.table-sba tbody');
+      const rows = Array.from(tbody.querySelectorAll('.score-row'));
+      
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      
+      rows.sort((a, b) => {
+        const nameA = a.querySelector('.student-name').textContent.toLowerCase().trim();
+        const nameB = b.querySelector('.student-name').textContent.toLowerCase().trim();
+        return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+      });
+
+      rows.forEach((row, idx) => {
+        const indexEl = row.querySelector('.row-index');
+        if (indexEl) indexEl.textContent = idx + 1;
+        tbody.appendChild(row);
+      });
+
+      sortBtn.innerHTML = `<i class="fas fa-sort-alpha-${sortOrder === 'asc' ? 'down' : 'up'}"></i>`;
+    });
+  }
+
+  // Optimistic Calculation on Input
   const calculateRow = (row) => {
     const sbaFields = ['class_test', 'group_work', 'project', 'individual_test'];
     let subTotal = 0;
@@ -225,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const rawExamInput = row.querySelector('[data-field="raw_score"]');
     const rawExam = rawExamInput ? (parseFloat(rawExamInput.value) || 0) : 0;
     const scaledExam = parseFloat(((rawExam / 100) * 50).toFixed(2));
-    const overall = parseFloat((scaledSba + scaledExam).toFixed(2));
+    const finalTotal = parseFloat((scaledSba + scaledExam).toFixed(2));
 
     const subTotalEl = row.querySelector('.sub-total');
     if (subTotalEl) subTotalEl.textContent = subTotal % 1 === 0 ? subTotal : subTotal.toFixed(1);
@@ -237,7 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scaledExamEl) scaledExamEl.textContent = scaledExam;
     
     const overallEl = row.querySelector('.overall-total');
-    if (overallEl) overallEl.textContent = overall.toFixed(1);
+    if (overallEl) overallEl.textContent = finalTotal.toFixed(1);
   };
 
   inputs.forEach(input => {

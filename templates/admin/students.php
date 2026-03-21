@@ -80,10 +80,10 @@ $filterClass = $_GET['class_id'] ?? null;
         <tr>
           <th style="padding-left:2rem;">Student ID</th>
           <th>Full Name</th>
-          <th>Gender</th>
+          <th>Parent/Guardian</th>
           <th>Class Placement</th>
           <th style="width:120px;" class="text-center">Status</th>
-          <th style="width:120px;" class="text-right pr-8">Actions</th>
+          <th style="width:130px;" class="text-right pr-8">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -106,9 +106,11 @@ $filterClass = $_GET['class_id'] ?? null;
             </div>
           </td>
           <td>
-             <span class="badge" style="background:<?= $s['gender'] == 'Male' ? '#e1f5fe' : '#fce4ec' ?>; color:<?= $s['gender'] == 'Male' ? '#0288d1' : '#c2185b' ?>; font-size:10px; font-weight:800; border:none;">
-               <?= strtoupper($s['gender'] ?: 'N/A') ?>
-             </span>
+            <?php if ($s['linked_parents']): ?>
+              <div style="font-size:11px; color:var(--clr-text); font-weight:600; line-height:1.5;"><?= htmlspecialchars($s['linked_parents']) ?></div>
+            <?php else: ?>
+              <span style="font-size:11px; color:var(--clr-text-muted); font-style:italic;">None linked</span>
+            <?php endif; ?>
           </td>
           <td>
              <div style="font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($s['class_name'] ?: 'Unassigned') ?></div>
@@ -119,6 +121,9 @@ $filterClass = $_GET['class_id'] ?? null;
           </td>
           <td class="text-right pr-8">
             <div class="flex justify-end gap-2">
+              <button class="btn btn-ghost btn-xs" style="color:var(--clr-primary);" onclick="openParentModal(<?= $s['id'] ?>, '<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>')" data-tooltip="Manage Parents">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              </button>
               <button class="btn btn-ghost btn-xs" onclick='editStudent(<?= htmlspecialchars(json_encode($s), ENT_QUOTES) ?>)' data-tooltip="Edit profile">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
@@ -210,7 +215,104 @@ $filterClass = $_GET['class_id'] ?? null;
   <input type="hidden" name="student_id" id="del-student-id">
 </form>
 
+<!-- Unlink Parent Form -->
+<form method="POST" action="<?= $base ?>/admin/students" id="form-parent-unlink" style="display:none">
+  <?= CSRF::field() ?>
+  <input type="hidden" name="_action" value="parent_unlink">
+  <input type="hidden" name="link_id" id="unlink-link-id">
+</form>
+
+<!-- ══ Parent/Guardian Management Modal ═══════════════════════════ -->
+<div id="modal-parent" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-parent-title" style="display:none;">
+  <div class="modal w-full max-w-lg mx-4">
+    <div class="modal-header">
+      <div>
+        <h3 class="modal-title" id="modal-parent-title">Parent / Guardian</h3>
+        <div id="modal-parent-subtitle" style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px;"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal('modal-parent')" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Current parents list -->
+      <div id="modal-parent-list" class="mb-5">
+        <!-- Populated by JS from PHP -->
+      </div>
+
+      <!-- Link new parent form -->
+      <div style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1.25rem; border:1px solid var(--clr-border);">
+        <h4 style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--clr-text); margin-bottom:1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline; vertical-align:-2px; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          Link a Parent/Guardian
+        </h4>
+        <form method="POST" action="<?= $base ?>/admin/students" id="form-parent-link" onsubmit="Loader.show()">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="_action" value="parent_link">
+          <input type="hidden" name="student_id" id="parent-link-student-id">
+
+          <div class="form-group">
+            <label class="form-label">Guardian's Full Name <span class="required">*</span></label>
+            <input type="text" name="parent_name" class="form-control" placeholder="e.g. Kwame Mensah" required maxlength="200">
+            <p class="form-text">Only required when registering a new account. Ignored if phone already exists.</p>
+          </div>
+
+          <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem;">
+            <div class="form-group">
+              <label class="form-label">Phone Number <span class="required">*</span></label>
+              <input type="tel" name="parent_phone" class="form-control" placeholder="0241234567" required inputmode="numeric">
+              <p class="form-text">They will use this to log in via OTP.</p>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Relationship</label>
+              <select name="relationship" class="form-control">
+                <option value="Parent/Guardian">Parent / Guardian</option>
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+                <option value="Aunt/Uncle">Aunt / Uncle</option>
+                <option value="Sibling">Sibling</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary w-full">Link Guardian</button>
+        </form>
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content:flex-end;">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('modal-parent')">Close</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
+// ── Parent Modal ──────────────────────────────────────
+const allStudents = <?= json_encode($students) ?>;
+
+function openParentModal(studentId, studentName) {
+  document.getElementById('parent-link-student-id').value = studentId;
+  document.getElementById('modal-parent-title').textContent = 'Parent / Guardian';
+  document.getElementById('modal-parent-subtitle').textContent = 'Student: ' + studentName;
+
+  const s = allStudents.find(x => Number(x.id) === Number(studentId));
+  const list = document.getElementById('modal-parent-list');
+
+  if (s && s.linked_parents) {
+    let html = '<div style="margin-bottom:0.5rem;"><div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--clr-text-muted); margin-bottom:8px;">Current Guardians</div>';
+    html += '<div style="background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:var(--radius-md); padding:0.75rem; font-size:var(--text-sm); color:var(--clr-text); line-height:1.8;">';
+    html += s.linked_parents.replace(/, /g, '<br>');
+    html += '</div></div>';
+    list.innerHTML = html;
+  } else {
+    list.innerHTML = '<div style="font-size:var(--text-sm); color:var(--clr-text-muted); font-style:italic; margin-bottom:1rem;">No guardians linked yet.</div>';
+  }
+
+  document.getElementById('form-parent-link').reset();
+  document.getElementById('parent-link-student-id').value = studentId;
+  openModal('modal-parent');
+}
+
+// ── Student Modal ──────────────────────────────────────
 function openStudentModal() {
   document.getElementById('form-student').reset();
   document.getElementById('student-id-field').value = '';

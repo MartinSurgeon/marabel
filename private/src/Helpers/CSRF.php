@@ -28,22 +28,21 @@ class CSRF {
 
     /**
      * Validate the submitted CSRF token.
-     * Throws on failure in debug mode; returns false in production.
+     * Token persists for the session (not single-use) to support pages with multiple forms.
      */
     public static function verify(): bool {
         $submitted = $_POST['_csrf_token'] ?? '';
         $expected  = $_SESSION[self::$key] ?? '';
 
         if (!$submitted || !$expected || !hash_equals($expected, $submitted)) {
-            // Guard against missing configuration constants during early bootstrap.
             if (defined('APP_DEBUG') && APP_DEBUG) {
                 http_response_code(403);
                 die('CSRF token mismatch.');
             }
             return false;
         }
-        // Rotate the token after successful verification
-        unset($_SESSION[self::$key]);
+        // Token is NOT rotated — kept for the lifetime of the session.
+        // This supports pages with multiple forms (login: 3 forms, OTP page: 2 forms).
         return true;
     }
 }

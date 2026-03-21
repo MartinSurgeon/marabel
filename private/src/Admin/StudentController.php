@@ -16,9 +16,11 @@ class StudentController {
             }
             $action = $_POST['_action'] ?? '';
             match ($action) {
-                'student_store'  => $this->studentStore(),
-                'student_delete' => $this->studentDelete(),
-                'student_status' => $this->studentStatus(),
+                'student_store'    => $this->studentStore(),
+                'student_delete'   => $this->studentDelete(),
+                'student_status'   => $this->studentStatus(),
+                'parent_link'      => $this->parentLink(),
+                'parent_unlink'    => $this->parentUnlink(),
                 default => $this->redirect(),
             };
         }
@@ -54,7 +56,11 @@ class StudentController {
         }
 
         $studentsList = DB::query(
-            "SELECT s.*, c.class_name, c.section
+            "SELECT s.*, c.class_name, c.section,
+                    (SELECT GROUP_CONCAT(u.full_name, ' (', u.phone, ')' SEPARATOR ', ')
+                     FROM student_parents sp2
+                     JOIN users u ON u.id = sp2.parent_user_id
+                     WHERE sp2.student_id = s.id) as linked_parents
              FROM students s
              LEFT JOIN classes c ON c.id = s.current_class_id
              $where
@@ -139,6 +145,67 @@ class StudentController {
         $status = $_POST['status'] ?? 'active';
         DB::execute("UPDATE students SET status = ? WHERE id = ?", [$status, $id]);
         Session::flash('success', "Student status updated to $status.");
+        $this->redirect();
+    }
+
+    // ── Parent Linking ────────────────────────────────────────
+    private function parentLink(): void {
+        $studentId    = (int)($_POST['student_id'] ?? 0);
+        $phone        = trim($_POST['parent_phone'] ?? '');
+        $relationship = trim($_POST['relationship'] ?? 'Parent/Guardian');
+
+        if (!$studentId || !$phone) {
+            Session::flash('error', 'Student and phone number are required.');
+            $this->redirect();
+        }
+
+        // Look up parent user by phone; create if not exists
+        $user = DB::queryOne(
+            "SELECT id, full_name FROM users WHERE phone = ? AND role = 'parent'",
+            [$phone]
+        );
+
+        if (!$user) {
+            // Auto-create a parent account (name can be updated later)
+            $parentName  = trim($_POST['parent_name'] ?? 'Parent/Guardian');
+            $parentName  = $parentName ?: 'Parent/Guardian';
+            $newId = DB::insert(
+                "INSERT INTO users (full_name, phone, role, is_active) VALUES (?, ?, 'parent', 1)",
+                [$parentName, $phone]
+            );
+            $parentUserId = $newId;
+        } else {
+            $parentUserId = $user['id'];
+        }
+
+        // Check not already linked
+        $existing = DB::queryOne(
+            "SELECT id FROM student_parents WHERE student_id = ? AND parent_user_id = ?",
+            [$studentId, $parentUserId]
+        );
+
+        if ($existing) {
+            Session::flash('error', 'This parent is already linked to this student.');
+            $this->redirect();
+        }
+
+        DB::insert(
+            "INSERT INTO student_parents (student_id, parent_user_id, relationship) VALUES (?, ?, ?)",
+            [$studentId, $parentUserId, $relationship]
+        );
+
+        Session::flash('success', 'Parent/Guardian linked successfully. They can now log in using their phone number.');
+        $this->redirect();
+    }
+
+    private function parentUnlink(): void {
+        $linkId = (int)($_POST['link_id'] ?? 0);
+        if (!$linkId) {
+            Session::flash('error', 'Invalid link.');
+            $this->redirect();
+        }
+        DB::execute("DELETE FROM student_parents WHERE id = ?", [$linkId]);
+        Session::flash('success', 'Parent/Guardian unlinked.');
         $this->redirect();
     }
 

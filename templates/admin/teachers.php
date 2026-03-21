@@ -69,6 +69,32 @@ $assignments = $assignmentsList ?? [];
       </div>
       <?php endif; ?>
 
+      <div style="margin-top:0.5rem;">
+        <?php if ($t['lead_classes']): ?>
+          <div class="mb-2">
+            <span style="font-size:10px; font-weight:700; color:var(--clr-primary-600); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:4px;">Class Teacher</span>
+            <div class="flex flex-wrap gap-1">
+              <?php foreach (explode(', ', $t['lead_classes']) as $lc): ?>
+                <span class="badge badge-purple" style="font-size:10px; padding:2px 6px;"><?= htmlspecialchars($lc) ?></span>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <?php if ($t['assignment_summary']): ?>
+          <div class="mb-2">
+            <span style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:4px;">Teaching</span>
+            <div class="flex flex-wrap gap-1">
+              <?php foreach (explode(', ', $t['assignment_summary']) as $as): ?>
+                <span class="badge badge-gray" style="font-size:10px; padding:2px 6px;"><?= htmlspecialchars($as) ?></span>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php else: ?>
+          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; margin-top:0.5rem;">No subjects assigned yet</div>
+        <?php endif; ?>
+      </div>
+
       <div class="grid" style="grid-template-columns:1fr 1fr; gap:0.75rem; border-top:1px solid var(--clr-border); padding-top:1rem; margin-top:1rem;">
          <div style="background:var(--clr-surface-2); padding:0.75rem; border-radius:var(--radius-md); text-align:center;">
             <div style="font-size:1.125rem; font-weight:800; color:var(--clr-primary);"><?= $t['class_count'] ?></div>
@@ -96,37 +122,98 @@ $assignments = $assignmentsList ?? [];
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
 
-<!-- ══ Teacher Modal ════════════════════════════════════════ -->
+<!-- ══ Teacher Modal (Integrated) ════════════════════════════════════════ -->
 <div id="modal-teacher" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-teacher-title" style="display:none;">
-  <div class="modal w-full max-w-md mx-4">
+  <div class="modal w-full max-w-2xl mx-4">
     <div class="modal-header">
       <h3 class="modal-title" id="modal-teacher-title">Teacher Profile</h3>
       <button class="modal-close" onclick="closeModal('modal-teacher')" aria-label="Close dialog">&times;</button>
     </div>
-    <form method="POST" action="<?= $base ?>/admin/teachers" id="form-teacher" onsubmit="Loader.show()">
-      <?= CSRF::field() ?>
-      <input type="hidden" name="_action" value="teacher_store">
-      <input type="hidden" name="teacher_id" id="teacher-id-field" value="">
-      <div class="modal-body">
-         <div class="form-group">
-            <label class="form-label">Full Name <span class="required">*</span></label>
-            <input type="text" name="full_name" id="teacher-name" class="form-control" placeholder="e.g. John Doe" required maxlength="200">
-         </div>
-         <div class="form-group">
-            <label class="form-label">Email Address <span class="required">*</span></label>
-            <input type="email" name="email" id="teacher-email" class="form-control" placeholder="johndoe@example.com" required maxlength="150" oninput="this.value = this.value.toLowerCase()">
-            <p class="form-text">This will be used for login.</p>
-         </div>
-         <div class="form-group">
-            <label class="form-label">Phone Number</label>
-            <input type="text" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20">
-         </div>
+    
+    <!-- Tabs Header -->
+    <div class="flex border-b border-gray-200 px-6">
+      <button onclick="switchTeacherTab('profile')" id="tab-profile" class="py-3 px-4 text-sm font-bold border-b-2 border-primary text-primary transition-all">Profile Details</button>
+      <button onclick="switchTeacherTab('assignments')" id="tab-assignments" class="py-3 px-4 text-sm font-bold border-b-2 border-transparent text-muted hover:text-primary transition-all">Subject Assignments</button>
+    </div>
+
+    <div class="modal-body" style="padding-top:1.5rem;">
+      <!-- Profile Tab -->
+      <div id="pane-profile">
+        <form method="POST" action="<?= $base ?>/admin/teachers" id="form-teacher" onsubmit="Loader.show()">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="_action" value="teacher_store">
+          <input type="hidden" name="teacher_id" id="teacher-id-field" value="">
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="required">*</span></label>
+              <input type="text" name="full_name" id="teacher-name" class="form-control" placeholder="e.g. John Doe" required maxlength="200">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Email Address <span class="required">*</span></label>
+              <input type="email" name="email" id="teacher-email" class="form-control" placeholder="johndoe@example.com" required maxlength="150" oninput="this.value = this.value.toLowerCase()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input type="text" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20">
+            </div>
+          </div>
+          <div class="flex justify-end mt-6">
+            <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save teacher</button>
+          </div>
+        </form>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-teacher')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save teacher</button>
+
+      <!-- Assignments Tab -->
+      <div id="pane-assignments" style="display:none;">
+        <div id="assign-only-when-exists">
+          <form method="POST" action="<?= $base ?>/admin/teachers" id="form-assign-inner" onsubmit="Loader.show()">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="assign_subject">
+            <input type="hidden" name="teacher_id" id="assign-teacher-id-inner" value="">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="form-group">
+                <label class="form-label">Classes <span class="required">*</span></label>
+                <div class="form-control p-0 overflow-y-auto" style="height:150px; background:var(--clr-surface-2);">
+                  <?php foreach ($classes as $c): ?>
+                    <label class="flex items-center gap-2 p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0">
+                      <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>">
+                      <span><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Subjects <span class="required">*</span></label>
+                <div class="form-control p-0 overflow-y-auto" style="height:150px; background:var(--clr-surface-2);">
+                  <?php foreach ($subjects as $s): ?>
+                    <label class="flex items-center gap-2 p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0">
+                      <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>">
+                      <span><?= htmlspecialchars($s['subject_name']) ?></span>
+                    </label>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary w-full mt-4">Assign Selection</button>
+          </form>
+
+          <div class="mt-8">
+            <h4 class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Current Assignments</h4>
+            <div id="inner-assign-list" class="border border-gray-200 rounded-lg overflow-y-auto max-h-48 bg-gray-50">
+               <!-- Populated via JS -->
+            </div>
+          </div>
+        </div>
+        <div id="assign-new-teacher-message" class="text-center py-12" style="display:none;">
+          <p class="text-muted">Please save the teacher profile before managing assignments.</p>
+        </div>
       </div>
-    </form>
+    </div>
+    <div class="modal-footer bg-gray-50 border-t border-gray-100" style="justify-content:flex-end;">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('modal-teacher')">Close</button>
+    </div>
   </div>
 </div>
 
@@ -201,70 +288,116 @@ $assignments = $assignmentsList ?? [];
 <script>
 const allAssignments = <?= json_encode($assignments) ?>;
 
+function switchTeacherTab(tab) {
+  const pProfile = document.getElementById('pane-profile');
+  const pAssign  = document.getElementById('pane-assignments');
+  const tProfile = document.getElementById('tab-profile');
+  const tAssign  = document.getElementById('tab-assignments');
+  
+  if (tab === 'profile') {
+    pProfile.style.display = 'block';
+    pAssign.style.display  = 'none';
+    tProfile.classList.add('border-primary', 'text-primary');
+    tProfile.classList.remove('border-transparent', 'text-muted');
+    tAssign.classList.add('border-transparent', 'text-muted');
+    tAssign.classList.remove('border-primary', 'text-primary');
+  } else {
+    pProfile.style.display = 'none';
+    pAssign.style.display  = 'block';
+    tAssign.classList.add('border-primary', 'text-primary');
+    tAssign.classList.remove('border-transparent', 'text-muted');
+    tProfile.classList.add('border-transparent', 'text-muted');
+    tProfile.classList.remove('border-primary', 'text-primary');
+  }
+}
+
 function openTeacherModal() {
   document.getElementById('form-teacher').reset();
   document.getElementById('teacher-id-field').value = '';
   document.getElementById('modal-teacher-title').textContent = 'New Teacher Profile';
   document.getElementById('teacher-submit-btn').textContent = 'Create Profile';
+  
+  // Hide assignments for new teacher
+  document.getElementById('tab-assignments').style.display = 'none';
+  document.getElementById('assign-only-when-exists').style.display = 'none';
+  document.getElementById('assign-new-teacher-message').style.display = 'block';
+  
+  switchTeacherTab('profile');
   openModal('modal-teacher');
 }
 
 function editTeacher(t) {
-  document.getElementById('form-teacher').reset();
-  document.getElementById('teacher-id-field').value = t.id;
-  document.getElementById('teacher-name').value = t.full_name;
-  document.getElementById('teacher-email').value = t.email;
-  document.getElementById('teacher-phone').value = t.phone || '';
-  document.getElementById('modal-teacher-title').textContent = 'Edit Profile';
-  document.getElementById('teacher-submit-btn').textContent = 'Update Profile';
+  populateTeacherData(t);
+  switchTeacherTab('profile');
   openModal('modal-teacher');
 }
 
+function openAssignModal(teacherId, teacherName) {
+  // Now uses the same integrated modal but switches to assignments tab
+  const teacher = <?= json_encode($teachers) ?>.find(x => Number(x.id) === Number(teacherId));
+  populateTeacherData(teacher);
+  switchTeacherTab('assignments');
+  openModal('modal-teacher');
+}
+
+function populateTeacherData(t) {
+  document.getElementById('form-teacher').reset();
+  document.getElementById('form-assign-inner').reset();
+  
+  document.getElementById('teacher-id-field').value = t.id;
+  document.getElementById('assign-teacher-id-inner').value = t.id;
+  document.getElementById('teacher-name').value = t.full_name;
+  document.getElementById('teacher-email').value = t.email;
+  document.getElementById('teacher-phone').value = t.phone || '';
+  
+  document.getElementById('modal-teacher-title').textContent = 'Manage: ' + t.full_name;
+  document.getElementById('teacher-submit-btn').textContent = 'Update Profile';
+  
+  // Show assignments
+  document.getElementById('tab-assignments').style.display = 'block';
+  document.getElementById('assign-only-when-exists').style.display = 'block';
+  document.getElementById('assign-new-teacher-message').style.display = 'none';
+  
+  renderAssignmentsList(t.id);
+}
+
+function renderAssignmentsList(teacherId) {
+  const container = document.getElementById('inner-assign-list');
+  const teacherAssignments = allAssignments.filter(a => Number(a.teacher_id) === Number(teacherId));
+  
+  if (teacherAssignments.length === 0) {
+    container.innerHTML = `<div class="p-6 text-center text-muted text-xs">No active assignments found.</div>`;
+    return;
+  }
+  
+  let html = '';
+  teacherAssignments.forEach(a => {
+    html += `
+      <div class="flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
+        <div>
+          <div class="text-xs font-bold text-gray-800">${escapeHtml(a.subject_name)}</div>
+          <div class="text-[10px] text-muted uppercase font-bold tracking-tight">${escapeHtml(a.class_name)} ${escapeHtml(a.section)}</div>
+        </div>
+        <button type="button" class="p-1 text-danger hover:bg-red-50 rounded" onclick="removeAssignment(${a.id})" title="Remove Assignment">
+          <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
 function confirmDeleteTeacher(id, name) {
-  confirmAction(`Permanently remove teacher "${name}"?\n\nThis will also remove all their class and subject assignments. They will no longer be able to log in.`, () => {
+  confirmAction(`Permanently remove teacher "${name}"?\n\nThis will remove all their records.`, () => {
     document.getElementById('del-teacher-id').value = id;
     document.getElementById('form-teacher-delete').submit();
   });
 }
 
-function openAssignModal(teacherId, teacherName) {
-  document.getElementById('form-assign').reset();
-  document.getElementById('assign-teacher-id').value = teacherId;
-  document.getElementById('modal-assign-subtitle').textContent = `Teacher: ${teacherName}`;
-  
-  // Render assignments
-  const container = document.getElementById('assign-list-container');
-  const teacherAssignments = allAssignments.filter(a => Number(a.teacher_id) === Number(teacherId));
-  
-  if (teacherAssignments.length === 0) {
-    container.innerHTML = `<div class="p-4 text-center text-muted text-sm">No assignments found for this academic year.</div>`;
-  } else {
-    let html = '';
-    teacherAssignments.forEach(a => {
-      html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--clr-border);">
-          <div>
-            <div style="font-weight:600; font-size:var(--text-sm); color:var(--clr-text);">${escapeHtml(a.subject_name)}</div>
-            <div style="font-size:var(--text-xs); color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.02em;">${escapeHtml(a.class_name)} ${escapeHtml(a.section)}</div>
-          </div>
-          <button type="button" class="btn btn-ghost btn-xs text-danger" onclick="removeAssignment(${a.id})" aria-label="Remove Assignment">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      `;
-    });
-    // Remove last border
-    html = html.replace(/border-bottom:1px solid var\(--clr-border\);"(?!.*border-bottom:1px solid var\(--clr-border\);")/s, 'border-bottom:none;"');
-    container.innerHTML = html;
-  }
-  
-  openModal('modal-assign');
-}
-
 function removeAssignment(id) {
   confirmAction({
     title: 'Remove Assignment?',
-    message: 'Remove this subject assignment? This will remove the teacher from this specific class/subject for the current term.',
+    message: 'Remove this subject from the teacher?',
     confirmText: 'Yes, Remove',
     type: 'danger'
   }, () => {
@@ -273,13 +406,7 @@ function removeAssignment(id) {
   });
 }
 
-// Simple XSS escaper for JS templates
 function escapeHtml(unsafe) {
-    return (unsafe||'').toString()
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+    return (unsafe||'').toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 </script>

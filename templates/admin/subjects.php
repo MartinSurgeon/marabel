@@ -62,6 +62,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         <tr>
           <th style="padding-left:2rem; width:80px;">Order</th>
           <th>Subject Name</th>
+          <th>Teaching Staff</th>
           <th>Code</th>
           <th style="width:120px;" class="text-center">Status</th>
           <th style="width:120px;" class="text-right pr-8">Actions</th>
@@ -75,6 +76,17 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
           </td>
           <td>
             <div style="font-weight:700; color:var(--clr-text);"><?= htmlspecialchars($s['subject_name']) ?></div>
+          </td>
+          <td>
+            <div class="flex flex-wrap gap-1">
+              <?php if ($s['assigned_teachers']): ?>
+                <?php foreach (explode(', ', $s['assigned_teachers']) as $teacher): ?>
+                  <span class="badge badge-gray" style="font-size:10px; padding:2px 6px;"><?= htmlspecialchars($teacher) ?></span>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <span style="font-size:10px; color:var(--clr-text-muted); font-style:italic;">No teachers</span>
+              <?php endif; ?>
+            </div>
           </td>
           <td><code style="font-size:11px;"><?= htmlspecialchars($s['subject_code'] ?: '—') ?></code></td>
           <td class="text-center">
