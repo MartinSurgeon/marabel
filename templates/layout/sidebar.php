@@ -128,11 +128,168 @@ function navActive(string $path): string {
       <div class="user-name"><?= htmlspecialchars(Session::get('user_name', 'User')) ?></div>
       <div class="user-role"><?= ucfirst(Session::role() ?? '') ?></div>
     </div>
-    <a href="<?= $base ?>/logout" title="Sign out" style="color:rgba(255,255,255,.5);transition:color .15s" aria-label="Sign out">
+    <button
+      id="logout-trigger"
+      onclick="LogoutModal.open()"
+      title="Sign out"
+      aria-label="Open sign out confirmation"
+      style="background:none;border:none;cursor:pointer;padding:4px;border-radius:6px;color:rgba(255,255,255,.5);transition:color .15s,background .15s;display:flex;align-items:center;"
+      onmouseenter="this.style.color='#fca5a5';this.style.background='rgba(239,68,68,.15)'"
+      onmouseleave="this.style.color='rgba(255,255,255,.5)';this.style.background='none'"
+    >
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-    </a>
+    </button>
   </div>
 </nav>
 
 <!-- Sidebar backdrop (created by JS but we pre-declare for clarity) -->
 <div id="sidebar-backdrop" class="sidebar-backdrop" aria-hidden="true"></div>
+
+<!-- ── Logout Confirmation Modal ──────────────────────────────── -->
+<style>
+  .logout-overlay {
+    position: fixed; inset: 0; z-index: 9000;
+    background: rgba(9, 9, 11, 0.55);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 1rem;
+    opacity: 0; visibility: hidden;
+    transition: opacity .22s ease, visibility .22s ease;
+  }
+  .logout-overlay.open { opacity: 1; visibility: visible; }
+  .logout-dialog {
+    background: var(--clr-surface, #fff);
+    border-radius: 18px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.22), 0 2px 8px rgba(0,0,0,.08);
+    padding: 2rem;
+    width: 100%; max-width: 380px;
+    transform: scale(.93) translateY(12px);
+    transition: transform .24s cubic-bezier(.34,1.56,.64,1);
+    border: 1px solid var(--clr-border, #e5e7eb);
+  }
+  .logout-overlay.open .logout-dialog { transform: scale(1) translateY(0); }
+  .logout-icon-ring {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: rgba(239,68,68,.1);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem;
+  }
+  .logout-title {
+    font-size: 1.125rem; font-weight: 800;
+    text-align: center; color: var(--clr-text, #111);
+    margin-bottom: .4rem;
+  }
+  .logout-sub {
+    text-align: center; font-size: .875rem;
+    color: var(--clr-text-muted, #6b7280);
+    margin-bottom: 1.75rem;
+    line-height: 1.55;
+  }
+  .logout-user-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--clr-surface-2, #f3f4f6);
+    border: 1px solid var(--clr-border, #e5e7eb);
+    border-radius: 99px;
+    padding: 3px 10px 3px 5px;
+    font-weight: 700; font-size: .8rem; color: var(--clr-text, #111);
+  }
+  .logout-user-chip-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--clr-primary, #692bc4);
+    color: #fff; font-size: 10px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .logout-actions {
+    display: grid; grid-template-columns: 1fr 1fr; gap: .75rem;
+  }
+  .logout-cancel-btn {
+    padding: .7rem 1rem;
+    border-radius: 10px;
+    border: 1.5px solid var(--clr-border, #e5e7eb);
+    background: var(--clr-surface, #fff);
+    font-weight: 700; font-size: .875rem;
+    color: var(--clr-text, #111);
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+  }
+  .logout-cancel-btn:hover { background: var(--clr-surface-2, #f3f4f6); border-color: #d1d5db; }
+  .logout-confirm-btn {
+    padding: .7rem 1rem;
+    border-radius: 10px;
+    border: none;
+    background: #dc2626;
+    color: #fff;
+    font-weight: 700; font-size: .875rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    transition: background .15s, transform .1s;
+  }
+  .logout-confirm-btn:hover { background: #b91c1c; }
+  .logout-confirm-btn:active { transform: scale(.96); }
+</style>
+
+<div id="logout-overlay" class="logout-overlay" role="dialog" aria-modal="true" aria-labelledby="logout-dialog-title" onclick="LogoutModal.onBackdrop(event)">
+  <div class="logout-dialog">
+
+    <div class="logout-icon-ring">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="#dc2626" stroke-width="2" width="28" height="28">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+      </svg>
+    </div>
+
+    <div class="logout-title" id="logout-dialog-title">Sign out?</div>
+    <div class="logout-sub">
+      You're signed in as&nbsp;
+      <span class="logout-user-chip">
+        <span class="logout-user-chip-avatar"><?= strtoupper(substr(Session::get('user_name', '?'), 0, 1)) ?></span>
+        <?= htmlspecialchars(Session::get('user_name', 'User')) ?>
+      </span>
+      <br><br>Any unsaved changes will be lost.
+    </div>
+
+    <div class="logout-actions">
+      <button class="logout-cancel-btn" onclick="LogoutModal.close()" id="logout-cancel-btn">
+        Cancel
+      </button>
+      <a href="<?= $base ?>/logout" class="logout-confirm-btn" id="logout-confirm-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="15" height="15">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Sign Out
+      </a>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const LogoutModal = {
+  open() {
+    const overlay = document.getElementById('logout-overlay');
+    overlay.classList.add('open');
+    // Focus Cancel by default — safe, prevents accidental confirm
+    setTimeout(() => document.getElementById('logout-cancel-btn')?.focus(), 50);
+    document.addEventListener('keydown', LogoutModal._onKey);
+  },
+  close() {
+    document.getElementById('logout-overlay').classList.remove('open');
+    document.removeEventListener('keydown', LogoutModal._onKey);
+    document.getElementById('logout-trigger')?.focus();
+  },
+  onBackdrop(e) {
+    // Only close if clicking the dark overlay itself, not the dialog
+    if (e.target === document.getElementById('logout-overlay')) LogoutModal.close();
+  },
+  _onKey(e) {
+    if (e.key === 'Escape') LogoutModal.close();
+    // Tab trap inside dialog
+    if (e.key === 'Tab') {
+      const focusable = document.getElementById('logout-overlay').querySelectorAll('button, a[href]');
+      const first = focusable[0], last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+};
+</script>
