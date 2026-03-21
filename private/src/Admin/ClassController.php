@@ -35,17 +35,23 @@ class ClassController {
         $filterYear = $_GET['year_id'] ?? $activeYearId;
         $classesList = [];
         if ($filterYear) {
+        $classesList = [];
+        if ($filterYear) {
             $classesList = DB::query(
                 "SELECT c.*, sl.name as level_name, sl.code as level_code,
-                        u.full_name as teacher_name,
+                        (SELECT GROUP_CONCAT(u.full_name SEPARATOR ', ')
+                         FROM class_teachers ct JOIN users u ON u.id = ct.teacher_id
+                         WHERE ct.class_id = c.id) as teacher_name,
+                        (SELECT GROUP_CONCAT(ct.teacher_id SEPARATOR ',')
+                         FROM class_teachers ct WHERE ct.class_id = c.id) as class_teacher_ids,
                         (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active') as student_count
                  FROM classes c
                  JOIN school_levels sl ON sl.id = c.level_id
-                 LEFT JOIN users u ON u.id = c.class_teacher_id
                  WHERE c.academic_year_id = ?
                  ORDER BY sl.sort_order, c.class_name",
                 [$filterYear]
             );
+        }
         }
     }
 
@@ -65,32 +71,43 @@ class ClassController {
             'level_id'         => (int)$_POST['level_id'],
             'class_name'       => strtoupper(trim($_POST['class_name'])),
             'section'          => strtoupper(trim($_POST['section'] ?? '')),
-            'class_teacher_id' => $_POST['class_teacher_id'] ?: null,
             'academic_year_id' => (int)$_POST['academic_year_id'],
         ];
 
         $id = $_POST['class_id'] ?? null;
         if ($id) {
             DB::execute(
-                "UPDATE classes SET level_id=?, class_name=?, section=?, class_teacher_id=?, academic_year_id=? WHERE id=?",
+                "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=? WHERE id=?",
                 array_merge(array_values($data), [(int)$id])
             );
-            Session::flash('success', "Class '{$data['class_name']}' updated.");
+            $this->syncClassTeachers((int)$id, $_POST['teacher_ids'] ?? []);
+            Session::flash('success', "Classroom '{$data['class_name']}' updated.");
         } else {
-            DB::insert(
-                "INSERT INTO classes (level_id, class_name, section, class_teacher_id, academic_year_id) VALUES (?,?,?,?,?)",
+            $newId = DB::insert(
+                "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?,?,?,?)",
                 array_values($data)
             );
-            Session::flash('success', "Class '{$data['class_name']}' created.");
+            $this->syncClassTeachers((int)$newId, $_POST['teacher_ids'] ?? []);
+            Session::flash('success', "Classroom '{$data['class_name']}' created.");
         }
         $this->back();
+    }
+
+    private function syncClassTeachers(int $classId, array $teacherIds): void {
+        DB::execute("DELETE FROM class_teachers WHERE class_id = ?", [$classId]);
+        foreach ($teacherIds as $tid) {
+            $tid = (int)$tid;
+            if ($tid && $classId) {
+                DB::execute("INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)", [$classId, $tid]);
+            }
+        }
     }
 
     private function classDelete(): void {
         $id  = (int)($_POST['class_id'] ?? 0);
         $row = DB::queryOne("SELECT class_name FROM classes WHERE id = ?", [$id]);
         DB::execute("DELETE FROM classes WHERE id = ?", [$id]);
-        Session::flash('success', "Class '{$row['class_name']}' deleted.");
+        Session::flash('success', "Classroom '{$row['class_name']}' deleted.");
         $this->back();
     }
 

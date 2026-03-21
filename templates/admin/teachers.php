@@ -157,6 +157,15 @@ $assignments = $assignmentsList ?? [];
               <label class="form-label">Phone Number</label>
               <input type="text" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20">
             </div>
+            <div class="form-group">
+              <label class="form-label">Classroom Assignments</label>
+              <select name="class_ids[]" id="teacher-classrooms" class="form-control" multiple style="min-height:90px; padding:.5rem;">
+                <?php foreach ($classes as $c): ?>
+                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['level_name'] . ' - ' . $c['class_name'] . ' ' . $c['section']) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <p class="form-text">Hold Ctrl/Cmd to select multiple. These represent the teacher's role as a Class Teacher.</p>
+            </div>
           </div>
           <div class="flex justify-end mt-6">
             <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save teacher</button>
@@ -349,6 +358,17 @@ function populateTeacherData(t) {
   document.getElementById('teacher-name').value = t.full_name;
   document.getElementById('teacher-email').value = t.email;
   document.getElementById('teacher-phone').value = t.phone || '';
+  
+  const cSelect = document.getElementById('teacher-classrooms');
+  if (cSelect) {
+      Array.from(cSelect.options).forEach(opt => opt.selected = false);
+      if (t.assigned_class_ids) {
+        const ids = t.assigned_class_ids.split(',');
+        Array.from(cSelect.options).forEach(opt => {
+          if (ids.includes(opt.value)) opt.selected = true;
+        });
+      }
+  }
   
   document.getElementById('modal-teacher-title').textContent = 'Manage: ' + t.full_name;
   document.getElementById('teacher-submit-btn').textContent = 'Update Profile';

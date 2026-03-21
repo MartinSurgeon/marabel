@@ -1,9 +1,9 @@
 <?php
 /**
- * Classes & Sections Management View
+ * Classrooms Management View
  * HCI/UX: Year filter, card grid by level, modal CRUD, student count badges
  */
-$pageTitle = 'Classes & Sections';
+$pageTitle = 'Classrooms';
 include __DIR__ . '/../layout/header.php';
 
 global $classesList, $levelsList, $yearsList, $teachersList, $activeYearId;
@@ -23,9 +23,9 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 <!-- Toolbar -->
 <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
-    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Classes & Sections</h1>
+    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Classrooms</h1>
     <p class="text-muted m-0" style="font-size:var(--text-sm); max-width:600px;">
-      Manage class sections and assign class teachers. Grouped by school level for easier administration.
+      Manage classrooms, sections, and assign class teachers. Grouped by school level for easier administration.
     </p>
   </div>
   <div class="flex items-center gap-3">
@@ -42,7 +42,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
     </form>
     <button class="btn btn-primary shadow-purple" onclick="openClassModal()" style="height:42px;">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-      New Class
+      New Classroom
     </button>
   </div>
 </div>
@@ -110,14 +110,16 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         </div>
 
         <div style="border-top:1px solid var(--clr-border); padding-top:1rem; margin-top:auto;">
-           <div style="font-size:11px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; margin-bottom:0.25rem;">Class Teacher</div>
+           <div style="font-size:11px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; margin-bottom:0.25rem;">Class Teacher(s)</div>
            <?php if ($cls['teacher_name']): ?>
-             <div class="flex items-center gap-2">
+             <?php foreach (explode(', ', $cls['teacher_name']) as $tName): ?>
+             <div class="flex items-center gap-2 mb-1">
                 <div style="width:24px; height:24px; background:var(--clr-surface-2); border-radius:var(--radius-full); display:flex; align-items:center; justify-content:center; color:var(--clr-primary-700); font-weight:800; font-size:10px;">
-                   <?= substr($cls['teacher_name'], 0, 1) ?>
+                   <?= substr($tName, 0, 1) ?>
                 </div>
-                <div style="font-size:13px; font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($cls['teacher_name']) ?></div>
+                <div style="font-size:13px; font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($tName) ?></div>
              </div>
+             <?php endforeach; ?>
            <?php else: ?>
              <div class="flex items-center gap-2 text-warning" style="font-size:13px; font-weight:500;">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
@@ -143,7 +145,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 <div id="modal-class" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-class-title" style="display:none;">
   <div class="modal w-full max-w-lg mx-4">
     <div class="modal-header">
-      <h3 class="modal-title" id="modal-class-title">Class Information</h3>
+      <h3 class="modal-title" id="modal-class-title">Classroom Information</h3>
       <button class="modal-close" onclick="closeModal('modal-class')" aria-label="Close dialog">&times;</button>
     </div>
     <form method="POST" action="<?= $base ?>/admin/classes" id="form-class" onsubmit="Loader.show()">
@@ -177,7 +179,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 
         <div class="grid" style="grid-template-columns:2fr 1fr; gap:1.5rem;">
           <div class="form-group">
-            <label class="form-label">Class Name <span class="required">*</span></label>
+            <label class="form-label">Classroom Name <span class="required">*</span></label>
             <input type="text" id="class-name-input" name="class_name" class="form-control"
               placeholder="e.g. B1, B8" required maxlength="20"
               oninput="this.value = this.value.toUpperCase()">
@@ -192,19 +194,18 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         </div>
 
         <div class="form-group">
-          <label class="form-label">Assign Class Teacher</label>
-          <select name="class_teacher_id" id="class-teacher" class="form-control">
-            <option value="">— Unassigned —</option>
+          <label class="form-label">Assign Class Teacher(s)</label>
+          <select name="teacher_ids[]" id="class-teacher" class="form-control" multiple style="min-height:90px; padding:.5rem;">
             <?php foreach ($teachersList as $t): ?>
             <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['full_name']) ?></option>
             <?php endforeach; ?>
           </select>
-          <p class="form-text">Class teachers manage score entry for their specific section.</p>
+          <p class="form-text">Hold Ctrl/Cmd to select multiple teachers. Class teachers manage score entry for their assigned students.</p>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modal-class')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="class-submit-btn">Save Class Information</button>
+        <button type="submit" class="btn btn-primary" id="class-submit-btn">Save Classroom</button>
       </div>
     </form>
   </div>
@@ -221,8 +222,8 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 function openClassModal() {
   document.getElementById('form-class').reset();
   document.getElementById('class-id-field').value = '';
-  document.getElementById('modal-class-title').textContent = 'New Class Section';
-  document.getElementById('class-submit-btn').textContent = 'Create Class';
+  document.getElementById('modal-class-title').textContent = 'New Classroom';
+  document.getElementById('class-submit-btn').textContent = 'Create Classroom';
   openModal('modal-class');
 }
 
@@ -233,9 +234,18 @@ function editClass(cls) {
   document.getElementById('class-level').value = cls.level_id;
   document.getElementById('class-name-input').value = cls.class_name;
   document.getElementById('class-section').value = cls.section || '';
-  document.getElementById('class-teacher').value = cls.class_teacher_id || '';
+  
+  const tSelect = document.getElementById('class-teacher');
+  Array.from(tSelect.options).forEach(opt => opt.selected = false);
+  if (cls.class_teacher_ids) {
+    const ids = cls.class_teacher_ids.split(',');
+    Array.from(tSelect.options).forEach(opt => {
+      if (ids.includes(opt.value)) opt.selected = true;
+    });
+  }
+  
   document.getElementById('modal-class-title').textContent = 'Edit ' + cls.class_name;
-  document.getElementById('class-submit-btn').textContent = 'Update Class';
+  document.getElementById('class-submit-btn').textContent = 'Update Classroom';
   openModal('modal-class');
 }
 

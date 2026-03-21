@@ -30,7 +30,7 @@ class TeacherController {
         
         $teachersList = DB::query(
             "SELECT u.*, 
-                    (SELECT COUNT(*) FROM classes c WHERE c.class_teacher_id = u.id) as class_count,
+                    (SELECT COUNT(*) FROM class_teachers ct WHERE ct.teacher_id = u.id) as class_count,
                     (SELECT COUNT(*) FROM class_subjects cs WHERE cs.teacher_id = u.id) as subject_count,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' (', s.subject_name, ')') SEPARATOR ', ')
                      FROM class_subjects cs 
@@ -38,9 +38,12 @@ class TeacherController {
                      JOIN subjects s ON s.id = cs.subject_id
                      JOIN academic_years ay ON ay.id = c.academic_year_id
                      WHERE cs.teacher_id = u.id AND ay.is_active = 1) as assignment_summary,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' ', c.section) SEPARATOR ', ')
-                     FROM classes c 
-                     WHERE c.class_teacher_id = u.id) as lead_classes
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, IFNULL(c.section, '')) SEPARATOR ', ')
+                     FROM class_teachers ct 
+                     JOIN classes c ON c.id = ct.class_id
+                     WHERE ct.teacher_id = u.id) as lead_classes,
+                    (SELECT GROUP_CONCAT(DISTINCT class_id)
+                     FROM class_teachers ct WHERE ct.teacher_id = u.id) as assigned_class_ids
              FROM users u 
              WHERE u.role = 'teacher' 
              ORDER BY u.full_name"
@@ -98,8 +101,9 @@ class TeacherController {
         if ($id) {
             DB::execute(
                 "UPDATE users SET full_name=?, email=?, phone=? WHERE id=? AND role='teacher'",
-                array_merge(array_values($data), [(int)$id])
+                [$data['full_name'], $data['email'], $data['phone'], (int)$id]
             );
+            $this->syncTeacherClassrooms((int)$id, $_POST['class_ids'] ?? []);
             Session::flash('success', "Teacher record updated.");
         } else {
             // Check for existing email
@@ -110,24 +114,35 @@ class TeacherController {
             }
             
             $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
-            DB::insert(
+            $newId = DB::insert(
                 "INSERT INTO users (full_name, email, phone, role, password_hash) VALUES (?,?,?,?,?)",
                 array_values($data)
             );
+            $this->syncTeacherClassrooms((int)$newId, $_POST['class_ids'] ?? []);
             Session::flash('success', "Teacher created with default password: password123");
         }
         $this->redirect();
+    }
+
+    private function syncTeacherClassrooms(int $teacherId, array $classIds): void {
+        DB::execute("DELETE FROM class_teachers WHERE teacher_id = ?", [$teacherId]);
+        foreach ($classIds as $classId) {
+            $classId = (int)$classId;
+            if ($classId && $teacherId) {
+                DB::execute("INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)", [$classId, $teacherId]);
+            }
+        }
     }
 
     private function teacherDelete(): void {
         $id = (int)($_POST['teacher_id'] ?? 0);
         
         // Prevent deleting if assigned to classes
-        $hasClasses  = DB::queryOne("SELECT id FROM classes WHERE class_teacher_id = ? LIMIT 1", [$id]);
+        $hasClasses  = DB::queryOne("SELECT class_id FROM class_teachers WHERE teacher_id = ? LIMIT 1", [$id]);
         $hasSubjects = DB::queryOne("SELECT id FROM class_subjects WHERE teacher_id = ? LIMIT 1", [$id]);
         
         if ($hasClasses || $hasSubjects) {
-            Session::flash('error', "Cannot delete teacher. Please unassign them from all classes and subjects first.");
+            Session::flash('error', "Cannot delete teacher. Please unassign them from all classrooms and subjects first.");
         } else {
             DB::execute("DELETE FROM users WHERE id = ? AND role = 'teacher'", [$id]);
             Session::flash('success', "Teacher removed.");

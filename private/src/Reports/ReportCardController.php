@@ -129,9 +129,10 @@ class ReportCardController {
         // ── 8. Class teacher name (for signature area) ─────────────────
         $classTeacher = DB::queryOne(
             "SELECT u.full_name
-             FROM classes c
-             JOIN users u ON u.id = c.class_teacher_id
-             WHERE c.id = ?",
+             FROM class_teachers ct
+             JOIN users u ON u.id = ct.teacher_id
+             WHERE ct.class_id = ?
+             LIMIT 1",
             [$student['class_id']]
         );
 

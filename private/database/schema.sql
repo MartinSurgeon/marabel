@@ -50,12 +50,19 @@ CREATE TABLE classes (
   level_id          INT UNSIGNED NOT NULL,
   class_name        VARCHAR(20) NOT NULL,      -- e.g. "B1A", "B8B"
   section           VARCHAR(5),               -- e.g. "A", "B"
-  class_teacher_id  INT UNSIGNED,             -- FK to users
   academic_year_id  INT UNSIGNED NOT NULL,
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_class_year (class_name, academic_year_id),
   FOREIGN KEY (level_id) REFERENCES school_levels(id),
   FOREIGN KEY (academic_year_id) REFERENCES academic_years(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE class_teachers (
+  class_id      INT UNSIGNED NOT NULL,
+  teacher_id    INT UNSIGNED NOT NULL,
+  PRIMARY KEY (class_id, teacher_id),
+  FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE,
+  FOREIGN KEY (teacher_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE subjects (
