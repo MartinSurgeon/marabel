@@ -11,7 +11,10 @@ require_once PRIVATE_PATH . '/src/Helpers/CSRF.php';
 class AuthController {
 
     public function handle(): void {
-        $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $rawPath  = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $appBase  = defined('APP_BASE') ? APP_BASE : '';
+        // Strip the subdirectory prefix so comparisons work at /marabel/ OR /
+        $path     = '/' . ltrim(substr($rawPath, strlen($appBase)), '/');
 
         if ($path === '/logout') {
             $this->logout();
