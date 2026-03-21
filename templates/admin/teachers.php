@@ -197,9 +197,18 @@ $assignments = $assignmentsList ?? [];
                 <label class="form-label">Subjects <span class="required">*</span></label>
                 <div class="form-control p-0 overflow-y-auto" style="height:150px; background:var(--clr-surface-2);">
                   <?php foreach ($subjects as $s): ?>
-                    <label class="flex items-center gap-2 p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0">
-                      <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>">
-                      <span><?= htmlspecialchars($s['subject_name']) ?></span>
+                    <label class="flex items-center justify-between p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0 transition-colors">
+                      <div class="flex items-center gap-2">
+                        <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>">
+                        <span><?= htmlspecialchars($s['subject_name']) ?></span>
+                      </div>
+                      <?php 
+                        $lvlBadgeColor = 'gray';
+                        if ($s['level_name'] == 'LP') $lvlBadgeColor = 'success';
+                        elseif ($s['level_name'] == 'UP') $lvlBadgeColor = 'warning';
+                        elseif ($s['level_name'] == 'JHS') $lvlBadgeColor = 'purple';
+                      ?>
+                      <span class="badge badge-<?= $lvlBadgeColor ?>" style="font-size:9px; padding:2px 5px;"><?= htmlspecialchars($s['level_name']) ?></span>
                     </label>
                   <?php endforeach; ?>
                 </div>
