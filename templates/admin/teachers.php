@@ -40,7 +40,7 @@ $assignments = $assignmentsList ?? [];
 <?php else: ?>
 <div class="grid" style="grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem;">
   <?php foreach ($teachers as $t): ?>
-  <div class="card hover-lift flex flex-col <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>" style="padding:0; overflow:hidden;">
+  <div class="card hover-lift flex flex-col <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>" style="padding:0; overflow:hidden; border:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); border-radius:var(--radius-xl); box-shadow:0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01);">
     <div style="padding:1.5rem 1.5rem 1rem;">
       <div class="flex justify-between items-start mb-4">
         <div class="flex items-center gap-3">
@@ -56,7 +56,7 @@ $assignments = $assignmentsList ?? [];
            <?= CSRF::field() ?>
            <input type="hidden" name="_action" value="teacher_toggle">
            <input type="hidden" name="teacher_id" value="<?= $t['id'] ?>">
-           <button type="submit" class="badge <?= $t['is_active'] ? 'badge-success' : 'badge-danger' ?>" style="cursor:pointer; border:none; padding:4px 8px;">
+           <button type="submit" class="badge <?= $t['is_active'] ? 'badge-success' : 'badge-danger' ?>" style="cursor:pointer; border:none; padding:5px 10px; font-size:9px; letter-spacing:0.05em; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
               <?= $t['is_active'] ? 'ACTIVE' : 'INACTIVE' ?>
            </button>
         </form>
@@ -95,24 +95,22 @@ $assignments = $assignmentsList ?? [];
         <?php endif; ?>
       </div>
 
-      <div class="grid" style="grid-template-columns:1fr 1fr; gap:0.75rem; border-top:1px solid var(--clr-border); padding-top:1rem; margin-top:1rem;">
-         <div style="background:var(--clr-surface-2); padding:0.75rem; border-radius:var(--radius-md); text-align:center;">
-            <div style="font-size:1.125rem; font-weight:800; color:var(--clr-primary);"><?= $t['class_count'] ?></div>
-            <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase;">Classrooms</div>
+      <div class="grid" style="grid-template-columns:1fr 1fr; gap:0.75rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:1.25rem; margin-top:1.5rem;">
+         <div style="background:var(--clr-primary-50); padding:0.875rem; border-radius:var(--radius-lg); text-align:center; border:1px solid rgba(79, 29, 150, 0.05);">
+            <div style="font-size:1.375rem; font-weight:900; color:var(--clr-primary); letter-spacing:-0.03em;"><?= $t['class_count'] ?></div>
+            <div style="font-size:10px; font-weight:800; color:var(--clr-primary-600); text-transform:uppercase; letter-spacing:0.04em;">Classes</div>
          </div>
-         <div style="background:var(--clr-surface-2); padding:0.75rem; border-radius:var(--radius-md); text-align:center;">
-            <div style="font-size:1.125rem; font-weight:800; color:var(--clr-primary);"><?= $t['subject_count'] ?></div>
-            <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase;">Subjects</div>
+         <div style="background:rgba(124, 58, 237, 0.05); padding:0.875rem; border-radius:var(--radius-lg); text-align:center; border:1px solid rgba(124, 58, 237, 0.05);">
+            <div style="font-size:1.375rem; font-weight:900; color:var(--clr-accent); letter-spacing:-0.03em;"><?= $t['subject_count'] ?></div>
+            <div style="font-size:10px; font-weight:800; color:var(--clr-accent); text-transform:uppercase; letter-spacing:0.04em;">Subjects</div>
          </div>
       </div>
     </div>
 
-    <div style="margin-top:auto; padding:0.75rem 1.5rem; background:linear-gradient(to right, var(--clr-surface-2), var(--clr-surface)); border-top:1px solid var(--clr-border); display:flex; justify-content:flex-end; gap:0.5rem; flex-wrap:wrap;">
-       <button class="btn btn-secondary btn-xs" onclick="openAssignModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">
-         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg> ASSIGN
-       </button>
-       <button class="btn btn-ghost btn-xs" onclick='editTeacher(<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>)'>EDIT</button>
-       <button class="btn btn-ghost btn-xs text-danger" onclick="confirmDeleteTeacher(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">DELETE</button>
+    <div style="margin-top:auto; padding:0.875rem 1.5rem; background:rgba(249,250,251,0.5); border-top:1px solid rgba(0,0,0,0.04); display:flex; justify-content:flex-end; gap:0.625rem; flex-wrap:wrap;">
+       <button class="btn btn-secondary btn-xs font-bold" onclick="openAssignModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">ASSIGN</button>
+       <button class="btn btn-ghost btn-xs font-bold" onclick='editTeacher(<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>)' style="color:var(--clr-primary);">EDIT</button>
+       <button class="btn btn-ghost btn-xs font-bold text-danger" onclick="confirmDeleteTeacher(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">DELETE</button>
     </div>
   </div>
   <?php endforeach; ?>

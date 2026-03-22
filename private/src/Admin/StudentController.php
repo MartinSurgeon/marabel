@@ -16,12 +16,14 @@ class StudentController {
             }
             $action = $_POST['_action'] ?? '';
             match ($action) {
-                'student_store'    => $this->studentStore(),
-                'student_delete'   => $this->studentDelete(),
-                'student_status'   => $this->studentStatus(),
-                'parent_link'      => $this->parentLink(),
-                'parent_unlink'    => $this->parentUnlink(),
-                default => $this->redirect(),
+                'student_store'       => $this->studentStore(),
+                'student_delete'      => $this->studentDelete(),
+                'student_status'      => $this->studentStatus(),
+                'parent_link'         => $this->parentLink(),
+                'parent_unlink'       => $this->parentUnlink(),
+                'student_bulk_import' => $this->studentBulkImport(),
+                'student_bulk_tpl'    => $this->studentBulkTemplate(),
+                default               => $this->redirect(),
             };
         }
 
@@ -215,5 +217,144 @@ class StudentController {
         $yearId  = $_GET['year_id'] ?? '';
         header("Location: $base/admin/students?year_id=$yearId&class_id=$classId");
         exit;
+    }
+
+    // ── Bulk CSV Import ───────────────────────────────────────────────
+
+    /**
+     * Download a blank CSV template for bulk student import.
+     */
+    private function studentBulkTemplate(): void {
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="student_import_template.csv"');
+        header('Cache-Control: no-cache');
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Full_Name', 'Class', 'Section', 'Gender']);
+        fputcsv($out, ['ADJEI VICENT', 'BASIC 1', '', 'Male']);
+        fputcsv($out, ['ADOMAKO CECILIA', 'BASIC 4', '', 'Female']);
+        fputcsv($out, ['OSEI KOFI', 'BASIC 5', 'A', 'Male']);
+        fclose($out);
+        exit;
+    }
+
+    /**
+     * Bulk import students from a CSV upload.
+     * CSV columns: Full_Name, Class, Section, Gender
+     * - Auto-generates Student ID numbers (zero-padded 4-digit)
+     * - Skips rows where same full_name already exists in that class
+     * - Resolves class by class_name + section against DB
+     */
+    private function studentBulkImport(): void {
+        $file = $_FILES['import_csv'] ?? null;
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
+            Session::set('bulk_import_result', ['error' => 'No file uploaded or upload failed.']);
+            $this->redirect();
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if ($ext !== 'csv') {
+            Session::set('bulk_import_result', ['error' => 'Only .csv files are accepted. Open your Excel file and use File → Save As → CSV.']);
+            $this->redirect();
+        }
+
+        $academicYearId = (int)($_POST['academic_year_id'] ?? 0);
+        if (!$academicYearId) {
+            Session::set('bulk_import_result', ['error' => 'Please select an Academic Year before importing.']);
+            $this->redirect();
+        }
+
+        $handle = fopen($file['tmp_name'], 'r');
+        if (!$handle) {
+            Session::set('bulk_import_result', ['error' => 'Could not read the uploaded file.']);
+            $this->redirect();
+        }
+
+        // Build class lookup: "BASIC 1|" => id, "BASIC 5|A" => id, etc.
+        $allClasses = DB::query("SELECT id, class_name, section FROM classes");
+        $classMap   = [];
+        foreach ($allClasses as $cls) {
+            $key = strtoupper(trim($cls['class_name'])) . '|' . strtoupper(trim($cls['section']));
+            $classMap[$key] = (int)$cls['id'];
+        }
+
+        // Get next available student ID number
+        $maxId = DB::queryValue("SELECT MAX(CAST(student_id_number AS UNSIGNED)) FROM students") ?? 0;
+        $nextId = (int)$maxId + 1;
+
+        // Read and skip header row
+        $header = fgetcsv($handle);
+        if (!$header) {
+            fclose($handle);
+            Session::set('bulk_import_result', ['error' => 'CSV file appears to be empty.']);
+            $this->redirect();
+        }
+
+        // Normalize header
+        $header = array_map(fn($h) => strtolower(trim($h)), $header);
+        $nameIdx    = array_search('full_name', $header);
+        $classIdx   = array_search('class', $header);
+        $sectionIdx = array_search('section', $header);
+        $genderIdx  = array_search('gender', $header);
+
+        if ($nameIdx === false || $classIdx === false) {
+            fclose($handle);
+            Session::set('bulk_import_result', [
+                'error' => 'Invalid CSV format. Required columns: Full_Name, Class (and optionally Section, Gender). Download the template for guidance.'
+            ]);
+            $this->redirect();
+        }
+
+        $inserted  = 0;
+        $skipped   = 0;
+        $rowErrors = [];
+        $lineNum   = 1;
+
+        while (($row = fgetcsv($handle)) !== false) {
+            $lineNum++;
+            $fullName = strtoupper(trim($row[$nameIdx] ?? ''));
+            if ($fullName === '') {
+                $skipped++;
+                continue; // blank row
+            }
+
+            $className   = strtoupper(trim($row[$classIdx] ?? ''));
+            $sectionName = strtoupper(trim($row[$sectionIdx] ?? ''));
+            $gender      = ucfirst(strtolower(trim($row[$genderIdx] ?? '')));
+            if (!in_array($gender, ['Male', 'Female', 'Other'])) $gender = null;
+
+            $classKey = $className . '|' . $sectionName;
+            if (!isset($classMap[$classKey])) {
+                $rowErrors[] = "Row {$lineNum}: Class \u00ab{$className}" . ($sectionName ? " ({$sectionName})" : '') . "\u00bb not found in the system.";
+                $skipped++;
+                continue;
+            }
+            $classId = $classMap[$classKey];
+
+            // Duplicate check: same name in same class
+            $exists = DB::queryOne(
+                "SELECT id FROM students WHERE UPPER(full_name) = ? AND current_class_id = ?",
+                [$fullName, $classId]
+            );
+            if ($exists) {
+                $skipped++;
+                continue;
+            }
+
+            $studentIdNum = str_pad((string)$nextId, 4, '0', STR_PAD_LEFT);
+            DB::execute(
+                "INSERT INTO students (student_id_number, full_name, gender, current_class_id, academic_year_id, status) VALUES (?,?,?,?,?,'active')",
+                [$studentIdNum, $fullName, $gender ?: null, $classId, $academicYearId]
+            );
+            $nextId++;
+            $inserted++;
+        }
+        fclose($handle);
+
+        Session::set('bulk_import_result', [
+            'inserted'  => $inserted,
+            'skipped'   => $skipped,
+            'rowErrors' => $rowErrors,
+        ]);
+        $this->redirect();
     }
 }

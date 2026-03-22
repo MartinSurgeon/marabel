@@ -75,20 +75,28 @@ class ClassController {
         ];
 
         $id = $_POST['class_id'] ?? null;
-        if ($id) {
-            DB::execute(
-                "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=? WHERE id=?",
-                array_merge(array_values($data), [(int)$id])
-            );
-            $this->syncClassTeachers((int)$id, $_POST['teacher_ids'] ?? []);
-            Session::flash('success', "Classroom '{$data['class_name']}' updated.");
-        } else {
-            $newId = DB::insert(
-                "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?,?,?,?)",
-                array_values($data)
-            );
-            $this->syncClassTeachers((int)$newId, $_POST['teacher_ids'] ?? []);
-            Session::flash('success', "Classroom '{$data['class_name']}' created.");
+        try {
+            if ($id) {
+                DB::execute(
+                    "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=? WHERE id=?",
+                    array_merge(array_values($data), [(int)$id])
+                );
+                $this->syncClassTeachers((int)$id, $_POST['teacher_ids'] ?? []);
+                Session::flash('success', "Classroom '{$data['class_name']}' updated.");
+            } else {
+                $newId = DB::insert(
+                    "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?,?,?,?)",
+                    array_values($data)
+                );
+                $this->syncClassTeachers((int)$newId, $_POST['teacher_ids'] ?? []);
+                Session::flash('success', "Classroom '{$data['class_name']}' created.");
+            }
+        } catch (PDOException $e) {
+            if ($e->getCode() == 23000) { // Integrity constraint violation
+                Session::flash('error', "A classroom with this name and section already exists for the selected academic year.");
+            } else {
+                Session::flash('error', "A database error occurred while saving the classroom.");
+            }
         }
         $this->back();
     }

@@ -86,7 +86,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 
   <div class="grid" style="grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
     <?php foreach ($levelClasses as $cls): ?>
-    <div class="card hover-lift flex flex-col" style="padding:0; overflow:hidden; border:1px solid var(--clr-border);">
+    <div class="card hover-lift flex flex-col" style="padding:0; overflow:hidden; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02); background:rgba(255,255,255,0.8); backdrop-filter:blur(10px);">
       <div style="padding:1.5rem 1.5rem 1rem;">
         <div class="flex justify-between items-start mb-3">
           <div style="font-size:2rem; font-weight:900; letter-spacing:-0.04em; color:var(--clr-primary); line-height:1;">
@@ -103,9 +103,9 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         </div>
 
         <div class="flex items-center gap-2 mb-4">
-           <div style="background:var(--clr-success-bg); color:var(--clr-success); padding:2px 8px; border-radius:var(--radius-full); font-size:11px; font-weight:800; display:flex; align-items:center;">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="12" height="12" class="mr-1"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 015.25-2.906z"/></svg>
-              <?= $cls['student_count'] ?> Students
+           <div style="background:var(--clr-primary-50); color:var(--clr-primary); padding:3px 10px; border-radius:var(--radius-full); font-size:11px; font-weight:800; display:flex; align-items:center; border:1px solid rgba(79, 29, 150, 0.1);">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="12" height="12" class="mr-1.5 opacity-80"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 015.25-2.906z"/></svg>
+              <?= $cls['student_count'] ?> PUPILS
            </div>
         </div>
 
@@ -128,8 +128,8 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
            <?php endif; ?>
         </div>
       </div>
-      <div style="margin-top:auto; padding:0.75rem 1.5rem; background:var(--clr-surface-2); display:flex; justify-content:flex-end;">
-         <a href="<?= $base ?>/admin/students?class_id=<?= $cls['id'] ?>" class="btn btn-ghost btn-xs" style="font-size:11px; font-weight:700; letter-spacing:0.02em;">VIEW ROSTER →</a>
+      <div style="margin-top:auto; padding:0.875rem 1.5rem; background:rgba(249,250,251,0.5); border-top:1px solid rgba(0,0,0,0.04); display:flex; justify-content:flex-end;">
+         <a href="<?= $base ?>/admin/students?class_id=<?= $cls['id'] ?>" class="btn btn-ghost btn-xs font-bold" style="font-size:10px; letter-spacing:0.04em; color:var(--clr-primary);">ROSTER & SCORES →</a>
       </div>
     </div>
     <?php endforeach; ?>

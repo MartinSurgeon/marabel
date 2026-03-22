@@ -16,14 +16,45 @@ $filterYear  = $_GET['year_id'] ?? $activeYearId;
 $filterClass = $_GET['class_id'] ?? null;
 ?>
 
-<div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
+<!-- DataTables 2.1.8 + Responsive 3.0.3 + AutoFill 2.7.0 -->
+<link href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/autofill/2.7.0/css/autoFill.dataTables.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
+<script src="https://cdn.datatables.net/autofill/2.7.0/js/dataTables.autoFill.min.js"></script>
+
+<style>
+/* Robust DataTables 2.x Styles */
+div.dt-container { font-size: 13px; color: var(--clr-text); font-family: var(--font-sans); margin-top: 1rem; padding: 0 1rem 1rem 1rem; }
+div.dt-layout-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 768px) {
+    div.dt-layout-row { flex-direction: column; align-items: stretch; text-align: center; }
+    div.dt-container .dt-search input { width: 100% !important; margin: 0 !important; }
+}
+div.dt-container .dt-search input { border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 0.5rem 1rem; font-size: 13px; transition: all 0.2s ease; background: var(--clr-surface); }
+div.dt-container .dt-search input:focus { outline: none; border-color: var(--clr-primary-400); box-shadow: 0 0 0 4px rgba(105, 43, 196, 0.1); }
+div.dt-container .dt-length select { border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 0.45rem 2rem 0.45rem 0.8rem; font-size: 13px; background: var(--clr-surface); }
+div.dt-container .dt-paging { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 1rem; }
+div.dt-container .dt-paging .dt-paging-button { padding: 0.5rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--clr-border) !important; cursor: pointer; background: var(--clr-surface) !important; transition: all 0.2s; }
+div.dt-container .dt-paging .dt-paging-button:hover { background: var(--clr-surface-2) !important; }
+div.dt-container .dt-paging .dt-paging-button.current { background: var(--clr-primary) !important; color: white !important; border-color: var(--clr-primary) !important; font-weight: 700; }
+table.dataTable thead th { border-bottom: 2px solid var(--clr-border) !important; color: var(--clr-text-muted); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; padding: 1rem 0.75rem !important; }
+/* Responsive '+' control styling */
+table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before { 
+    background-color: var(--clr-primary) !important;
+    border: none !important;
+    box-shadow: 0 2px 4px rgba(105, 43, 196, 0.3) !important;
+}
+</style>
+
+<div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
     <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Students & Enrolment</h1>
-    <p class="text-muted m-0" style="font-size:var(--text-sm); max-width:600px;">
-      Manage student profiles, registrations, and class placements for the academic session.
-    </p>
+    <p class="text-muted m-0" style="font-size:var(--text-sm); max-width:600px;">Manage student profiles, registrations, and class placements.</p>
   </div>
-  <button class="btn btn-primary shadow-purple" onclick="openStudentModal()" style="height:42px;">
+  <button class="btn btn-primary shadow-purple" id="btn-register-top" style="height:42px;">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
     Register Student
   </button>
@@ -34,30 +65,20 @@ $filterClass = $_GET['class_id'] ?? null;
   <form method="GET" action="<?= $base ?>/admin/students" class="flex items-center gap-4 flex-wrap" id="filter-form">
     <div class="flex items-center gap-2">
        <span style="font-size:11px; font-weight:800; color:var(--clr-text-muted); text-transform:uppercase;">Session</span>
-       <select name="year_id" class="form-control" style="width:auto; min-width:140px; height:38px;" onchange="Loader.show(); this.form.submit()">
+       <select name="year_id" class="form-control filter-select" style="width:auto; min-width:140px; height:38px;">
           <?php foreach ($years as $y): ?>
-            <option value="<?= $y['id'] ?>" <?= $filterYear == $y['id'] ? 'selected' : '' ?>>
-               <?= htmlspecialchars($y['year_name']) ?>
-            </option>
+            <option value="<?= $y['id'] ?>" <?= $filterYear == $y['id'] ? 'selected' : '' ?>><?= htmlspecialchars($y['year_name']) ?></option>
           <?php endforeach; ?>
        </select>
     </div>
-    
     <div class="flex items-center gap-2">
        <span style="font-size:11px; font-weight:800; color:var(--clr-text-muted); text-transform:uppercase;">Class</span>
-       <select name="class_id" class="form-control" style="width:auto; min-width:160px; height:38px;" onchange="Loader.show(); this.form.submit()">
+       <select name="class_id" class="form-control filter-select" style="width:auto; min-width:160px; height:38px;">
           <option value="">— All Classes —</option>
           <?php foreach ($classes as $c): ?>
-            <option value="<?= $c['id'] ?>" <?= $filterClass == $c['id'] ? 'selected' : '' ?>>
-               <?= htmlspecialchars($c['class_name']) ?><?= $c['section'] ? " ({$c['section']})" : '' ?>
-            </option>
+            <option value="<?= $c['id'] ?>" <?= $filterClass == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['class_name']) ?><?= $c['section'] ? " ({$c['section']})" : '' ?></option>
           <?php endforeach; ?>
        </select>
-    </div>
-
-    <div style="flex:1; min-width:200px; position:relative;">
-       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16" style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--clr-text-muted);"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-       <input type="text" id="student-search" placeholder="Quick search by name or ID..." class="form-control" style="padding-left:36px; height:38px;">
     </div>
   </form>
 </div>
@@ -68,66 +89,51 @@ $filterClass = $_GET['class_id'] ?? null;
      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary-300)"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
   </div>
   <h2 style="font-weight:800; color:var(--clr-text);">No Students Found</h2>
-  <p class="text-muted" style="max-width:320px; margin:0 auto 2.5rem;">Register your first student or adjust your filters to see the roster.</p>
-  <button class="btn btn-primary" onclick="openStudentModal()">Register Student</button>
+  <button class="btn btn-primary" id="btn-register-empty">Register Student</button>
 </div>
-
 <?php else: ?>
 <div class="card" style="padding:0; overflow:hidden;">
   <div class="table-wrapper">
-    <table class="table" style="margin-bottom:0;" id="student-table">
+    <table class="table display responsive nowrap" style="width:100%; margin-bottom:0;" id="student-table">
       <thead>
         <tr>
-          <th style="padding-left:2rem;">Student ID</th>
-          <th>Full Name</th>
-          <th>Parent/Guardian</th>
-          <th>Class Placement</th>
-          <th style="width:120px;" class="text-center">Status</th>
-          <th style="width:130px;" class="text-right pr-8">Actions</th>
+          <th class="all" style="padding-left:2rem;">ID</th>
+          <th class="all">Full Name</th>
+          <th class="min-desktop">Parent/Guardian</th>
+          <th class="min-tablet">Class Placement</th>
+          <th class="min-tablet text-center">Status</th>
+          <th class="all text-right pr-8">Actions</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($students as $s): ?>
         <tr>
-          <td style="padding-left:2rem;">
-            <span style="font-family:var(--font-mono); font-weight:800; color:var(--clr-primary); font-size:12px;"><?= htmlspecialchars($s['student_id_number']) ?></span>
-          </td>
+          <td style="padding-left:2rem;"><span style="font-family:var(--font-mono); font-weight:800; color:var(--clr-primary); font-size:12px;"><?= htmlspecialchars($s['student_id_number']) ?></span></td>
           <td>
             <div style="display:flex; align-items:center; gap:0.75rem;">
-               <div style="width:32px; height:32px; background:var(--clr-surface-2); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; color:var(--clr-primary-700); font-weight:800; font-size:11px;">
-                  <?= substr($s['full_name'], 0, 1) ?>
-               </div>
-               <div>
-                  <div style="font-weight:700; color:var(--clr-text); line-height:1.2;"><?= htmlspecialchars($s['full_name']) ?></div>
-                  <?php if ($s['surname']): ?>
-                    <div style="font-size:10px; color:var(--clr-text-muted); text-transform:uppercase; font-weight:600;"><?= htmlspecialchars($s['surname']) ?></div>
+               <div style="width:32px; height:32px; background:var(--clr-surface-2); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; color:var(--clr-primary-700); font-weight:800; font-size:11px;"><?= substr($s['full_name'], 0, 1) ?></div>
+               <div style="font-weight:700; color:var(--clr-text); line-height:1.2; display:flex; align-items:center; gap:0.5rem;">
+                  <?= htmlspecialchars($s['full_name']) ?>
+                  <?php if (($s['gender'] ?? '') === 'Male'): ?>
+                    <span class="badge" style="background:rgba(59,130,246,0.1); color:#3b82f6; border:1px solid rgba(59,130,246,0.2); font-size:9px; padding:1px 4px;">M</span>
+                  <?php elseif (($s['gender'] ?? '') === 'Female'): ?>
+                    <span class="badge" style="background:rgba(236,72,153,0.1); color:#ec4899; border:1px solid rgba(236,72,153,0.2); font-size:9px; padding:1px 4px;">F</span>
                   <?php endif; ?>
                </div>
             </div>
           </td>
-          <td>
-            <?php if ($s['linked_parents']): ?>
-              <div style="font-size:11px; color:var(--clr-text); font-weight:600; line-height:1.5;"><?= htmlspecialchars($s['linked_parents']) ?></div>
-            <?php else: ?>
-              <span style="font-size:11px; color:var(--clr-text-muted); font-style:italic;">None linked</span>
-            <?php endif; ?>
-          </td>
-          <td>
-             <div style="font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($s['class_name'] ?: 'Unassigned') ?></div>
-             <div style="font-size:11px; color:var(--clr-text-muted);"><?= htmlspecialchars($s['section'] ?: 'No section') ?></div>
-          </td>
-          <td class="text-center">
-             <span class="badge badge-<?= $s['status'] == 'active' ? 'success' : 'warning' ?>" style="font-size:10px;"><?= strtoupper($s['status']) ?></span>
-          </td>
+          <td><?= $s['linked_parents'] ? '<div style="font-size:11px; font-weight:600;">'.htmlspecialchars($s['linked_parents']).'</div>' : '<span class="text-muted italic block" style="font-size:11px;">None</span>' ?></td>
+          <td><div style="font-weight:600;"><?= htmlspecialchars($s['class_name'] ?: 'Unassigned') ?></div><div style="font-size:11px; color:var(--clr-text-muted);"><?= htmlspecialchars($s['section'] ?: '') ?></div></td>
+          <td class="text-center"><span class="badge badge-<?= $s['status'] == 'active' ? 'success' : 'warning' ?>" style="font-size:10px;"><?= strtoupper($s['status']) ?></span></td>
           <td class="text-right pr-8">
             <div class="flex justify-end gap-2">
-              <button class="btn btn-ghost btn-xs" style="color:var(--clr-primary);" onclick="openParentModal(<?= $s['id'] ?>, '<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>')" data-tooltip="Manage Parents">
+              <button class="btn btn-ghost btn-xs act-parent" data-id="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>" style="color:var(--clr-primary);" title="Manage Parents">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
               </button>
-              <button class="btn btn-ghost btn-xs" onclick='editStudent(<?= htmlspecialchars(json_encode($s), ENT_QUOTES) ?>)' data-tooltip="Edit profile">
+              <button class="btn btn-ghost btn-xs act-edit" data-student='<?= htmlspecialchars(json_encode($s), ENT_QUOTES) ?>' title="Edit Profile">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
-              <button class="btn btn-ghost btn-xs text-danger" onclick="confirmDeleteStudent(<?= $s['id'] ?>, '<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>')" data-tooltip="Remove record">
+              <button class="btn btn-ghost btn-xs act-delete text-danger" data-id="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>" title="Remove Record">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -140,215 +146,154 @@ $filterClass = $_GET['class_id'] ?? null;
 </div>
 <?php endif; ?>
 
-<?php include __DIR__ . '/../layout/footer.php'; ?>
-
 <!-- ══ Student Registration Modal ══════════════════════════════ -->
-<div id="modal-student" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-student-title" style="display:none;">
-  <div class="modal w-full max-w-xl mx-4">
-    <div class="modal-header">
-      <h3 class="modal-title" id="modal-student-title">Student Registration</h3>
-      <button class="modal-close" onclick="closeModal('modal-student')" aria-label="Close dialog">&times;</button>
-    </div>
-    <form method="POST" action="<?= $base ?>/admin/students" id="form-student" onsubmit="Loader.show()">
-      <?= CSRF::field() ?>
-      <input type="hidden" name="_action" value="student_store">
-      <input type="hidden" name="student_id" id="student-id-field" value="">
-      <input type="hidden" name="academic_year_id" value="<?= $filterYear ?>">
-      <div class="modal-body">
-         
-         <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
-            <div class="form-group">
-               <label class="form-label">Student ID / Index No. <span class="required">*</span></label>
-               <input type="text" name="student_id_number" id="stu-id-num" class="form-control" required maxlength="50" placeholder="e.g. 20240001">
+<div id="modal-student" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
+    <div class="modal w-full max-w-xl mx-4">
+        <div class="modal-header">
+            <h3 class="modal-title" id="modal-student-title">Student Registration</h3>
+            <button class="modal-close" onclick="closeModal('modal-student')">&times;</button>
+        </div>
+        <form method="POST" action="<?= $base ?>/admin/students" id="form-student" onsubmit="Loader.show()">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="student_store">
+            <input type="hidden" name="student_id" id="student-id-field" value="">
+            <input type="hidden" name="academic_year_id" value="<?= $filterYear ?>">
+            <div class="modal-body">
+                <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
+                    <div class="form-group"><label class="form-label">Student ID <span class="required">*</span></label><input type="text" name="student_id_number" id="stu-id-num" class="form-control" required placeholder="e.g. 20240001"></div>
+                    <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="full_name" id="stu-name" class="form-control" required placeholder="e.g. Ama Serwaa"></div>
+                </div>
+                <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
+                    <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" id="stu-surname" class="form-control" placeholder="Optional"></div>
+                    <div class="form-group">
+                        <label class="form-label">Class <span class="required">*</span></label>
+                        <select name="current_class_id" id="stu-class" class="form-control" required><option value="">— Select —</option><?php foreach ($classes as $c): ?><option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'].' '.$c['section']) ?></option><?php endforeach; ?></select>
+                    </div>
+                </div>
+                <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
+                    <div class="form-group"><label class="form-label">Gender</label><select name="gender" id="stu-gender" class="form-control"><option value="">— Select —</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
+                    <div class="form-group"><label class="form-label">DOB</label><input type="date" name="date_of_birth" id="stu-dob" class="form-control"></div>
+                </div>
             </div>
-            <div class="form-group">
-               <label class="form-label">Full Name <span class="required">*</span></label>
-               <input type="text" name="full_name" id="stu-name" class="form-control" required maxlength="200" placeholder="e.g. Ama Serwaa">
-            </div>
-         </div>
-
-         <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
-            <div class="form-group">
-               <label class="form-label">Surname</label>
-               <input type="text" name="surname" id="stu-surname" class="form-control" maxlength="100" placeholder="e.g. Appiah">
-            </div>
-            <div class="form-group">
-               <label class="form-label">Class Placement <span class="required">*</span></label>
-               <select name="current_class_id" id="stu-class" class="form-control" required>
-                  <option value="">— Select Class —</option>
-                  <?php foreach ($classes as $c): ?>
-                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name']) ?><?php if($c['section']) echo " ({$c['section']})"; ?> — <?= htmlspecialchars($c['level_name']) ?></option>
-                  <?php endforeach; ?>
-               </select>
-            </div>
-         </div>
-
-         <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
-            <div class="form-group">
-               <label class="form-label">Gender</label>
-               <select name="gender" id="stu-gender" class="form-control">
-                  <option value="">— Select —</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-               </select>
-            </div>
-            <div class="form-group">
-               <label class="form-label">Date of Birth</label>
-               <input type="date" name="date_of_birth" id="stu-dob" class="form-control">
-            </div>
-         </div>
-
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-student')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="student-submit-btn">Complete Registration</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Delete Form -->
-<form method="POST" action="<?= $base ?>/admin/students" id="form-student-delete" style="display:none">
-  <?= CSRF::field() ?>
-  <input type="hidden" name="_action" value="student_delete">
-  <input type="hidden" name="student_id" id="del-student-id">
-</form>
-
-<!-- Unlink Parent Form -->
-<form method="POST" action="<?= $base ?>/admin/students" id="form-parent-unlink" style="display:none">
-  <?= CSRF::field() ?>
-  <input type="hidden" name="_action" value="parent_unlink">
-  <input type="hidden" name="link_id" id="unlink-link-id">
-</form>
-
-<!-- ══ Parent/Guardian Management Modal ═══════════════════════════ -->
-<div id="modal-parent" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-parent-title" style="display:none;">
-  <div class="modal w-full max-w-lg mx-4">
-    <div class="modal-header">
-      <div>
-        <h3 class="modal-title" id="modal-parent-title">Parent / Guardian</h3>
-        <div id="modal-parent-subtitle" style="font-size:12px; color:rgba(255,255,255,0.7); margin-top:2px;"></div>
-      </div>
-      <button class="modal-close" onclick="closeModal('modal-parent')" aria-label="Close">&times;</button>
-    </div>
-    <div class="modal-body">
-
-      <!-- Current parents list -->
-      <div id="modal-parent-list" class="mb-5">
-        <!-- Populated by JS from PHP -->
-      </div>
-
-      <!-- Link new parent form -->
-      <div style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1.25rem; border:1px solid var(--clr-border);">
-        <h4 style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--clr-text); margin-bottom:1rem;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14" style="display:inline; vertical-align:-2px; margin-right:4px;"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-          Link a Parent/Guardian
-        </h4>
-        <form method="POST" action="<?= $base ?>/admin/students" id="form-parent-link" onsubmit="Loader.show()">
-          <?= CSRF::field() ?>
-          <input type="hidden" name="_action" value="parent_link">
-          <input type="hidden" name="student_id" id="parent-link-student-id">
-
-          <div class="form-group">
-            <label class="form-label">Guardian's Full Name <span class="required">*</span></label>
-            <input type="text" name="parent_name" class="form-control" placeholder="e.g. Kwame Mensah" required maxlength="200">
-            <p class="form-text">Only required when registering a new account. Ignored if phone already exists.</p>
-          </div>
-
-          <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem;">
-            <div class="form-group">
-              <label class="form-label">Phone Number <span class="required">*</span></label>
-              <input type="tel" name="parent_phone" class="form-control" placeholder="0241234567" required inputmode="numeric">
-              <p class="form-text">They will use this to log in via OTP.</p>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Relationship</label>
-              <select name="relationship" class="form-control">
-                <option value="Parent/Guardian">Parent / Guardian</option>
-                <option value="Father">Father</option>
-                <option value="Mother">Mother</option>
-                <option value="Aunt/Uncle">Aunt / Uncle</option>
-                <option value="Sibling">Sibling</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary w-full">Link Guardian</button>
+            <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modal-student')">Cancel</button><button type="submit" class="btn btn-primary" id="student-submit-btn">Complete</button></div>
         </form>
-      </div>
     </div>
-    <div class="modal-footer" style="justify-content:flex-end;">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('modal-parent')">Close</button>
-    </div>
-  </div>
 </div>
 
+<form method="POST" action="<?= $base ?>/admin/students" id="form-student-delete" style="display:none"><?= CSRF::field() ?><input type="hidden" name="_action" value="student_delete"><input type="hidden" name="student_id" id="del-student-id"></form>
 
+<!-- Parent Modal -->
+<div id="modal-parent" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
+    <div class="modal w-full max-w-lg mx-4">
+        <div class="modal-header"><div><h3 class="modal-title" id="modal-parent-title">Guardian Management</h3><div id="modal-parent-subtitle" style="font-size:12px; opacity:0.7;"></div></div><button class="modal-close" onclick="closeModal('modal-parent')">&times;</button></div>
+        <div class="modal-body">
+            <div id="modal-parent-list" class="mb-5"></div>
+            <div style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1.25rem; border:1px solid var(--clr-border);">
+                <h4 style="font-size:12px; font-weight:800; margin-bottom:1rem;">LINK GUARDIAN</h4>
+                <form method="POST" action="<?= $base ?>/admin/students" id="form-parent-link" onsubmit="Loader.show()">
+                    <?= CSRF::field() ?><input type="hidden" name="_action" value="parent_link"><input type="hidden" name="student_id" id="parent-link-student-id">
+                    <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="parent_name" class="form-control" required></div>
+                    <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem;">
+                        <div class="form-group"><label class="form-label">Phone <span class="required">*</span></label><input type="tel" name="parent_phone" class="form-control" required inputmode="numeric"></div>
+                        <div class="form-group"><label class="form-label">Relationship</label><select name="relationship" class="form-control"><option value="Parent">Parent</option><option value="Father">Father</option><option value="Mother">Mother</option><option value="Guardian">Guardian</option></select></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-full">Link Account</button>
+                </form>
+            </div>
+        </div>
+        <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modal-parent')">Close</button></div>
+    </div>
+</div>
+
+<?php ob_start(); ?>
 <script>
-// ── Parent Modal ──────────────────────────────────────
 const allStudents = <?= json_encode($students) ?>;
+$(document).ready(function() {
+    // 1. Initialize DataTable with Responsive support
+    const table = $('#student-table').DataTable({
+        autoFill: true,
+        responsive: true,
+        pageLength: 25,
+        dom: '<"dt-layout-row"lf>rt<"dt-layout-row"ip>',
+        language: {
+            search: "", searchPlaceholder: "Search records...",
+            lengthMenu: "Show _MENU_",
+            paginate: { previous: 'Prev', next: 'Next' }
+        },
+        columnDefs: [{ orderable: false, targets: -1 }]
+    });
 
-function openParentModal(studentId, studentName) {
-  document.getElementById('parent-link-student-id').value = studentId;
-  document.getElementById('modal-parent-title').textContent = 'Parent / Guardian';
-  document.getElementById('modal-parent-subtitle').textContent = 'Student: ' + studentName;
+    // 2. Global Function Definitions (Outside ready scopes but within script)
+    window.openStudentModal = function() {
+        $('#form-student')[0].reset();
+        $('#student-id-field').val('');
+        $('#modal-student-title').text('New Student Registration');
+        $('#student-submit-btn').text('Complete Registration');
+        openModal('modal-student');
+    };
 
-  const s = allStudents.find(x => Number(x.id) === Number(studentId));
-  const list = document.getElementById('modal-parent-list');
+    window.editStudent = function(s) {
+        $('#form-student')[0].reset();
+        $('#student-id-field').val(s.id);
+        $('#stu-id-num').val(s.student_id_number);
+        $('#stu-name').val(s.full_name);
+        $('#stu-surname').val(s.surname || '');
+        $('#stu-class').val(s.current_class_id);
+        $('#stu-gender').val(s.gender || '');
+        $('#stu-dob').val(s.date_of_birth || '');
+        $('#modal-student-title').text('Edit Profile: ' + s.full_name);
+        $('#student-submit-btn').text('Update Record');
+        openModal('modal-student');
+    };
 
-  if (s && s.linked_parents) {
-    let html = '<div style="margin-bottom:0.5rem;"><div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; color:var(--clr-text-muted); margin-bottom:8px;">Current Guardians</div>';
-    html += '<div style="background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:var(--radius-md); padding:0.75rem; font-size:var(--text-sm); color:var(--clr-text); line-height:1.8;">';
-    html += s.linked_parents.replace(/, /g, '<br>');
-    html += '</div></div>';
-    list.innerHTML = html;
-  } else {
-    list.innerHTML = '<div style="font-size:var(--text-sm); color:var(--clr-text-muted); font-style:italic; margin-bottom:1rem;">No guardians linked yet.</div>';
-  }
+    window.openParentModal = function(id, name) {
+        $('#parent-link-student-id').val(id);
+        $('#modal-parent-subtitle').text('Student: ' + name);
+        const s = allStudents.find(x => Number(x.id) === Number(id));
+        const listHtml = (s && s.linked_parents) 
+            ? '<div class="p-3 surface-2 rounded border">' + s.linked_parents.replace(/, /g, '<br>') + '</div>'
+            : '<div class="text-sm text-muted italic p-2">No guardians linked.</div>';
+        $('#modal-parent-list').html(listHtml);
+        openModal('modal-parent');
+    };
 
-  document.getElementById('form-parent-link').reset();
-  document.getElementById('parent-link-student-id').value = studentId;
-  openModal('modal-parent');
-}
+    window.confirmDeleteStudent = function(id, name) {
+        confirmAction(`Are you sure you want to permanently remove "${name}"?`, () => {
+            $('#del-student-id').val(id);
+            $('#form-student-delete').submit();
+        });
+    };
 
-// ── Student Modal ──────────────────────────────────────
-function openStudentModal() {
-  document.getElementById('form-student').reset();
-  document.getElementById('student-id-field').value = '';
-  document.getElementById('modal-student-title').textContent = 'New Student Registration';
-  document.getElementById('student-submit-btn').textContent = 'Complete Registration';
-  openModal('modal-student');
-}
+    // 3. Event Delegation for Action Buttons (Robust for Redraws/Responsive)
+    $('#student-table').on('click', '.act-edit', function() {
+        const data = $(this).data('student');
+        window.editStudent(data);
+    });
+    $('#student-table').on('click', '.act-parent', function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        window.openParentModal(id, name);
+    });
+    $('#student-table').on('click', '.act-delete', function() {
+        const id = $(this).data('id');
+        const name = $(this).data('name');
+        window.confirmDeleteStudent(id, name);
+    });
 
-function editStudent(s) {
-  document.getElementById('form-student').reset();
-  document.getElementById('student-id-field').value = s.id;
-  document.getElementById('stu-id-num').value = s.student_id_number;
-  document.getElementById('stu-name').value = s.full_name;
-  document.getElementById('stu-surname').value = s.surname || '';
-  document.getElementById('stu-class').value = s.current_class_id;
-  document.getElementById('stu-gender').value = s.gender || '';
-  document.getElementById('stu-dob').value = s.date_of_birth || '';
-  document.getElementById('modal-student-title').textContent = 'Edit Profile: ' + s.full_name;
-  document.getElementById('student-submit-btn').textContent = 'Update Record';
-  openModal('modal-student');
-}
+    // 4. Register Buttons (Static)
+    $('#btn-register-top, #btn-register-empty').on('click', window.openStudentModal);
 
-function confirmDeleteStudent(id, name) {
-  confirmAction(`Permanently remove record for "${name}"?\n\nThis will delete all their academic history if no scores are locked. This action cannot be undone.`, () => {
-    document.getElementById('del-student-id').value = id;
-    document.getElementById('form-student-delete').submit();
-  });
-}
-
-// Client-side search
-document.getElementById('student-search').addEventListener('input', function(e) {
-  const q = e.target.value.toLowerCase();
-  const rows = document.querySelectorAll('#student-table tbody tr');
-  rows.forEach(row => {
-    const text = row.innerText.toLowerCase();
-    row.style.display = text.includes(q) ? '' : 'none';
-  });
+    // 5. Filters (Submit on Change)
+    $('.filter-select').on('change', function() {
+        if (typeof Loader !== 'undefined') Loader.show();
+        $(this).closest('form').submit();
+    });
 });
+
+// Auto-dismiss bulk result banner
+const banner = document.getElementById('bulk-result-banner');
+if (banner) setTimeout(() => banner.style.display = 'none', 8000);
 </script>
+<?php $extraJs = ob_get_clean(); ?>
+
+<?php include __DIR__ . '/../layout/footer.php'; ?>

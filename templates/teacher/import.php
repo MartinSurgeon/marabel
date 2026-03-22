@@ -10,10 +10,10 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 
 // ── Load teacher's class-subject assignments ──────────────────────
 $userId = Session::userId();
-$role   = Session::role();
+$uRole   = Session::role();
 
-$whereClause = ($role === 'admin') ? '' : 'AND cs.teacher_id = ?';
-$params      = ($role === 'admin') ? [] : [$userId];
+$whereClause = ($uRole === 'admin') ? '' : 'AND cs.teacher_id = ?';
+$params      = ($uRole === 'admin') ? [] : [$userId];
 
 $assignments = DB::query(
     "SELECT cs.id as cs_id, c.class_name, c.section, s.subject_name, t.name as term_name, t.id as term_id

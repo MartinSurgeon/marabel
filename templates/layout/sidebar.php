@@ -7,9 +7,12 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $role = Session::role();
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-function navActive(string $path): string {
+function navActive(string $path, bool $exact = false): string {
     global $currentPath;
-    return str_starts_with($currentPath, $path) ? ' active' : '';
+    if ($exact) {
+        return ($currentPath === $path) ? ' active' : '';
+    }
+    return (str_starts_with($currentPath, $path)) ? ' active' : '';
 }
 ?>
 <nav class="sidebar" id="sidebar" aria-label="Main navigation">
@@ -34,10 +37,10 @@ function navActive(string $path): string {
 
   <div class="sidebar-nav">
 
-    <?php if ($role === 'admin'): ?>
+    <?php if (Session::role() === 'admin'): ?>
     <!-- ── Admin Navigation ─────────────────────────────── -->
     <div class="nav-section-label">Overview</div>
-    <a href="<?= $base ?>/admin" class="nav-item<?= navActive($base . '/admin') ?>" aria-label="Dashboard">
+    <a href="<?= $base ?>/admin" class="nav-item<?= navActive($base . '/admin', true) ?>" aria-label="Dashboard">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       Dashboard
     </a>
@@ -65,6 +68,10 @@ function navActive(string $path): string {
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
       Students
     </a>
+    <a href="<?= $base ?>/admin/import" class="nav-item<?= navActive($base . '/admin/import', true) ?>">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+      Import Students
+    </a>
 
     <div class="nav-section-label">Reports</div>
     <a href="<?= $base ?>/admin/publish" class="nav-item<?= navActive($base . '/admin/publish') ?>">
@@ -82,10 +89,10 @@ function navActive(string $path): string {
       SMS Centre
     </a>
 
-    <?php elseif ($role === 'teacher'): ?>
+    <?php elseif (Session::role() === 'teacher'): ?>
     <!-- ── Teacher Navigation ───────────────────────────── -->
     <div class="nav-section-label">Overview</div>
-    <a href="<?= $base ?>/teacher" class="nav-item<?= navActive($base . '/teacher') ?>">
+    <a href="<?= $base ?>/teacher" class="nav-item<?= navActive($base . '/teacher', true) ?>">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       My Dashboard
     </a>
@@ -100,7 +107,7 @@ function navActive(string $path): string {
       Import from Excel
     </a>
 
-    <?php elseif ($role === 'parent'): ?>
+    <?php elseif (Session::role() === 'parent'): ?>
     <!-- ── Parent Navigation ────────────────────────────── -->
     <div class="nav-section-label">My Children</div>
     <a href="<?= $base ?>/parent" class="nav-item<?= navActive($base . '/parent') ?>">
@@ -108,7 +115,7 @@ function navActive(string $path): string {
       Dashboard
     </a>
 
-    <?php elseif ($role === 'student'): ?>
+    <?php elseif (Session::role() === 'student'): ?>
     <!-- ── Student Navigation ───────────────────────────── -->
     <div class="nav-section-label">My Results</div>
     <a href="<?= $base ?>/student" class="nav-item<?= navActive($base . '/student') ?>">
