@@ -153,7 +153,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
             <h3 class="modal-title" id="modal-student-title">Student Registration</h3>
             <button class="modal-close" onclick="closeModal('modal-student')">&times;</button>
         </div>
-        <form method="POST" action="<?= $base ?>/admin/students" id="form-student" onsubmit="Loader.show()">
+        <form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-student" onsubmit="Loader.show()">
             <?= CSRF::field() ?>
             <input type="hidden" name="_action" value="student_store">
             <input type="hidden" name="student_id" id="student-id-field" value="">
@@ -180,7 +180,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
     </div>
 </div>
 
-<form method="POST" action="<?= $base ?>/admin/students" id="form-student-delete" style="display:none"><?= CSRF::field() ?><input type="hidden" name="_action" value="student_delete"><input type="hidden" name="student_id" id="del-student-id"></form>
+<form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-student-delete" style="display:none"><?= CSRF::field() ?><input type="hidden" name="_action" value="student_delete"><input type="hidden" name="student_id" id="del-student-id"></form>
 
 <!-- Parent Modal -->
 <div id="modal-parent" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
@@ -190,7 +190,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
             <div id="modal-parent-list" class="mb-5"></div>
             <div style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1.25rem; border:1px solid var(--clr-border);">
                 <h4 style="font-size:12px; font-weight:800; margin-bottom:1rem;">LINK GUARDIAN</h4>
-                <form method="POST" action="<?= $base ?>/admin/students" id="form-parent-link" onsubmit="Loader.show()">
+                <form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-parent-link" onsubmit="Loader.show()">
                     <?= CSRF::field() ?><input type="hidden" name="_action" value="parent_link"><input type="hidden" name="student_id" id="parent-link-student-id">
                     <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="parent_name" class="form-control" required></div>
                     <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem;">
@@ -286,7 +286,8 @@ $(document).ready(function() {
                 confirmText: 'Set to Inactive',
                 type: 'warning'
             }, () => {
-                const form = $('<form method="POST" action="">')
+                const actionUrl = '<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>';
+                const form = $('<form method="POST" action="' + actionUrl + '">')
                     .append($('<input type="hidden" name="_action" value="student_status">'))
                     .append($('<input type="hidden" name="student_id" value="' + id + '">'))
                     .append($('<input type="hidden" name="status" value="inactive">'))

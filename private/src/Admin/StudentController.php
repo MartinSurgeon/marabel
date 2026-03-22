@@ -11,7 +11,7 @@ class StudentController {
 
         if ($method === 'POST') {
             if (!CSRF::verify()) {
-                Session::flash('error', 'Invalid request token.');
+                Session::flash('error', 'Your session expired due to inactivity. For your security, please try your action again.');
                 $this->redirect();
             }
             $action = $_POST['_action'] ?? '';
@@ -37,8 +37,8 @@ class StudentController {
         $activeYearId = $activeYear['id'] ?? null;
         $yearsList    = DB::query("SELECT id, year_name FROM academic_years ORDER BY year_name DESC");
 
-        $filterYear  = $_GET['year_id']  ?? $activeYearId;
-        $filterClass = $_GET['class_id'] ?? null;
+        $filterYear  = !empty($_GET['year_id']) ? $_GET['year_id'] : $activeYearId;
+        $filterClass = !empty($_GET['class_id']) ? $_GET['class_id'] : null;
 
         $classesList = DB::query(
             "SELECT c.id, c.class_name, c.section, sl.name as level_name
@@ -230,9 +230,16 @@ class StudentController {
 
     private function redirect(): never {
         $base = defined('APP_BASE') ? APP_BASE : '';
-        $classId = $_GET['class_id'] ?? '';
-        $yearId  = $_GET['year_id'] ?? '';
-        header("Location: $base/admin/students?year_id=$yearId&class_id=$classId");
+        $yearId  = $_GET['year_id'] ?? $_POST['academic_year_id'] ?? '';
+        $classId = $_GET['class_id'] ?? $_POST['current_class_id'] ?? '';
+        
+        $query = [];
+        if ($yearId)  $query[] = "year_id=" . urlencode((string)$yearId);
+        if ($classId) $query[] = "class_id=" . urlencode((string)$classId);
+        
+        $qs = !empty($query) ? '?' . implode('&', $query) : '';
+        
+        header("Location: $base/admin/students" . $qs);
         exit;
     }
 
