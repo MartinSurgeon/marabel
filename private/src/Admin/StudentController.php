@@ -20,6 +20,7 @@ class StudentController {
                 'student_delete'      => $this->studentDelete(),
                 'student_status'      => $this->studentStatus(),
                 'parent_link'         => $this->parentLink(),
+                'parent_get'          => $this->parentGet(),
                 'parent_unlink'       => $this->parentUnlink(),
                 'student_bulk_import' => $this->studentBulkImport(),
                 'student_bulk_tpl'    => $this->studentBulkTemplate(),
@@ -97,6 +98,7 @@ class StudentController {
             'date_of_birth'     => $_POST['date_of_birth'] ?: null,
             'current_class_id'  => (int)$_POST['current_class_id'],
             'academic_year_id'  => (int)$_POST['academic_year_id'],
+            'status'            => $_POST['status'] ?? 'active',
         ];
 
         $id = $_POST['student_id'] ?? null;
@@ -111,7 +113,7 @@ class StudentController {
                 $this->redirect();
             }
             DB::execute(
-                "UPDATE students SET student_id_number=?, full_name=?, surname=?, gender=?, date_of_birth=?, current_class_id=?, academic_year_id=? WHERE id=?",
+                "UPDATE students SET student_id_number=?, full_name=?, surname=?, gender=?, date_of_birth=?, current_class_id=?, academic_year_id=?, status=? WHERE id=?",
                 array_merge(array_values($data), [(int)$id])
             );
             Session::flash('success', "Student record updated.");
@@ -124,7 +126,7 @@ class StudentController {
             }
             
             DB::insert(
-                "INSERT INTO students (student_id_number, full_name, surname, gender, date_of_birth, current_class_id, academic_year_id) VALUES (?,?,?,?,?,?,?)",
+                "INSERT INTO students (student_id_number, full_name, surname, gender, date_of_birth, current_class_id, academic_year_id, status) VALUES (?,?,?,?,?,?,?,?)",
                 array_values($data)
             );
             Session::flash('success', "Student '{$data['full_name']}' registered successfully.");
@@ -172,11 +174,15 @@ class StudentController {
         $studentId    = (int)($_POST['student_id'] ?? 0);
         $phone        = trim($_POST['parent_phone'] ?? '');
         $relationship = trim($_POST['relationship'] ?? 'Parent/Guardian');
+        $parentName   = trim($_POST['parent_name'] ?? 'Parent/Guardian');
 
         if (!$studentId || !$phone) {
             Session::flash('error', 'Student and phone number are required.');
             $this->redirect();
         }
+
+        // Enforce "One Active Phone" rule per student
+        DB::execute("DELETE FROM student_parents WHERE student_id = ?", [$studentId]);
 
         // Look up parent user by phone; create if not exists
         $user = DB::queryOne(
@@ -185,36 +191,36 @@ class StudentController {
         );
 
         if (!$user) {
-            // Auto-create a parent account (name can be updated later)
-            $parentName  = trim($_POST['parent_name'] ?? 'Parent/Guardian');
-            $parentName  = $parentName ?: 'Parent/Guardian';
-            $newId = DB::insert(
+            $parentUserId = DB::insert(
                 "INSERT INTO users (full_name, phone, role, is_active) VALUES (?, ?, 'parent', 1)",
-                [$parentName, $phone]
+                [$parentName ?: 'Parent/Guardian', $phone]
             );
-            $parentUserId = $newId;
         } else {
             $parentUserId = $user['id'];
-        }
-
-        // Check not already linked
-        $existing = DB::queryOne(
-            "SELECT id FROM student_parents WHERE student_id = ? AND parent_user_id = ?",
-            [$studentId, $parentUserId]
-        );
-
-        if ($existing) {
-            Session::flash('error', 'This parent is already linked to this student.');
-            $this->redirect();
+            // Also update the parent's name in the users table for consistency
+            DB::execute("UPDATE users SET full_name = ? WHERE id = ?", [$parentName ?: 'Parent/Guardian', $parentUserId]);
         }
 
         DB::insert(
-            "INSERT INTO student_parents (student_id, parent_user_id, relationship) VALUES (?, ?, ?)",
+            "INSERT INTO student_parents (student_id, parent_user_id, relationship, is_primary) VALUES (?, ?, ?, 1)",
             [$studentId, $parentUserId, $relationship]
         );
 
-        Session::flash('success', 'Parent/Guardian linked successfully. They can now log in using their phone number.');
+        Session::flash('success', 'Parent/Guardian contact updated successfully.');
         $this->redirect();
+    }
+
+    private function parentGet(): void {
+        $studentId = (int)($_GET['student_id'] ?? 0);
+        $parents = DB::query("
+            SELECT sp.id as link_id, sp.relationship, u.full_name as parent_name, u.phone as parent_phone
+            FROM student_parents sp
+            JOIN users u ON u.id = sp.parent_user_id
+            WHERE sp.student_id = ?
+        ", [$studentId]);
+        header('Content-Type: application/json');
+        echo json_encode($parents);
+        exit;
     }
 
     private function parentUnlink(): void {

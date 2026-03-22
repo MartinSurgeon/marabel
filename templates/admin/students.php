@@ -174,6 +174,14 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
                     <div class="form-group"><label class="form-label">Gender</label><select name="gender" id="stu-gender" class="form-control"><option value="">— Select —</option><option value="Male">Male</option><option value="Female">Female</option></select></div>
                     <div class="form-group"><label class="form-label">DOB</label><input type="date" name="date_of_birth" id="stu-dob" class="form-control"></div>
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Account Status</label>
+                    <select name="status" id="stu-status" class="form-control">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="transferred">Transferred</option>
+                    </select>
+                </div>
             </div>
             <div class="modal-footer"><button type="button" class="btn btn-ghost" onclick="closeModal('modal-student')">Cancel</button><button type="submit" class="btn btn-primary" id="student-submit-btn">Complete</button></div>
         </form>
@@ -189,15 +197,18 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
         <div class="modal-body">
             <div id="modal-parent-list" class="mb-5"></div>
             <div style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1.25rem; border:1px solid var(--clr-border);">
-                <h4 style="font-size:12px; font-weight:800; margin-bottom:1rem;">LINK GUARDIAN</h4>
+                <h4 style="font-size:12px; font-weight:800; margin-bottom:1rem;" id="parent-form-title">LINK CONTACT</h4>
                 <form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-parent-link" onsubmit="Loader.show()">
-                    <?= CSRF::field() ?><input type="hidden" name="_action" value="parent_link"><input type="hidden" name="student_id" id="parent-link-student-id">
-                    <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="parent_name" class="form-control" required></div>
+                    <?= CSRF::field() ?>
+                    <input type="hidden" name="_action" value="parent_link">
+                    <input type="hidden" name="student_id" id="parent-link-student-id">
+                    <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="parent_name" id="parent-name-field" class="form-control" required placeholder="Parent or Guardian Name"></div>
                     <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem;">
-                        <div class="form-group"><label class="form-label">Phone <span class="required">*</span></label><input type="tel" name="parent_phone" class="form-control" required inputmode="numeric"></div>
-                        <div class="form-group"><label class="form-label">Relationship</label><select name="relationship" class="form-control"><option value="Parent">Parent</option><option value="Father">Father</option><option value="Mother">Mother</option><option value="Guardian">Guardian</option></select></div>
+                        <div class="form-group"><label class="form-label">Phone # <span class="required">*</span></label><input type="tel" name="parent_phone" id="parent-phone-field" class="form-control" required inputmode="numeric" placeholder="e.g. 0244000000"></div>
+                        <div class="form-group"><label class="form-label">Relationship</label><select name="relationship" id="parent-rel-field" class="form-control"><option value="Parent">Parent</option><option value="Father">Father</option><option value="Mother">Mother</option><option value="Guardian">Guardian</option><option value="Other">Other</option></select></div>
                     </div>
-                    <button type="submit" class="btn btn-primary w-full">Link Account</button>
+                    <button type="submit" class="btn btn-primary w-full" id="parent-submit-btn">Update Active Contact</button>
+                    <p style="font-size:10px; color:var(--clr-text-muted); margin-top:0.75rem; text-align:center;">Note: Setting a new contact will replace the existing one.</p>
                 </form>
             </div>
         </div>
@@ -227,6 +238,7 @@ $(document).ready(function() {
     window.openStudentModal = function() {
         $('#form-student')[0].reset();
         $('#student-id-field').val('');
+        $('#stu-status').val('active');
         $('#modal-student-title').text('New Student Registration');
         $('#student-submit-btn').text('Complete Registration');
         openModal('modal-student');
@@ -241,6 +253,7 @@ $(document).ready(function() {
         $('#stu-class').val(s.current_class_id);
         $('#stu-gender').val(s.gender || '');
         $('#stu-dob').val(s.date_of_birth || '');
+        $('#stu-status').val(s.status || 'active');
         $('#modal-student-title').text('Edit Profile: ' + s.full_name);
         $('#student-submit-btn').text('Update Record');
         openModal('modal-student');
@@ -249,16 +262,87 @@ $(document).ready(function() {
     window.openParentModal = function(id, name) {
         $('#parent-link-student-id').val(id);
         $('#modal-parent-subtitle').text('Student: ' + name);
-        const s = allStudents.find(x => Number(x.id) === Number(id));
-        const listHtml = (s && s.linked_parents) 
-            ? '<div class="p-3 surface-2 rounded border">' + s.linked_parents.replace(/, /g, '<br>') + '</div>'
-            : '<div class="text-sm text-muted italic p-2">No guardians linked.</div>';
-        $('#modal-parent-list').html(listHtml);
+        resetParentForm();
+        fetchParents(id);
         openModal('modal-parent');
     };
 
+    function resetParentForm() {
+        $('#form-parent-link')[0].reset();
+        $('#parent-form-title').text('LINK CONTACT');
+        $('#parent-submit-btn').text('Update Active Contact');
+    }
+
+    function fetchParents(studentId) {
+        $('#modal-parent-list').html('<div class="p-4 text-center text-muted">Loading contact info...</div>');
+        $.get('<?= $base ?>/admin/students', { _action: 'parent_get', student_id: studentId }, function(data) {
+            if (!data || data.length === 0) {
+                $('#modal-parent-list').html('<div class="text-sm text-muted italic p-3 surface-2 rounded border">No active contact linked.</div>');
+                return;
+            }
+
+            let html = `
+                <table class="table table-sm" style="font-size:12px;">
+                    <thead>
+                        <tr style="background:var(--clr-surface-2)">
+                            <th style="padding:0.5rem;">Contact Name</th>
+                            <th>Phone</th>
+                            <th>Rel.</th>
+                            <th class="text-right">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            data.forEach(p => {
+                html += `
+                    <tr>
+                        <td style="padding:0.5rem; font-weight:700;">${p.parent_name}</td>
+                        <td style="font-family:var(--font-mono);">${p.parent_phone}</td>
+                        <td><span class="badge" style="background:var(--clr-surface-2); font-size:9px;">${p.relationship}</span></td>
+                        <td class="text-right">
+                           <div class="flex justify-end gap-1">
+                               <button onclick="editParentLink('${p.parent_name}', '${p.parent_phone}', '${p.relationship}')" class="btn btn-ghost btn-xs" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg></button>
+                               <button onclick="confirmUnlinkParent(${p.link_id})" class="btn btn-ghost btn-xs text-danger" title="Unlink"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg></button>
+                           </div>
+                        </td>
+                    </tr>`;
+            });
+            html += '</tbody></table>';
+            $('#modal-parent-list').html(html);
+        });
+    }
+
+    window.editParentLink = function(name, phone, rel) {
+        $('#parent-name-field').val(name);
+        $('#parent-phone-field').val(phone);
+        $('#parent-rel-field').val(rel);
+        $('#parent-form-title').text('EDIT CONTACT');
+        $('#parent-submit-btn').text('Save Changes');
+    };
+
+    window.confirmUnlinkParent = function(linkId) {
+        confirmAction({
+            title: 'Unlink Contact?',
+            message: 'This will remove the parent/guardian phone link from this student. They will no longer be able to access the student portal for this record.',
+            confirmText: 'Unlink Now',
+            type: 'danger'
+        }, () => {
+            const form = $('<form method="POST" action="">')
+                .append($('<input type="hidden" name="_action" value="parent_unlink">'))
+                .append($('<input type="hidden" name="link_id" value="' + linkId + '">'))
+                .append($('<?= CSRF::field() ?>'));
+            $('body').append(form);
+            Loader.show();
+            form.submit();
+        });
+    };
+
     window.confirmDeleteStudent = function(id, name) {
-        confirmAction(`Are you sure you want to permanently remove "${name}"?`, () => {
+        confirmAction({
+            title: 'Permanently Delete Profile?',
+            message: `Are you sure you want to completely remove "${name}" and all their profile data? This action is permanent and cannot be undone.`,
+            confirmText: 'Yes, Delete Profile',
+            type: 'danger'
+        }, () => {
             $('#del-student-id').val(id);
             $('#form-student-delete').submit();
         });
@@ -281,9 +365,9 @@ $(document).ready(function() {
 
         if (hasRecords) {
             confirmAction({
-                title: 'Cannot Delete Record',
-                message: `Cannot delete record for "${name}" because they have recorded scores or attendance. Please set their status to "inactive" instead.`,
-                confirmText: 'Set to Inactive',
+                title: 'Cannot Delete Profile',
+                message: `We cannot delete "${name}" because they have existing academic records (scores or attendance). To keep these records safe while removing the student from the active list, please change their status to "Inactive" or "Transferred" instead.`,
+                confirmText: 'Change to Inactive',
                 type: 'warning'
             }, () => {
                 const actionUrl = '<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>';
