@@ -214,7 +214,7 @@ class ImportController {
 
         foreach ($dataRows as $row) {
             $lineNum++;
-            $studentIdNum = trim($row[0] ?? '');
+            $studentIdNum = str_pad(trim($row[0] ?? ''), 4, '0', STR_PAD_LEFT);
             $indivTest    = $this->parseScore($row[2] ?? '', 'Individual Test',   15.0, $lineNum, $errors);
             $groupWork    = $this->parseScore($row[3] ?? '', 'Group Work',         15.0, $lineNum, $errors);
             $classTest    = $this->parseScore($row[4] ?? '', 'Class Test',         15.0, $lineNum, $errors);

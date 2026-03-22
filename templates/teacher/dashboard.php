@@ -21,12 +21,29 @@ $userName = Session::get('user_name', 'Teacher');
     </p>
   </div>
   <div class="flex gap-3">
+    <?php global $myClasses; if (!empty($myClasses)): ?>
+      <div class="dropdown relative">
+        <button class="btn btn-primary" style="border-radius:var(--radius-full); gap:0.5rem;" onclick="this.nextElementSibling.classList.toggle('hidden')">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+          Manage Class
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+        </button>
+        <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-fade-in">
+          <?php foreach ($myClasses as $c): ?>
+            <a href="<?= $base ?>/teacher/class?id=<?= $c['id'] ?>" class="block px-4 py-3 text-sm hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0" style="color:var(--clr-text); font-weight:600;">
+              <?= htmlspecialchars($c['class_name'] . ($c['section'] ? " ({$c['section']})" : '')) ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    <?php endif; ?>
     <a href="<?= $base ?>/teacher/import" class="btn btn-outline" style="border-radius:var(--radius-full);">
        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
        Bulk Import
     </a>
   </div>
 </div>
+
 
 <?php if (empty($assignedBundles)): ?>
 <!-- ── Empty State ────────────────────────────────────────────── -->

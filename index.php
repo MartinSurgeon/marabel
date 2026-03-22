@@ -71,6 +71,8 @@ $routes = [
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],
     '/teacher/scores'           => ['teacher/score_entry', ['admin','teacher'], 'Teacher\\ScoreController'],
     '/teacher/import'           => ['teacher/import',      ['admin','teacher'], 'Teacher\\ImportController'],
+    '/teacher/class'            => ['teacher/manage_class', ['admin','teacher'], 'Teacher\\ClassManagementController'],
+
 
     // ── Parent ───────────────────────────────────────────────
     '/parent'                   => ['parent/portal',       ['parent'], 'Parent\\PortalController'],

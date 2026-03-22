@@ -7,7 +7,8 @@
  */
 
 global $rc_student, $rc_term, $rc_scores, $rc_aggregate,
-       $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher;
+       $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
+
 
 $student      = $rc_student      ?? [];
 $term         = $rc_term         ?? [];
@@ -85,6 +86,23 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       pointer-events: none;
       z-index: 0;
     }
+
+    /* Draft Watermark */
+    .draft-watermark {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 150px;
+      font-weight: 900;
+      color: rgba(200, 0, 0, 0.1);
+      text-transform: uppercase;
+      letter-spacing: 20px;
+      pointer-events: none;
+      z-index: 99;
+      white-space: nowrap;
+    }
+
 
     /* Toolbar */
     .toolbar {
@@ -198,8 +216,12 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
 </div>
 
 <div class="container">
+  <?php if (!$rc_isPublished): ?>
+    <div class="draft-watermark">DRAFT PREVIEW</div>
+  <?php endif; ?>
   
   <div class="school-header">
+
     <div class="school-logo">
       <img src="<?= $base ?>/assets/img/school-logo.png" alt="School Badge" onerror="this.style.visibility='hidden'">
     </div>

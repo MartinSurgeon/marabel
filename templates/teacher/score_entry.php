@@ -27,10 +27,32 @@ $base = defined('APP_BASE') ? APP_BASE : '';
     </p>
   </div>
   
-  <div id="save-indicator" class="flex items-center gap-2 px-4 py-2 rounded-full border border-transparent transition-all" style="font-size:12px; font-weight:700;">
-     <!-- Dynamically filled by JS -->
+  <div class="flex items-center gap-3">
+    <div id="save-indicator" class="flex items-center gap-2 px-4 py-2 rounded-full border border-transparent transition-all" style="font-size:12px; font-weight:700;">
+       <!-- Dynamically filled by JS -->
+    </div>
+    <div class="dropdown relative">
+      <button class="btn btn-outline" style="border-radius:var(--radius-full); gap:0.5rem;" onclick="this.nextElementSibling.classList.toggle('hidden')">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+        Preview Reports
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      <div class="hidden absolute right-0 mt-2 w-64 max-h-96 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50 animate-fade-in">
+        <div class="p-3 border-b border-slate-100 sticky top-0 bg-white z-10">
+          <input type="text" placeholder="Search student..." class="w-full p-2 text-xs border border-slate-200 rounded-lg" oninput="const q=this.value.toLowerCase(); this.parentElement.nextElementSibling.querySelectorAll('a').forEach(a=>a.style.display=a.textContent.toLowerCase().includes(q)?'':'none')">
+        </div>
+        <div class="py-1">
+          <?php foreach ($studentList as $s): ?>
+            <a href="<?= $base ?>/report?student=<?= $s['id'] ?>&term=<?= $classSub['term_id'] ?>" target="_blank" class="block px-4 py-2 text-xs hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0" style="color:var(--clr-text); font-weight:600;">
+              <?= htmlspecialchars($s['full_name']) ?>
+            </a>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
+
 
 <!-- ── Score Grid ─────────────────────────────────────────── -->
 <div class="card" style="padding:0; overflow:hidden; border:1px solid var(--clr-border);">

@@ -49,11 +49,22 @@ class DashboardController {
                  ORDER BY c.class_name ASC, s.sort_order ASC",
                 [$term['id'], $term['id'], $teacherId, $term['id']]
             );
+
+            // 3. Get Classes where this teacher is the "Class Teacher"
+            $classTeacherFor = DB::query(
+                "SELECT c.id, c.class_name, c.section 
+                 FROM classes c
+                 JOIN class_teachers ct ON ct.class_id = c.id
+                 WHERE ct.teacher_id = ?",
+                [$teacherId]
+            );
         }
 
         // Global variables for template
-        global $activeTerm, $assignedBundles;
+        global $activeTerm, $assignedBundles, $myClasses;
         $activeTerm = $term;
         $assignedBundles = $assigned;
+        $myClasses = $classTeacherFor;
+
     }
 }

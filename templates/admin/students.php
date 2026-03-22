@@ -133,7 +133,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
               <button class="btn btn-ghost btn-xs act-edit" data-student='<?= htmlspecialchars(json_encode($s), ENT_QUOTES) ?>' title="Edit Profile">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
               </button>
-              <button class="btn btn-ghost btn-xs act-delete text-danger" data-id="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>" title="Remove Record">
+              <button class="btn btn-ghost btn-xs act-delete text-danger" data-id="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>" data-has-records="<?= $s['has_records'] ? 1 : 0 ?>" title="Remove Record">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
               </button>
             </div>
@@ -277,7 +277,27 @@ $(document).ready(function() {
     $('#student-table').on('click', '.act-delete', function() {
         const id = $(this).data('id');
         const name = $(this).data('name');
-        window.confirmDeleteStudent(id, name);
+        const hasRecords = $(this).data('has-records');
+
+        if (hasRecords) {
+            confirmAction({
+                title: 'Cannot Delete Record',
+                message: `Cannot delete record for "${name}" because they have recorded scores or attendance. Please set their status to "inactive" instead.`,
+                confirmText: 'Set to Inactive',
+                type: 'warning'
+            }, () => {
+                const form = $('<form method="POST" action="">')
+                    .append($('<input type="hidden" name="_action" value="student_status">'))
+                    .append($('<input type="hidden" name="student_id" value="' + id + '">'))
+                    .append($('<input type="hidden" name="status" value="inactive">'))
+                    .append($('<?= CSRF::field() ?>'));
+                $('body').append(form);
+                Loader.show();
+                form.submit();
+            });
+        } else {
+            window.confirmDeleteStudent(id, name);
+        }
     });
 
     // 4. Register Buttons (Static)

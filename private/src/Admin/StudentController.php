@@ -62,7 +62,11 @@ class StudentController {
                     (SELECT GROUP_CONCAT(u.full_name, ' (', u.phone, ')' SEPARATOR ', ')
                      FROM student_parents sp2
                      JOIN users u ON u.id = sp2.parent_user_id
-                     WHERE sp2.student_id = s.id) as linked_parents
+                     WHERE sp2.student_id = s.id) as linked_parents,
+                    (EXISTS(SELECT 1 FROM sba_component_scores WHERE student_id = s.id) OR
+                     EXISTS(SELECT 1 FROM exam_scores WHERE student_id = s.id) OR
+                     EXISTS(SELECT 1 FROM attendance WHERE student_id = s.id) OR
+                     EXISTS(SELECT 1 FROM student_remarks WHERE student_id = s.id)) as has_records
              FROM students s
              LEFT JOIN classes c ON c.id = s.current_class_id
              $where
@@ -131,11 +135,24 @@ class StudentController {
     private function studentDelete(): void {
         $id = (int)($_POST['student_id'] ?? 0);
         
-        // Safety check: Don't delete if they have scores recorded (usually better to 'inactive' them)
-        $hasScores = DB::queryOne("SELECT id FROM sba_component_scores WHERE student_id = ? LIMIT 1", [$id]);
-        if ($hasScores) {
+        // Safety check: Don't delete if they have any recorded academic/attendance data
+        // Check multiple tables where student data might exist
+        $hasRecords = DB::queryOne("
+            SELECT id FROM sba_component_scores WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM exam_scores WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM attendance WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM student_remarks WHERE student_id = ?
+            LIMIT 1
+        ", [$id, $id, $id, $id]);
+
+        if ($hasRecords) {
             Session::flash('error', "Cannot delete student with recorded scores. Please set status to 'inactive' instead.");
         } else {
+            // Also clean up parent links if deleting (though ON DELETE CASCADE should handle it, we're explicit here)
+            DB::execute("DELETE FROM student_parents WHERE student_id = ?", [$id]);
             DB::execute("DELETE FROM students WHERE id = ?", [$id]);
             Session::flash('success', "Student record removed.");
         }

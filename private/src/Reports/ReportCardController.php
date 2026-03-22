@@ -57,13 +57,16 @@ class ReportCardController {
         }
 
         // ── 3. Access control: parents/students can only see published results ──
+        // ── 3. Publication Status (Draft check) ───────────────────────
+        $publishedRecord = DB::queryOne(
+            "SELECT is_published FROM report_card_locks
+             WHERE class_id = ? AND term_id = ?",
+            [$student['class_id'], $termId]
+        );
+        $isPublished = (bool)($publishedRecord['is_published'] ?? false);
+
         if (in_array($role, ['parent', 'student'])) {
-            $published = DB::queryOne(
-                "SELECT id FROM report_card_locks
-                 WHERE class_id = ? AND term_id = ? AND is_published = 1",
-                [$student['class_id'], $termId]
-            );
-            if (!$published) {
+            if (!$isPublished) {
                 $this->abort('Results for this term have not been published yet.');
             }
 
@@ -85,6 +88,7 @@ class ReportCardController {
         }
 
         // ── 4. Subject Scores ──────────────────────────────────────────
+
         $scores = DB::query(
             "SELECT sub.subject_name, sub.subject_code,
                     cs2.class_score, cs2.exam_score, cs2.overall_total,
@@ -138,7 +142,7 @@ class ReportCardController {
 
         // ── 9. Pass globals to template ───────────────────────────────
         global $rc_student, $rc_term, $rc_scores, $rc_aggregate,
-               $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher;
+               $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
 
         $rc_student      = $student;
         $rc_term         = $term;
@@ -148,7 +152,9 @@ class ReportCardController {
         $rc_remarks      = $remarks;
         $rc_attendance   = $attendance;
         $rc_classTeacher = $classTeacher;
+        $rc_isPublished  = $isPublished;
     }
+
 
     private function abort(string $message): never {
         http_response_code(403);
