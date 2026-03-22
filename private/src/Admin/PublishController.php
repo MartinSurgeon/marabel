@@ -266,19 +266,30 @@ class PublishController {
                         <th style="padding-left:1.5rem; width:60px;">Pos</th>
                         <th>Student Name</th>
                         <th class="text-right">Agg. Score</th>
-                        <th class="text-center" style="padding-right:1.5rem;">Subjects</th>
+                        <th class="text-center">Subjects</th>
+                        <th class="text-right" style="padding-right:1.5rem;">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach($aggregates as $a): ?>
+                    <?php 
+                    $base = defined('APP_BASE') ? APP_BASE : '';
+                    foreach($aggregates as $a): 
+                    ?>
                     <tr>
                         <td style="padding-left:1.5rem; font-weight:800; color:var(--clr-primary);"><?= $a['class_position'] ?></td>
                         <td style="font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($a['full_name']) ?></td>
                         <td class="text-right" style="font-variant-numeric: tabular-nums; font-weight:700;"><?= number_format($a['aggregate_score'], 1) ?></td>
-                        <td class="text-center" style="padding-right:1.5rem;"><span class="badge" style="font-size:10px; background:var(--clr-surface-2);"><?= $a['number_of_subjects'] ?></span></td>
+                        <td class="text-center"><span class="badge" style="font-size:10px; background:var(--clr-surface-2);"><?= $a['number_of_subjects'] ?></span></td>
+                        <td class="text-right" style="padding-right:1.5rem;">
+                            <a href="<?= $base ?>/report?student=<?= $a['student_id'] ?>&term=<?= $termId ?>" target="_blank" class="btn btn-ghost btn-xs" style="color:var(--clr-primary); font-weight:700;">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                View Report
+                            </a>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
+
             </table>
             </div>
             <?php
