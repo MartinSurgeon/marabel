@@ -25,7 +25,7 @@ require_once PRIVATE_PATH . '/config/database.php';
 require_once PRIVATE_PATH . '/config/app.php';
 
 // Autoload helpers
-foreach (['DB', 'Session', 'CSRF', 'Validator', 'SMS'] as $helper) {
+foreach (['DB', 'Session', 'CSRF', 'Validator', 'SMS', 'Notification'] as $helper) {
     require_once PRIVATE_PATH . "/src/Helpers/{$helper}.php";
 }
 
@@ -58,6 +58,8 @@ $routes = [
     '/admin'                    => ['admin/dashboard',     ['admin'], 'Admin\\DashboardController'],
     '/admin/years'              => ['admin/academic_years',['admin'], 'Admin\\AcademicController'],
     '/admin/terms'              => ['admin/terms',         ['admin'], 'Admin\\AcademicController'],
+    '/admin/transition'         => ['admin/transition',    ['admin'], 'Admin\\TransitionController'],
+    '/admin/transition/terms'   => [null,                  ['admin'], 'Admin\\TransitionController'],
     '/admin/classes'            => ['admin/classes',       ['admin'], 'Admin\\ClassController'],
     '/admin/subjects'           => ['admin/subjects',      ['admin'], 'Admin\\SubjectController'],
     '/admin/teachers'           => ['admin/teachers',      ['admin'], 'Admin\\TeacherController'],
@@ -67,6 +69,8 @@ $routes = [
     '/admin/sms'                => ['admin/sms',           ['admin'], 'Admin\\SMSController'],
     '/admin/promotions'         => ['admin/promotions',    ['admin','teacher'], 'Admin\\PromotionController'],
     '/admin/remarks'            => ['admin/remarks',       ['admin'], 'Admin\\RemarkController'],
+    '/admin/notifications'      => [null,                  ['admin', 'teacher'], 'Admin\\NotificationController'],
+    '/admin/notifications/read-all' => [null,              ['admin', 'teacher'], 'Admin\\NotificationController'],
 
     // ── Teacher ──────────────────────────────────────────────
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],

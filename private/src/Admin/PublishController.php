@@ -175,6 +175,8 @@ class PublishController {
             );
 
             DB::commit();
+            $className = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+            Notification::send(null, "Results Published", "Report cards for {$className} have been published.", 'success', '/admin/publish');
             Session::flash('success', "Results published! Parents and students can now view report cards.");
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -193,6 +195,8 @@ class PublishController {
             [$classId, $termId]
         );
 
+        $className = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+        Notification::send(null, "Results Unpublished", "Report cards for {$className} have been hidden.", 'info', '/admin/publish');
         Session::flash('info', "Reports hidden. They are no longer visible to parents or students.");
         $this->redirect();
     }
@@ -209,6 +213,7 @@ class PublishController {
             [$termId]
         );
 
+        Notification::send(null, "Bulk Results Hidden", "All results for the term have been unpublished.", 'warning', '/admin/publish');
         Session::flash('success', "All results for this term have been unpublished and hidden from parents/students.");
         $this->redirect();
     }

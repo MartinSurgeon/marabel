@@ -82,6 +82,8 @@ class AcademicController {
         DB::execute("UPDATE academic_years SET is_active = 1 WHERE id = ?", [$id]);
         $row = DB::queryOne("SELECT year_name FROM academic_years WHERE id = ?", [$id]);
         Session::flash('success', "'{$row['year_name']}' is now the active academic year.");
+        Session::updateActiveTerm();
+        Notification::send(null, "Academic Year Activated", "'{$row['year_name']}' has been set as the active academic year.", 'success', '/admin/years');
         $this->back();
     }
 
@@ -154,6 +156,8 @@ class AcademicController {
         DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$id]);
         $row = DB::queryOne("SELECT name FROM terms WHERE id = ?", [$id]);
         Session::flash('success', "'{$row['name']}' is now the active term.");
+        Session::updateActiveTerm();
+        Notification::send(null, "Term Activated", "'{$row['name']}' has been set as the active term.", 'success', '/admin/terms');
         $this->back();
     }
 

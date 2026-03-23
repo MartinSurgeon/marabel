@@ -90,12 +90,32 @@ function navActive(string $path, bool $exact = false): string {
     </a>
 
     <?php elseif (Session::role() === 'teacher'): ?>
+    <?php
+    $managedClass = DB::queryOne(
+        "SELECT c.id, c.class_name, c.section FROM classes c 
+         JOIN class_teachers ct ON ct.class_id = c.id 
+         WHERE ct.teacher_id = ? LIMIT 1",
+        [Session::userId()]
+    );
+    ?>
     <!-- ── Teacher Navigation ───────────────────────────── -->
     <div class="nav-section-label">Overview</div>
     <a href="<?= $base ?>/teacher" class="nav-item<?= navActive($base . '/teacher', true) ?>">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
       My Dashboard
     </a>
+
+    <?php if ($managedClass): ?>
+    <div class="nav-section-label">Class Management</div>
+    <a href="<?= $base ?>/teacher/class?id=<?= $managedClass['id'] ?>" class="nav-item<?= navActive($base . '/teacher/class') ?>">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+      Manage Class
+    </a>
+    <a href="<?= $base ?>/admin/promotions" class="nav-item<?= navActive($base . '/admin/promotions') ?>">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+      Promotions
+    </a>
+    <?php endif; ?>
 
     <div class="nav-section-label">Score Entry</div>
     <a href="<?= $base ?>/teacher/scores" class="nav-item<?= navActive($base . '/teacher/scores') ?>">

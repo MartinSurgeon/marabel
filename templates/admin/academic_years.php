@@ -41,10 +41,16 @@ function fmtDate(?string $d): string {
       Configure the school calendar. Set the <strong>Active Term</strong> to enable score entry and report card generation across the system.
     </p>
   </div>
-  <button class="btn btn-primary shadow-purple" onclick="openModal('modal-year')" aria-haspopup="dialog">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-    New Academic Year
-  </button>
+  <div class="flex gap-2">
+    <a href="<?= $base ?>/admin/transition" class="btn btn-outline" style="background:#fff;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" class="mr-2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      Session Transition
+    </a>
+    <button class="btn btn-primary shadow-purple" onclick="openModal('modal-year')" aria-haspopup="dialog">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      New Academic Year
+    </button>
+  </div>
 </div>
 
 <?php if (empty($years)): ?>

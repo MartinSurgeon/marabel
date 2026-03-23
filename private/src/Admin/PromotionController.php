@@ -50,8 +50,8 @@ class PromotionController {
 
         // Summarise each class: total students, auto-promotable, needs manual review
         if ($filterYearId) {
-            $role = Session::get('role');
-            $uid  = Session::get('user_id');
+            $role = Session::role();
+            $uid  = Session::userId();
             $where = "WHERE c.academic_year_id = ?";
             $params = [$filterYearId];
 
@@ -101,8 +101,8 @@ class PromotionController {
         }
 
         // Security check for teachers
-        if (Session::get('role') === 'teacher') {
-            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::get('user_id')]);
+        if (Session::role() === 'teacher') {
+            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::userId()]);
             if (!$assigned) {
                 Session::flash('error', 'Access denied: You are not assigned as a Class Teacher for this class.');
                 $this->redirect($yearId);
@@ -197,12 +197,12 @@ class PromotionController {
         }
 
         // Security check for teachers
-        if (Session::get('role') === 'teacher') {
+        if (Session::role() === 'teacher') {
             $check = DB::queryOne("
                 SELECT 1 FROM class_teachers ct 
                 JOIN students s ON s.current_class_id = ct.class_id 
                 WHERE s.id = ? AND ct.teacher_id = ?
-            ", [$studentId, Session::get('user_id')]);
+            ", [$studentId, Session::userId()]);
             if (!$check) {
                 Session::flash('error', 'Access denied: You are not assigned as a Class Teacher for this student.');
                 $this->redirect($yearId);
@@ -265,8 +265,8 @@ class PromotionController {
         }
 
         // Security check for teachers
-        if (Session::get('role') === 'teacher') {
-            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::get('user_id')]);
+        if (Session::role() === 'teacher') {
+            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::userId()]);
             if (!$assigned) {
                 Session::flash('error', 'Access denied.');
                 $this->redirect($yearId);
@@ -307,6 +307,16 @@ class PromotionController {
             header('Content-Type: application/json');
             echo json_encode(['students' => []]);
             exit;
+        }
+
+        // Security check for teachers
+        if (Session::role() === 'teacher') {
+            $isCT = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::userId()]);
+            if (!$isCT) {
+                header('Content-Type: application/json');
+                echo json_encode(['students' => [], 'error' => 'Access denied']);
+                exit;
+            }
         }
 
         $students = DB::query(

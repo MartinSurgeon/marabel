@@ -109,4 +109,18 @@ class Session {
     public static function regenerate(): void {
         session_regenerate_id(true);
     }
+
+    /** Refresh active term in session from DB */
+    public static function updateActiveTerm(): void {
+        $activeTermData = DB::queryOne(
+            "SELECT t.name, ay.year_name FROM terms t
+             JOIN academic_years ay ON t.academic_year_id = ay.id
+             WHERE t.is_active = 1 LIMIT 1"
+        );
+        if ($activeTermData) {
+            self::set('active_term', $activeTermData['year_name'] . ' · ' . $activeTermData['name']);
+        } else {
+            self::delete('active_term');
+        }
+    }
 }
