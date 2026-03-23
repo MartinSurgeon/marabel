@@ -223,8 +223,21 @@ class TeacherController {
     private function removeSubject(): void {
         $assignmentId = (int)($_POST['assignment_id'] ?? 0);
         if ($assignmentId) {
-            DB::execute("DELETE FROM class_subjects WHERE id = ?", [$assignmentId]);
-            Session::flash('success', "Subject assignment removed.");
+            // Check for scores across all relevant tables
+            $hasSba  = (int)DB::queryValue("SELECT COUNT(*) FROM sba_component_scores WHERE class_subject_id = ?", [$assignmentId]);
+            $hasEx   = (int)DB::queryValue("SELECT COUNT(*) FROM exam_scores WHERE class_subject_id = ?", [$assignmentId]);
+            $hasComp = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores WHERE class_subject_id = ?", [$assignmentId]);
+
+            if ($hasSba > 0 || $hasEx > 0 || $hasComp > 0) {
+                // If scores exist, we cannot delete the record due to FK constraints.
+                // Instead, we NULL out the teacher_id to unassign the teacher.
+                DB::execute("UPDATE class_subjects SET teacher_id = NULL WHERE id = ?", [$assignmentId]);
+                Session::flash('info', "Teacher unassigned. The subject record was preserved because it contains existing student scores.");
+            } else {
+                // If no scores exist, we can safely delete the assignment record entirely.
+                DB::execute("DELETE FROM class_subjects WHERE id = ?", [$assignmentId]);
+                Session::flash('success', "Subject assignment removed.");
+            }
         }
         $this->redirect();
     }
