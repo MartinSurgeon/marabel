@@ -114,8 +114,48 @@ class ClassController {
     private function classDelete(): void {
         $id  = (int)($_POST['class_id'] ?? 0);
         $row = DB::queryOne("SELECT class_name FROM classes WHERE id = ?", [$id]);
-        DB::execute("DELETE FROM classes WHERE id = ?", [$id]);
-        Session::flash('success', "Classroom '{$row['class_name']}' deleted.");
+        
+        if (!$row) {
+            Session::flash('error', 'Classroom not found.');
+            $this->back();
+        }
+
+        // 1. Check for active students
+        $studentCount = (int)DB::queryValue("SELECT COUNT(*) FROM students WHERE current_class_id = ? AND status = 'active'", [$id]);
+        if ($studentCount > 0) {
+            Session::flash('error', "Cannot delete '{$row['class_name']}' because it has {$studentCount} enrolled students. Please move or deactivate the students first.");
+            $this->back();
+        }
+
+        // 2. Check for academic records (published or computed data)
+        $hasScores = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores cs JOIN class_subjects csb ON csb.id = cs.class_subject_id WHERE csb.class_id = ?", [$id]);
+        $hasAggs   = (int)DB::queryValue("SELECT COUNT(*) FROM student_aggregates WHERE class_id = ?", [$id]);
+        
+        if ($hasScores > 0 || $hasAggs > 0) {
+            Session::flash('error', "Cannot delete '{$row['class_name']}' because it contains academic results or computed ranks. Deleting it would break historical data.");
+            $this->back();
+        }
+
+        // 3. Cleanup dependencies (stuff that doesn't have CASCADE or is safe to remove if the class is "empty")
+        try {
+            DB::beginTransaction();
+            
+            // Delete teacher assignments
+            DB::execute("DELETE FROM class_teachers WHERE class_id = ?", [$id]);
+            
+            // Delete subject assignments (only if they have no scores, which we checked above)
+            DB::execute("DELETE FROM class_subjects WHERE class_id = ?", [$id]);
+            
+            // Delete the class itself
+            DB::execute("DELETE FROM classes WHERE id = ?", [$id]);
+            
+            DB::commit();
+            Session::flash('success', "Classroom '{$row['class_name']}' deleted successfully.");
+        } catch (Exception $e) {
+            DB::rollBack();
+            Session::flash('error', "Failed to delete classroom. Database error: " . $e->getMessage());
+        }
+
         $this->back();
     }
 

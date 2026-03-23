@@ -8,22 +8,28 @@ class StudentController {
 
     public function handle(): void {
         $method = $_SERVER['REQUEST_METHOD'];
+        $action = $_REQUEST['_action'] ?? '';
+
+        // Handle Standalone Actions (GET or POST)
+        if ($action === 'parent_get') {
+            $this->parentGet();
+        }
+        if ($action === 'student_bulk_tpl') {
+            $this->studentBulkTemplate();
+        }
 
         if ($method === 'POST') {
             if (!CSRF::verify()) {
                 Session::flash('error', 'Your session expired due to inactivity. For your security, please try your action again.');
                 $this->redirect();
             }
-            $action = $_POST['_action'] ?? '';
             match ($action) {
                 'student_store'       => $this->studentStore(),
                 'student_delete'      => $this->studentDelete(),
                 'student_status'      => $this->studentStatus(),
                 'parent_link'         => $this->parentLink(),
-                'parent_get'          => $this->parentGet(),
                 'parent_unlink'       => $this->parentUnlink(),
                 'student_bulk_import' => $this->studentBulkImport(),
-                'student_bulk_tpl'    => $this->studentBulkTemplate(),
                 default               => $this->redirect(),
             };
         }

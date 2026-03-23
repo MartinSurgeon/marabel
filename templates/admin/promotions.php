@@ -50,7 +50,9 @@ $currentYear = $pageYear        ?? null;
   </div>
   <h2 style="font-weight:800; color:var(--clr-text); margin-bottom:.5rem;">No Academic Year Selected</h2>
   <p class="text-muted" style="max-width:320px; margin:0 auto 2rem;">Set up at least one academic year to manage student promotions.</p>
+  <?php if (Session::get('role') === 'admin'): ?>
   <a href="<?= $base ?>/admin/years" class="btn btn-primary">Manage Academic Years</a>
+  <?php endif; ?>
 </div>
 
 <?php elseif (empty($classes)): ?>
@@ -58,7 +60,9 @@ $currentYear = $pageYear        ?? null;
 <div class="card flex flex-col items-center justify-center" style="padding:6rem 2rem; text-align:center; border-style:dashed; background:var(--clr-surface-2);">
   <h2 style="font-weight:800; color:var(--clr-text);">No classes found for this year</h2>
   <p class="text-muted" style="margin:0 auto 2rem;">There are no class records associated with this academic session.</p>
+  <?php if (Session::get('role') === 'admin'): ?>
   <a href="<?= $base ?>/admin/classes" class="btn btn-outline">Manage Classes</a>
+  <?php endif; ?>
 </div>
 
 <?php else: ?>
@@ -124,14 +128,30 @@ $currentYear = $pageYear        ?? null;
     <!-- Actions -->
     <div style="padding:1rem 1.5rem; margin-top:auto; display:flex; gap:0.5rem; flex-wrap:wrap;">
       <?php if ($total > 0): ?>
-        <button class="btn btn-primary btn-sm" style="flex:1; justify-content:center; font-size:12px;"
-                onclick="openAutoModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
-          ⚡ Auto-Promote
-        </button>
-        <button class="btn btn-outline btn-sm" style="flex:1; justify-content:center; font-size:12px; color:var(--clr-text);"
-                onclick="openManualModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
-          ✏️ Manual Override
-        </button>
+        <?php if ($pending > 0): ?>
+          <button class="btn btn-primary btn-sm" style="flex:1; justify-content:center; font-size:12px;"
+                  onclick="openAutoModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
+            ⚡ Auto-Promote
+          </button>
+          <button class="btn btn-outline btn-sm" style="flex:1; justify-content:center; font-size:12px; color:var(--clr-text);"
+                  onclick="openManualModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
+            ✏️ Manual Override
+          </button>
+        <?php else: ?>
+          <form method="POST" action="<?= $base ?>/admin/promotions" onsubmit="return confirmUnpromote(event, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')" style="flex:1; display:flex;">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="unpromote_class">
+            <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
+            <input type="hidden" name="year_id" value="<?= $currentYear['id'] ?>">
+            <button type="submit" class="btn btn-ghost btn-sm text-danger" style="flex:1; justify-content:center; font-size:12px; font-weight:700; border:1px solid rgba(239,68,68,0.2);">
+              🔄 Unpromote All
+            </button>
+          </form>
+          <button class="btn btn-outline btn-sm" style="flex:1; justify-content:center; font-size:12px; color:var(--clr-text);"
+                  onclick="openManualModal(<?= $c['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
+            ✏️ Edit Status
+          </button>
+        <?php endif; ?>
       <?php else: ?>
         <p class="text-muted m-0" style="font-size:var(--text-xs); padding:0.25rem 0;">No students enrolled.</p>
       <?php endif; ?>
@@ -226,6 +246,17 @@ $currentYear = $pageYear        ?? null;
 const BASE   = '<?= $base ?>';
 const YEAR_ID = <?= (int)($currentYear['id'] ?? 0) ?>;
 const NEXT_YEARS = <?= json_encode($nextYears) ?>;
+
+function confirmUnpromote(e, className) {
+  e.preventDefault();
+  confirmAction({
+    title:       'Reset Promotion?',
+    message:     `This will revert all students in ${className} to their original state in this academic year. Any target class assignments in the next year will be reset.`,
+    confirmText: 'Yes, Reset',
+    type:        'danger'
+  }, () => { e.target.submit(); Loader.show(); });
+  return false;
+}
 
 function openAutoModal(classId, className) {
   document.getElementById('auto-class-id').value = classId;

@@ -65,7 +65,7 @@ $routes = [
     '/admin/import'             => ['admin/import_students',['admin'], 'Admin\\StudentImportController'],
     '/admin/publish'            => ['admin/publish',       ['admin'], 'Admin\\PublishController'],
     '/admin/sms'                => ['admin/sms',           ['admin'], 'Admin\\SMSController'],
-    '/admin/promotions'         => ['admin/promotions',    ['admin'], 'Admin\\PromotionController'],
+    '/admin/promotions'         => ['admin/promotions',    ['admin','teacher'], 'Admin\\PromotionController'],
 
     // ── Teacher ──────────────────────────────────────────────
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],

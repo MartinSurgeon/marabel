@@ -22,6 +22,7 @@ class PromotionController {
             match ($action) {
                 'auto_promote'      => $this->autoPromote(),
                 'manual_promote'    => $this->manualPromote(),
+                'unpromote_class'   => $this->unpromoteClass(),
                 default             => $this->redirect(),
             };
         }
@@ -49,22 +50,34 @@ class PromotionController {
 
         // Summarise each class: total students, auto-promotable, needs manual review
         if ($filterYearId) {
+            $role = Session::get('role');
+            $uid  = Session::get('user_id');
+            $where = "WHERE c.academic_year_id = ?";
+            $params = [$filterYearId];
+
+            if ($role === 'teacher') {
+                $where .= " AND c.id IN (SELECT class_id FROM class_teachers WHERE teacher_id = ?)";
+                $params[] = $uid;
+            }
+
             $classesSummary = DB::query(
                 "SELECT
                     c.id, c.class_name, c.section, sl.name as level_name, sl.code as level_code,
-                    COUNT(s.id) as total_students,
+                    (SELECT COUNT(*) FROM students s 
+                     WHERE (s.current_class_id = c.id AND s.academic_year_id = c.academic_year_id)
+                        OR s.id IN (SELECT student_id FROM student_promotions sp WHERE sp.academic_year_id = c.academic_year_id AND sp.student_id = s.id)
+                    ) as total_students,
                     SUM(CASE WHEN sp.promotion_status = 'promoted' THEN 1 ELSE 0 END) as promoted_count,
                     SUM(CASE WHEN sp.promotion_status = 'repeated' THEN 1 ELSE 0 END) as repeated_count,
-                    SUM(CASE WHEN sp.promotion_status = 'pending' OR sp.promotion_status IS NULL THEN 1 ELSE 0 END) as pending_count
+                    SUM(CASE WHEN (sp.promotion_status = 'pending' OR sp.promotion_status IS NULL) AND s.id IS NOT NULL THEN 1 ELSE 0 END) as pending_count
                  FROM classes c
                  JOIN school_levels sl ON sl.id = c.level_id
                  LEFT JOIN students s ON s.current_class_id = c.id AND s.status = 'active' AND s.academic_year_id = c.academic_year_id
-                 LEFT JOIN terms t ON t.academic_year_id = c.academic_year_id AND t.is_active = 1
                  LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = c.academic_year_id
-                 WHERE c.academic_year_id = ?
+                 $where
                  GROUP BY c.id, c.class_name, c.section, sl.name, sl.code
                  ORDER BY sl.sort_order, c.class_name",
-                [$filterYearId]
+                $params
             );
         } else {
             $classesSummary = [];
@@ -87,11 +100,21 @@ class PromotionController {
             $this->redirect($yearId);
         }
 
-        // Find the active term for this year
+        // Security check for teachers
+        if (Session::get('role') === 'teacher') {
+            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::get('user_id')]);
+            if (!$assigned) {
+                Session::flash('error', 'Access denied: You are not assigned as a Class Teacher for this class.');
+                $this->redirect($yearId);
+            }
+        }
+
+        // ... find the active term ...
         $term = DB::queryOne(
             "SELECT t.id FROM terms t WHERE t.academic_year_id = ? ORDER BY t.is_active DESC, t.term_number DESC LIMIT 1",
             [$yearId]
         );
+        // ... rest of autoPromote logic ...
 
         $students = DB::query(
             "SELECT s.id, s.full_name,
@@ -106,6 +129,13 @@ class PromotionController {
         $termId   = $term['id'] ?? null;
         $promoted = 0;
         $repeated = 0;
+
+        // Try to find the target class ID in the next year if a name was provided
+        $nextClassId = null;
+        if ($nextClass) {
+            $nc = DB::queryOne("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1", [$nextClass, $nextYearId]);
+            $nextClassId = $nc['id'] ?? null;
+        }
 
         foreach ($students as $student) {
             $sid = $student['id'];
@@ -131,11 +161,16 @@ class PromotionController {
             );
 
             if ($status === 'promoted') {
-                // Update student to new year (class_id will be set when admin assigns for next year)
-                DB::execute(
-                    "UPDATE students SET academic_year_id = ? WHERE id = ?",
-                    [$nextYearId, $sid]
-                );
+                // Update student to new year AND target class if found
+                $sql = "UPDATE students SET academic_year_id = ?";
+                $p   = [$nextYearId];
+                if ($nextClassId) {
+                    $sql .= ", current_class_id = ?";
+                    $p[] = $nextClassId;
+                }
+                $sql .= " WHERE id = ?";
+                $p[] = $sid;
+                DB::execute($sql, $p);
                 $promoted++;
             } else {
                 $repeated++;
@@ -161,6 +196,19 @@ class PromotionController {
             $this->redirect($yearId);
         }
 
+        // Security check for teachers
+        if (Session::get('role') === 'teacher') {
+            $check = DB::queryOne("
+                SELECT 1 FROM class_teachers ct 
+                JOIN students s ON s.current_class_id = ct.class_id 
+                WHERE s.id = ? AND ct.teacher_id = ?
+            ", [$studentId, Session::get('user_id')]);
+            if (!$check) {
+                Session::flash('error', 'Access denied: You are not assigned as a Class Teacher for this student.');
+                $this->redirect($yearId);
+            }
+        }
+
         // Find term
         $term = DB::queryOne(
             "SELECT t.id FROM terms t WHERE t.academic_year_id = ? ORDER BY t.is_active DESC, t.term_number DESC LIMIT 1",
@@ -180,12 +228,71 @@ class PromotionController {
         );
 
         if ($status === 'promoted' && $nextYearId) {
-            DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ?", [$nextYearId, $studentId]);
+            // Try to find target class ID in next year
+            $nextClassId = null;
+            if ($nextClass) {
+                $nc = DB::queryOne("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1", [$nextClass, $nextYearId]);
+                $nextClassId = $nc['id'] ?? null;
+            }
+
+            $sql = "UPDATE students SET academic_year_id = ?";
+            $p   = [$nextYearId];
+            if ($nextClassId) {
+                $sql .= ", current_class_id = ?";
+                $p[] = $nextClassId;
+            }
+            $sql .= " WHERE id = ?";
+            $p[] = $studentId;
+            DB::execute($sql, $p);
         }
 
         $student = DB::queryOne("SELECT full_name FROM students WHERE id = ?", [$studentId]);
         $label   = $status === 'promoted' ? 'promoted' : 'held back';
         Session::flash('success', "{$student['full_name']} has been manually {$label}.");
+        $this->redirect($yearId);
+    }
+
+    /**
+     * Revert promotion for an entire class.
+     */
+    private function unpromoteClass(): void {
+        $classId = (int)($_POST['class_id'] ?? 0);
+        $yearId  = (int)($_POST['year_id']  ?? 0);
+
+        if (!$classId || !$yearId) {
+            Session::flash('error', 'Invalid request.');
+            $this->redirect($yearId);
+        }
+
+        // Security check for teachers
+        if (Session::get('role') === 'teacher') {
+            $assigned = DB::queryOne("SELECT 1 FROM class_teachers WHERE class_id = ? AND teacher_id = ?", [$classId, Session::get('user_id')]);
+            if (!$assigned) {
+                Session::flash('error', 'Access denied.');
+                $this->redirect($yearId);
+            }
+        }
+
+        // Find all students who have a promotion record for this class/year
+        $promoStudents = DB::query("SELECT student_id FROM student_promotions WHERE academic_year_id = ? AND student_id IN (SELECT id FROM students WHERE current_class_id = ? OR id IN (SELECT student_id FROM student_promotions WHERE academic_year_id = ?))", [$yearId, $classId, $yearId]);
+        
+        // Actually, we need to find students who ARE currently or WERE in this class
+        $students = DB::query("
+            SELECT s.id FROM students s
+            LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ?
+            WHERE s.current_class_id = ? OR (sp.student_id IS NOT NULL AND sp.academic_year_id = ?)
+        ", [$yearId, $classId, $yearId]);
+
+        $count = 0;
+        foreach ($students as $s) {
+            // Revert year to the source year
+            DB::execute("UPDATE students SET academic_year_id = ?, current_class_id = ? WHERE id = ?", [$yearId, $classId, $s['id']]);
+            // Delete promotion record
+            DB::execute("DELETE FROM student_promotions WHERE student_id = ? AND academic_year_id = ?", [$s['id'], $yearId]);
+            $count++;
+        }
+
+        Session::flash('success', "Promotion reset for {$count} students. They are now back in their original session.");
         $this->redirect($yearId);
     }
 

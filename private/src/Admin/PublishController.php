@@ -36,6 +36,7 @@ class PublishController {
                 'unlock_class'  => $this->unlockClass(),
                 'publish_class' => $this->publishClass(),
                 'unpublish'     => $this->unpublishClass(),
+                'bulk_unpublish'=> $this->bulkUnpublish(),
                 default         => $this->redirect(),
             };
         }
@@ -193,6 +194,22 @@ class PublishController {
         );
 
         Session::flash('info', "Reports hidden. They are no longer visible to parents or students.");
+        $this->redirect();
+    }
+
+    private function bulkUnpublish(): void {
+        $termId = (int)($_POST['term_id'] ?? 0);
+        if (!$termId) {
+            Session::flash('error', 'Invalid term.');
+            $this->redirect();
+        }
+
+        DB::execute(
+            "UPDATE report_card_locks SET is_published = 0 WHERE term_id = ?",
+            [$termId]
+        );
+
+        Session::flash('success', "All results for this term have been unpublished and hidden from parents/students.");
         $this->redirect();
     }
 

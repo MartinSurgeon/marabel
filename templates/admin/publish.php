@@ -26,9 +26,22 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
     </p>
   </div>
   <?php if ($term): ?>
-  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.4rem;">
-    <div class="badge badge-primary" style="padding:7px 16px; border-radius:var(--radius-full); font-weight:800; font-size:12px;">
-      <?= htmlspecialchars($term['name']) ?> &nbsp;·&nbsp; <?= htmlspecialchars($activeYear['year_name'] ?? '') ?>
+  <div style="display:flex; flex-direction:column; align-items:flex-end; gap:0.6rem;">
+    <div class="flex items-center gap-3">
+        <?php if ($publishedCount > 0): ?>
+        <form method="POST" action="<?= $base ?>/admin/publish" id="bulkUnpublishForm" onsubmit="return confirmBulkUnpublish(event, '<?= htmlspecialchars($term['name'], ENT_QUOTES) ?>')">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="_action" value="bulk_unpublish">
+          <input type="hidden" name="term_id" value="<?= $term['id'] ?>">
+          <button type="submit" class="btn btn-ghost btn-xs text-danger" style="font-weight:700; border:1px solid rgba(239,68,68,0.2);">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+            Unpublish All
+          </button>
+        </form>
+        <?php endif; ?>
+        <div class="badge badge-primary" style="padding:7px 16px; border-radius:var(--radius-full); font-weight:800; font-size:12px;">
+          <?= htmlspecialchars($term['name']) ?> &nbsp;·&nbsp; <?= htmlspecialchars($activeYear['year_name'] ?? '') ?>
+        </div>
     </div>
     <?php if ($totalClasses > 0): ?>
     <span class="text-muted" style="font-size:var(--text-xs); font-weight:600;">
@@ -299,6 +312,17 @@ function confirmUnpublish(e, className) {
     message:     `Reports for ${className} will no longer be visible to parents or students. Scores and computed data are kept.`,
     confirmText: 'Yes, Unpublish',
     type:        'warning'
+  }, () => { e.target.submit(); Loader.show(); });
+  return false;
+}
+
+function confirmBulkUnpublish(e, termName) {
+  e.preventDefault();
+  confirmAction({
+    title:       'Unpublish ALL Results?',
+    message:     `This will hide ALL report cards for EVERY class in ${termName}. Parents and students will not be able to view their results until you publish them again individually.`,
+    confirmText: 'Yes, Hide Everything',
+    type:        'danger'
   }, () => { e.target.submit(); Loader.show(); });
   return false;
 }
