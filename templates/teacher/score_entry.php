@@ -10,11 +10,12 @@ global $classSub, $studentList, $sbaData, $examData;
 $base = defined('APP_BASE') ? APP_BASE : '';
 ?>
 
+<?php if (isset($classSub)): ?>
 <!-- ── Grid Header ────────────────────────────────────────── -->
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 animate-fade-in">
   <div>
     <div class="flex items-center gap-2 mb-1">
-      <a href="<?= $base ?>/teacher" class="btn btn-ghost btn-xs" style="padding:4px; margin-left:-8px;">
+      <a href="<?= $base ?>/teacher/scores" class="btn btn-ghost btn-xs" style="padding:4px; margin-left:-8px;" title="Back to Subjects">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
       </a>
       <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">
@@ -146,6 +147,92 @@ $base = defined('APP_BASE') ? APP_BASE : '';
     </table>
   </div>
 </div>
+
+<?php else: /* SELECTION VIEW (Moved from Old Dashboard) */ ?>
+  <?php global $activeTerm, $assignedBundles; ?>
+  
+  <div class="flex justify-between items-center mb-8 gap-4 animate-fade-in">
+    <div>
+      <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Score Entry Hub</h1>
+      <p class="text-muted m-0" style="font-size:var(--text-sm);">Select a subject below to enter student scores and track completion.</p>
+    </div>
+    <div style="font-size: 13px; font-weight: 700; color: var(--clr-primary); background: var(--clr-primary-50); padding: 0.5rem 1rem; border-radius: var(--radius-full);">
+       <?= htmlspecialchars($activeTerm['year_name'] ?? '') ?> · <?= htmlspecialchars($activeTerm['name'] ?? '') ?>
+    </div>
+  </div>
+
+  <?php if (empty($assignedBundles)): ?>
+    <div class="card flex flex-col items-center justify-center py-12 text-center" style="border-style: dashed;">
+        <div style="color: var(--clr-border); margin-bottom: 1rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="48" height="48"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+        </div>
+        <h3 style="font-weight: 700; color: var(--clr-text);">No assignments found</h3>
+        <p class="text-muted text-sm">You haven't been assigned any classes for score entry this term.</p>
+    </div>
+  <?php else: ?>
+    <div class="grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.5rem;">
+      <?php foreach ($assignedBundles as $b): 
+          $totalSt    = (int)$b['student_count'];
+          $sbaDone    = (int)$b['sba_completed_count'];
+          $examDone   = (int)$b['exam_completed_count'];
+          $isComplete = ($totalSt > 0 && $sbaDone >= $totalSt && $examDone >= $totalSt);
+          
+          $sbaPercent = ($totalSt > 0) ? round(($sbaDone / $totalSt) * 100) : 0;
+          $examPercent = ($totalSt > 0) ? round(($examDone / $totalSt) * 100) : 0;
+      ?>
+      <div class="card hover-lift animate-fade-in" style="padding:0; overflow:hidden; border:1px solid var(--clr-border); display:flex; flex-direction:column;">
+        <div style="padding:1.5rem; background:var(--clr-surface-2); border-bottom:1px solid var(--clr-border);">
+          <div style="font-size:10px; font-weight:800; color:var(--clr-primary); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:0.5rem;">
+            <?= htmlspecialchars($b['level_name']) ?>
+          </div>
+          <h3 style="margin:0; font-weight:800; font-size:1.125rem; color:var(--clr-text);">
+            <?= htmlspecialchars($b['class_name']) ?><?= $b['section'] ? " ({$b['section']})" : '' ?>
+          </h3>
+          <p class="text-muted" style="font-size:13px; margin:0.25rem 0 0;"><?= htmlspecialchars($b['subject_name']) ?></p>
+        </div>
+
+        <div style="padding:1.25rem; flex:1;">
+          <div class="mb-4">
+            <div class="flex justify-between items-center mb-2 text-xs font-bold">
+              <span>SBA Components</span>
+              <span style="color:<?= $sbaPercent >= 100 ? 'var(--clr-success)' : 'var(--clr-text)' ?>;"><?= $sbaPercent ?>%</span>
+            </div>
+            <div style="height:6px; background:var(--clr-border); border-radius:10px; overflow:hidden;">
+              <div style="height:100%; width:<?= $sbaPercent ?>%; background:var(--clr-primary); border-radius:10px; transition:width 0.5s ease;"></div>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-2 text-xs font-bold">
+              <span>End of Term Exam</span>
+              <span style="color:<?= $examPercent >= 100 ? 'var(--clr-success)' : 'var(--clr-text)' ?>;"><?= $examPercent ?>%</span>
+            </div>
+            <div style="height:6px; background:var(--clr-border); border-radius:10px; overflow:hidden;">
+              <div style="height:100%; width:<?= $examPercent ?>%; background:var(--clr-primary-300); border-radius:10px; transition:width 0.5s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:1rem 1.25rem; border-top:1px solid var(--clr-border); background:var(--clr-surface-2);">
+          <?php if ($b['is_locked']): ?>
+            <div class="flex items-center gap-2 text-muted" style="font-size:11px; font-weight:800;">
+               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+               LOCKED BY ADMIN
+            </div>
+          <?php else: ?>
+            <a href="<?= $base ?>/teacher/scores?id=<?= $b['class_subject_id'] ?>" 
+               class="btn <?= $isComplete ? 'btn-outline' : 'btn-primary' ?> btn-sm w-full" 
+               style="justify-content:center; font-size:12px;">
+               <?= $isComplete ? 'View / Edit Scores' : 'Enter Scores' ?>
+            </a>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  <?php endif; ?>
+
+<?php endif; ?>
 
 <!-- ── Custom Styles for Grid ─────────────────────────────────── -->
 <style>

@@ -283,6 +283,16 @@ CREATE TABLE report_card_locks (
   FOREIGN KEY (term_id)  REFERENCES terms(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Predefined remarks repository
+CREATE TABLE predefined_remarks (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  category    ENUM('teacher', 'headmaster') NOT NULL,
+  content     TEXT NOT NULL,
+  is_system   TINYINT(1) DEFAULT 0,
+  created_by  INT UNSIGNED,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ============================================================
 -- SMS
 -- ============================================================

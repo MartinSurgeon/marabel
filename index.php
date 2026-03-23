@@ -33,9 +33,9 @@ foreach (['DB', 'Session', 'CSRF', 'Validator', 'SMS'] as $helper) {
 require_once PRIVATE_PATH . '/src/Engine/GradingEngine.php';
 
 // Start session
-Session::start();
+session_start();
 
-// ── Routing ───────────────────────────────────────────────────────────
+// ── Configuration ───────────────────────────────────────────────────────────
 $rawUri  = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // Strip the subdirectory base so routes work at /marabel/ or /
@@ -66,6 +66,7 @@ $routes = [
     '/admin/publish'            => ['admin/publish',       ['admin'], 'Admin\\PublishController'],
     '/admin/sms'                => ['admin/sms',           ['admin'], 'Admin\\SMSController'],
     '/admin/promotions'         => ['admin/promotions',    ['admin','teacher'], 'Admin\\PromotionController'],
+    '/admin/remarks'            => ['admin/remarks',       ['admin'], 'Admin\\RemarkController'],
 
     // ── Teacher ──────────────────────────────────────────────
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],

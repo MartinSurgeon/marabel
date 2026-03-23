@@ -1,104 +1,105 @@
 <?php
 /**
- * Class Management Template (Attendance & Remarks)
+ * Headmaster Terminal Remarks Template
  */
 
-$pageTitle = 'Class Management';
+$pageTitle = 'Terminal Remarks';
 include __DIR__ . '/../layout/header.php';
 
-global $activeTerm, $targetClass, $studentList, $attData, $remData;
+global $activeTerm, $classList, $studentList, $predefinedRemarks, $selectedClassId;
 $base = defined('APP_BASE') ? APP_BASE : '';
 ?>
 
-<!-- ── Header ────────────────────────────────────────────── -->
+<!-- ── Page Header ────────────────────────────────────────────── -->
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
   <div>
-    <div class="flex items-center gap-2 mb-1">
-      <a href="<?= $base ?>/teacher" class="btn btn-ghost btn-xs" style="padding:4px; margin-left:-8px;">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
-      </a>
-      <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">
-        Attendance & Remarks
-      </h1>
-    </div>
+    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">
+      Terminal Remarks
+    </h1>
     <p class="text-muted m-0" style="font-size:var(--text-sm);">
-      Class: <strong><?= htmlspecialchars($targetClass['class_name'] . ' ' . ($targetClass['section'] ?? '')) ?></strong> 
-      · Term: <strong><?= htmlspecialchars($activeTerm['year_name'] . ' ' . $activeTerm['name']) ?></strong>
+      Add Headmaster/Headteacher remarks to student report cards for <strong><?= htmlspecialchars($activeTerm['year_name'] . ' ' . $activeTerm['name']) ?></strong>.
     </p>
   </div>
   
   <div id="save-indicator" class="flex items-center gap-2 px-4 py-2 rounded-full border border-transparent transition-all" style="font-size:12px; font-weight:700;">
-     <!-- Dynamically filled by JS -->
   </div>
 </div>
 
-<!-- ── Management Grid ────────────────────────────────────── -->
+<!-- ── Filters ────────────────────────────────────────────────── -->
+<div class="card mb-6" style="padding:1.5rem; border:1px solid var(--clr-border);">
+    <form method="GET" action="<?= $base ?>/admin/remarks" class="flex flex-wrap gap-4 items-end">
+        <div class="form-group mb-0" style="flex:1; min-width:300px;">
+            <label class="form-label" style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.04em; color:var(--clr-text-muted);">Select Classroom</label>
+            <select name="class_id" class="form-control" onchange="this.form.submit()" style="height:42px;">
+                <option value="">— Choose a Class —</option>
+                <?php foreach ($classList as $c): ?>
+                    <option value="<?= $c['id'] ?>" <?= $selectedClassId == $c['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($c['class_name'] . ' ' . ($c['section'] ?? '')) ?> (<?= htmlspecialchars($c['level_name']) ?>)
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="height:42px; padding:0 1.5rem;">Load Students</button>
+    </form>
+</div>
+
+<?php if (!$selectedClassId): ?>
+<div class="card flex flex-col items-center justify-center" style="padding:6rem 2rem; text-align:center; border-style:dashed;">
+  <div style="background:var(--clr-surface-2); padding:2rem; border-radius:var(--radius-full); margin-bottom:2rem;">
+     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary-300)"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+  </div>
+  <h2 style="font-weight:800; color:var(--clr-text); margin-bottom:.5rem;">Select a Class to Begin</h2>
+  <p class="text-muted" style="max-width:320px; margin:0 auto;">Choose a classroom from the list above to start adding terminal remarks.</p>
+</div>
+
+<?php elseif (empty($studentList)): ?>
+<div class="card flex flex-col items-center justify-center" style="padding:6rem 2rem; text-align:center; border-style:dashed; background:var(--clr-surface-2);">
+  <h2 style="font-weight:800; color:var(--clr-text);">No students found</h2>
+  <p class="text-muted">There are no active students in the selected classroom.</p>
+</div>
+
+<?php else: ?>
+<!-- ── Remarks Table ────────────────────────────────────────── -->
 <div class="card" style="padding:0; overflow:hidden; border:1px solid var(--clr-border);">
   <div style="overflow-x:auto;">
-    <table class="table-management" style="width:100%; border-collapse:collapse; min-width:1100px;">
+    <table class="table-management" style="width:100%; border-collapse:collapse; min-width:900px;">
       <thead style="background:var(--clr-surface-2); box-shadow:0 1px 0 var(--clr-border);">
         <tr>
           <th style="width:50px; text-align:center; padding:1rem;">#</th>
-          <th style="width:250px; text-align:left; padding:1rem; position:sticky; left:0; background:inherit; z-index:11; border-right:1px solid var(--clr-border);">Student Name</th>
-          <th style="width:120px; text-align:center; padding:1rem;">Attendance (<?= $activeTerm['total_school_days'] ?>)</th>
-          <th style="width:120px; text-align:center; padding:1rem;">Conduct (1-5)</th>
-          <th style="width:120px; text-align:center; padding:1rem;">Attitude (1-5)</th>
-          <th style="text-align:left; padding:1rem;">Teacher's Remark</th>
+          <th style="width:250px; text-align:left; padding:1rem;">Student Name</th>
+          <th style="width:250px; text-align:left; padding:1rem;">Teacher's Remark</th>
+          <th style="text-align:left; padding:1rem;">Headmaster's Terminal Remark</th>
           <th style="width:100px; text-align:center; padding:1rem;">Preview</th>
         </tr>
       </thead>
       <tbody>
-        <?php foreach ($studentList as $index => $s): 
-            $rem = $remData[$s['id']] ?? [];
-            $daysPresent = $attData[$s['id']] ?? '';
-        ?>
+        <?php foreach ($studentList as $index => $s): ?>
         <tr data-student-id="<?= $s['id'] ?>" class="manage-row hover:bg-slate-50 transition-colors">
           <td style="text-align:center; color:var(--clr-text-muted); font-size:12px;"><?= $index + 1 ?></td>
-          <td style="padding:0.75rem 1rem; position:sticky; left:0; background:white; z-index:5; border-right:1px solid var(--clr-border);">
+          <td style="padding:0.75rem 1rem;">
             <div style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($s['full_name']) ?></div>
             <div style="font-size:10px; color:var(--clr-text-muted); font-weight:600;"><?= $s['student_id_number'] ?></div>
           </td>
           
-          <td style="padding:0.5rem 0.75rem;">
-            <input type="number" min="0" max="<?= $activeTerm['total_school_days'] ?>" 
-                   class="manage-input" data-field="days_present" 
-                   value="<?= $daysPresent ?>" 
-                   style="width:80px; text-align:center; margin:0 auto; display:block;">
+          <td style="padding:0.75rem 1rem;">
+             <p class="m-0" style="font-size:12px; line-height:1.4; color:var(--clr-text-muted); font-style:italic;">
+                <?= $s['teacher_remark'] ? htmlspecialchars($s['teacher_remark']) : '<span style="opacity:0.5;">No remark entered</span>' ?>
+             </p>
           </td>
-          
-          <td style="padding:0.5rem 0.75rem;">
-            <select class="manage-input" data-field="conduct_character" style="width:100%;">
-                <option value="">Select...</option>
-                <?php for($i=1; $i<=5; $i++): ?>
-                    <option value="<?= $i ?>" <?= ($rem['conduct_character'] ?? '') == $i ? 'selected' : '' ?>><?= $i ?></option>
-                <?php endfor; ?>
-            </select>
-          </td>
-          
-          <td style="padding:0.5rem 0.75rem;">
-            <select class="manage-input" data-field="attitude" style="width:100%;">
-                <option value="">Select...</option>
-                <?php for($i=1; $i<=5; $i++): ?>
-                    <option value="<?= $i ?>" <?= ($rem['attitude'] ?? '') == $i ? 'selected' : '' ?>><?= $i ?></option>
-                <?php endfor; ?>
-            </select>
-          </td>
-          
+
           <td style="padding:0.5rem 1rem;">
             <div style="display:flex; gap:0.5rem; align-items:flex-start;">
               <div style="flex:1; position:relative;">
-                <textarea class="manage-input" data-field="teacher_remark" 
-                          rows="1" placeholder="Enter remark..."
-                          style="width:100%; border:1px solid var(--clr-border); border-radius:6px; padding:8px; font-size:13px; resize:vertical; display:block;"><?= htmlspecialchars($rem['teacher_remark'] ?? '') ?></textarea>
+                <textarea class="manage-input" data-field="headmaster_remark" 
+                          rows="1" placeholder="Enter headmaster remark..."
+                          style="width:100%; border:1px solid var(--clr-border); border-radius:6px; padding:8px; font-size:13px; resize:vertical; display:block;"><?= htmlspecialchars($s['headmaster_remark'] ?? '') ?></textarea>
               </div>
               <div style="display:flex; flex-direction:column; gap:4px;">
-                <!-- Quick Select Modal Trigger -->
                 <button type="button" class="btn btn-ghost btn-xs" title="Quick Select Remark"
                         onclick="openRemarkPicker(this)"
                         style="padding:4px; height:28px; width:28px; color:var(--clr-primary);">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
                 </button>
-                <!-- Save for Future Use Trigger -->
                 <button type="button" class="btn btn-ghost btn-xs btn-save-predefined" title="Save this remark for future use"
                         onclick="saveAsPredefined(this)"
                         style="padding:4px; height:28px; width:28px; color:var(--clr-success); display:none;">
@@ -121,6 +122,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
     </table>
   </div>
 </div>
+<?php endif; ?>
 
 <style>
 .manage-input {
@@ -139,11 +141,12 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 .manage-row td { border-bottom: 1px solid var(--clr-border); }
 .manage-row.saving { background: rgba(var(--clr-primary-rgb), 0.05); }
 .manage-row.error { background: rgba(var(--clr-danger-rgb), 0.05); }
+.remark-item:hover { background: var(--clr-surface-2); color: var(--clr-primary) !important; }
 </style>
 
 <script>
 const CONFIG = {
-    classId: <?= (int)$targetClass['id'] ?>,
+    classId: <?= (int)$selectedClassId ?>,
     termId: <?= (int)$activeTerm['id'] ?>,
     base: '<?= $base ?>',
     csrf: '<?= CSRF::token() ?>',
@@ -156,10 +159,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let saveQueue = 0;
 
     function updateIndicator(status, message) {
+        if (!indicator) return;
         if (status === 'saving') {
             indicator.style.color = 'var(--clr-primary)';
             indicator.style.background = 'rgba(var(--clr-primary-rgb), 0.1)';
-            indicator.innerHTML = `<svg class="animate-spin" viewBox="0 0 24 24" fill="none" width="14" height="14" style="border:2px solid currentColor; border-top-color:transparent; border-radius:50%;"></svg> Saving...`;
+            indicator.innerHTML = `Saving...`;
         } else if (status === 'saved') {
             indicator.style.color = 'var(--clr-success)';
             indicator.style.background = 'rgba(22, 163, 74, 0.1)';
@@ -175,11 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     inputs.forEach(input => {
         input.addEventListener('input', (e) => {
-            if (e.target.dataset.field === 'teacher_remark') {
-                const btn = e.target.closest('td').querySelector('.btn-save-predefined');
-                const val = e.target.value.trim();
-                btn.style.display = (val.length > 5 && !CONFIG.predefined.includes(val)) ? 'flex' : 'none';
-            }
+            const btn = e.target.closest('td').querySelector('.btn-save-predefined');
+            const val = e.target.value.trim();
+            btn.style.display = (val.length > 5 && !CONFIG.predefined.includes(val)) ? 'flex' : 'none';
         });
 
         input.addEventListener('change', async (e) => {
@@ -187,7 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const value = e.target.value;
             const row = e.target.closest('.manage-row');
             const studentId = row.dataset.studentId;
-            
             await performSave(studentId, field, value, row);
         });
     });
@@ -202,9 +203,9 @@ document.addEventListener('DOMContentLoaded', () => {
             modal.id = modalId;
             modal.className = 'modal-backdrop';
             modal.innerHTML = `
-                <div class="modal w-full max-w-lg mx-4">
+                <div class="modal w-full max-lg mx-4">
                     <div class="modal-header">
-                        <h3 class="modal-title">Select Predefined Remark</h3>
+                        <h3 class="modal-title">Headmaster Remarks</h3>
                         <button class="modal-close" onclick="closeModal('${modalId}')">&times;</button>
                     </div>
                     <div class="modal-body" style="padding:0;">
@@ -230,29 +231,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const textarea = row.querySelector('textarea');
         textarea.value = text;
         closeModal('modal-remark-picker');
-        
-        // Hide save button since it's now predefined
         row.querySelector('.btn-save-predefined').style.display = 'none';
-
-        await performSave(studentId, 'teacher_remark', text, row);
+        await performSave(studentId, 'headmaster_remark', text, row);
     };
 
     window.saveAsPredefined = async function(btn) {
         const textarea = btn.closest('td').querySelector('textarea');
         const content = textarea.value.trim();
         if (!content) return;
-
         btn.disabled = true;
-        btn.style.opacity = '0.5';
 
         try {
             const formData = new FormData();
             formData.append('field', 'save_predefined');
             formData.append('value', content);
-            formData.append('student_id', '0'); // ignored
+            formData.append('student_id', '0');
             formData.append('_csrf_token', CONFIG.csrf);
 
-            const response = await fetch(`${CONFIG.base}/teacher/class?id=${CONFIG.classId}`, {
+            const response = await fetch(`${CONFIG.base}/admin/remarks`, {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -263,18 +259,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 btn.style.display = 'none';
                 updateIndicator('saved');
             }
-        } catch (e) {} finally {
-            btn.disabled = false;
-            btn.style.opacity = '1';
-        }
+        } catch (e) {} finally { btn.disabled = false; }
     };
 
     async function performSave(studentId, field, value, row) {
         saveQueue++;
         updateIndicator('saving');
         row.classList.add('saving');
-        row.classList.remove('error');
-
         try {
             const formData = new FormData();
             formData.append('student_id', studentId);
@@ -282,36 +273,27 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('value', value);
             formData.append('_csrf_token', CONFIG.csrf);
 
-            const response = await fetch(`${CONFIG.base}/teacher/class?id=${CONFIG.classId}`, {
+            const response = await fetch(`${CONFIG.base}/admin/remarks`, {
                 method: 'POST',
                 body: formData,
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
-
-            if (!response.ok) throw new Error(`Server ${response.status}`);
             const result = await response.json();
             saveQueue--;
-
             if (result.success) {
                 row.classList.remove('saving');
                 if (saveQueue === 0) updateIndicator('saved');
             } else {
-                row.classList.remove('saving');
                 row.classList.add('error');
-                updateIndicator('error', result.message || 'Failed to save');
+                updateIndicator('error', result.message);
             }
         } catch (err) {
             saveQueue--;
-            row.classList.remove('saving');
             row.classList.add('error');
-            updateIndicator('error', err.message || 'Connection lost');
+            updateIndicator('error', 'Connection lost');
         }
     }
 });
 </script>
-
-<style>
-.remark-item:hover { background: var(--clr-surface-2); color: var(--clr-primary) !important; }
-</style>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>

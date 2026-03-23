@@ -75,13 +75,19 @@ class ClassManagementController {
         );
         $remMap = array_column($remarks, null, 'student_id');
 
+        // 7. Fetch Predefined Remarks for Teacher
+        $predefined = DB::query(
+            "SELECT content FROM predefined_remarks WHERE category = 'teacher' ORDER BY is_system DESC, content ASC"
+        );
+
         // Pass globals to template
-        global $activeTerm, $targetClass, $studentList, $attData, $remData;
+        global $activeTerm, $targetClass, $studentList, $attData, $remData, $predefinedRemarks;
         $activeTerm  = $term;
         $targetClass = $class;
         $studentList = $students;
         $attData     = $attMap;
         $remData     = $remMap;
+        $predefinedRemarks = array_column($predefined, 'content');
     }
 
     /**
@@ -108,6 +114,8 @@ class ClassManagementController {
             if ($field === 'days_present') {
                 $days = (int)$value;
                 $this->upsertAttendance($studentId, $termId, $days);
+            } elseif ($field === 'save_predefined') {
+                $this->savePredefinedRemark($value, 'teacher');
             } else {
                 $this->upsertRemark($studentId, $termId, $field, $value);
             }
@@ -149,6 +157,20 @@ class ClassManagementController {
             DB::execute(
                 "INSERT INTO student_remarks (student_id, term_id, $field, updated_by) VALUES (?, ?, ?, ?)",
                 [$sid, $tid, $val, Session::userId()]
+            );
+        }
+    }
+
+    private function savePredefinedRemark(string $content, string $category): void {
+        $content = trim($content);
+        if (!$content) return;
+
+        // Check if already exists
+        $exists = DB::queryOne("SELECT id FROM predefined_remarks WHERE content = ? AND category = ?", [$content, $category]);
+        if (!$exists) {
+            DB::execute(
+                "INSERT INTO predefined_remarks (category, content, created_by) VALUES (?, ?, ?)",
+                [$category, $content, Session::userId()]
             );
         }
     }
