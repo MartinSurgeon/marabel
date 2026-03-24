@@ -205,45 +205,39 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
           <button type="submit" class="btn btn-ghost btn-xs text-warning">Unlock Scores</button>
         </form>
 
-      <?php elseif ($isFullyLocked): ?>
-        <!-- Unlock -->
-        <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="Loader.show()">
-          <?= CSRF::field() ?>
-          <input type="hidden" name="_action" value="unlock_class">
-          <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
-          <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-          <button type="submit" class="btn btn-ghost btn-xs text-warning">Unlock</button>
-        </form>
-        <!-- Preview -->
-        <button type="button" class="btn btn-outline btn-xs" onclick="previewResults(<?= $c['id'] ?>, <?= $term['id'] ?>, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="13" height="13" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-          Preview
-        </button>
-        <!-- Publish -->
-        <?php if ($canPublish): ?>
-        <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="return confirmPublish(event, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>', <?= $students ?>, <?= $totalSubj ?>)">
-          <?= CSRF::field() ?>
-          <input type="hidden" name="_action" value="publish_class">
-          <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
-          <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-          <button type="submit" class="btn btn-primary btn-xs">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-            Publish Results
-          </button>
-        </form>
+      <?php else: ?>
+        
+        <?php if ($isFullyLocked): ?>
+          <!-- Unlock -->
+          <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="Loader.show()">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="unlock_class">
+            <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
+            <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
+            <button type="submit" class="btn btn-ghost btn-xs text-warning">Unlock</button>
+          </form>
+        <?php elseif (!$noStudents && !$noSubjects): ?>
+          <!-- Lock All Scores -->
+          <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="return confirmLock(event, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="lock_class">
+            <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
+            <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
+            <button type="submit" class="btn btn-outline btn-xs text-primary">Lock All Scores</button>
+          </form>
         <?php endif; ?>
 
-      <?php elseif (!$noStudents && !$noSubjects): ?>
-        <!-- Lock Scores -->
-        <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="return confirmLock(event, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>')">
-          <?= CSRF::field() ?>
-          <input type="hidden" name="_action" value="lock_class">
-          <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
-          <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-          <button type="submit" class="btn btn-outline btn-xs text-primary">
-            Lock All Scores
-          </button>
-        </form>
+        <!-- Publish (Only if fully locked) -->
+        <?php if ($canPublish): ?>
+          <form method="POST" action="<?= $base ?>/admin/publish" onsubmit="return confirmPublish(event, '<?= htmlspecialchars($c['class_name'], ENT_QUOTES) ?>', <?= $students ?>, <?= $totalSubj ?>)">
+            <?= CSRF::field() ?>
+            <input type="hidden" name="_action" value="publish_class">
+            <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
+            <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
+            <button type="submit" class="btn btn-primary btn-xs">Publish Results</button>
+          </form>
+        <?php endif; ?>
+
       <?php endif; ?>
 
       <!-- Stub: Print button -->
@@ -258,27 +252,6 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
 </div>
 <?php endif; ?>
 
-<!-- ── Result Preview Modal ──────────────────────────────────── -->
-<div id="previewModalWrap" class="modal-overlay hidden">
-  <div class="modal-backdrop" onclick="closePreviewModal()"></div>
-  <div class="modal" style="max-width:820px; width:95%; max-height:90vh; display:flex; flex-direction:column; padding:0; overflow:hidden;">
-    <div class="modal-header px-6 py-4" style="border-bottom:1px solid var(--clr-border); flex-shrink:0;">
-      <div>
-        <h2 id="previewModalTitle" class="m-0" style="font-size:1.125rem; font-weight:800;">Result Preview</h2>
-        <p class="m-0 text-xs text-muted">Read-only snapshot. Scores are computed but NOT published yet.</p>
-      </div>
-      <button class="modal-close" onclick="closePreviewModal()">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
-    </div>
-    <div id="previewModalBody" class="p-6" style="overflow-y:auto; flex:1; background:var(--clr-background);">
-      <!-- Content injected by JS -->
-    </div>
-    <div class="px-6 py-4" style="border-top:1px solid var(--clr-border); background:var(--clr-surface); text-align:right; flex-shrink:0;">
-      <button class="btn btn-ghost" onclick="closePreviewModal()">Close Preview</button>
-    </div>
-  </div>
-</div>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
 
@@ -327,47 +300,4 @@ function confirmBulkUnpublish(e, termName) {
   return false;
 }
 
-// ── Result Preview ──────────────────────────────────────────
-function previewResults(classId, termId, className) {
-  const wrap  = document.getElementById('previewModalWrap');
-  const title = document.getElementById('previewModalTitle');
-  const body  = document.getElementById('previewModalBody');
-
-  title.innerText = `Result Preview — ${className}`;
-  body.innerHTML  = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;gap:1rem;">
-    <svg style="animation:previewSpin 1s linear infinite;color:var(--clr-primary);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" width="36" height="36"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" opacity=".25"/><path fill="currentColor" opacity=".75" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-    <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--clr-text-muted);">Computing results snapshot…</span>
-    <style>@keyframes previewSpin{100%{transform:rotate(360deg)}}</style>
-  </div>`;
-
-  wrap.classList.remove('hidden');
-  document.body.style.overflow = 'hidden';
-
-  const fd = new FormData();
-  fd.append('_action',  'preview_class');
-  fd.append('class_id', classId);
-  fd.append('term_id',  termId);
-  const csrf = document.querySelector('input[name="_csrf_token"]');
-  if (csrf) fd.append('_csrf_token', csrf.value);
-
-  fetch('<?= $base ?>/admin/publish', { method:'POST', body:fd })
-    .then(r => r.text())
-    .then(html => {
-      body.innerHTML = html.includes('<!DOCTYPE') || html.includes('<html')
-        ? '<div class="text-center p-8" style="color:var(--clr-danger);">Preview failed — session may have expired. Please refresh.</div>'
-        : html;
-    })
-    .catch(err => {
-      body.innerHTML = `<div class="text-center p-8" style="color:var(--clr-danger);">Error: ${err.message}</div>`;
-    });
-}
-
-function closePreviewModal() {
-  document.getElementById('previewModalWrap').classList.add('hidden');
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closePreviewModal();
-});
 </script>

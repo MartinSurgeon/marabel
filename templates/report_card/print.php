@@ -55,10 +55,23 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       padding: 30px;
       background: #f0f0f2;
     }
+    @page {
+      size: A4 portrait;
+      margin: 12mm;
+    }
     @media print {
-      body { padding: 0; background: #fff; }
-      .no-print { display: none; }
-      .container { border: none !important; box-shadow: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; }
+      body { padding: 0 !important; background: #fff !important; margin: 0 !important; }
+      .no-print, .toolbar { display: none !important; }
+      .container { 
+        border: none !important; 
+        box-shadow: none !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        width: 100% !important; 
+        max-width: none !important; 
+        overflow: visible !important;
+      }
+      .container::before { opacity: 0.03 !important; }
     }
     
     .container {
@@ -197,7 +210,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
     .remarks-cell { font-size: 12px; font-weight: 600; color: #222; }
 
     /* Footer Tables */
-    .prof-table { width: 70%; margin: 35px auto 0; border: 1.5px solid #000; font-size: 11px; }
+    .prof-table { width: 70%; margin: 20px auto 0; border: 1.5px solid #000; font-size: 11px; }
     .prof-table th, .prof-table td { border: 1px solid #000; padding: 5px 12px; }
     .prof-table th { background: #eee; font-weight: 800; text-align: left; }
     .prof-table td { font-weight: 700; }
@@ -294,7 +307,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       <?php endforeach; ?>
 
       <?php 
-      $rowsToFill = max(0, 8 - count($scores));
+      $rowsToFill = max(0, 5 - count($scores));
       for($i=0; $i<$rowsToFill; $i++): ?>
       <tr style="height:26px;">
         <td></td><td></td><td></td><td></td><td></td><td></td><td></td>

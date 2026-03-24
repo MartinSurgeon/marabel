@@ -78,10 +78,21 @@ class SubjectController {
         $id = (int)($_POST['subject_id'] ?? 0);
         $row = DB::queryOne("SELECT subject_name FROM subjects WHERE id = ?", [$id]);
         if ($row) {
-            // Check if scores exist for this subject before deleting
-            $exists = DB::queryOne("SELECT id FROM sba_component_scores WHERE class_subject_id IN (SELECT id FROM class_subjects WHERE subject_id = ?) LIMIT 1", [$id]);
-            if ($exists) {
-                Session::flash('error', "Cannot delete '{$row['subject_name']}' because it has recorded scores.");
+            // 1. Check for scores (SBA/Exams)
+            $hasScores = DB::queryValue("
+                SELECT COUNT(*) FROM sba_component_scores WHERE class_subject_id IN (SELECT id FROM class_subjects WHERE subject_id = ?)
+                UNION ALL
+                SELECT COUNT(*) FROM exam_scores WHERE class_subject_id IN (SELECT id FROM class_subjects WHERE subject_id = ?)
+                LIMIT 1
+            ", [$id, $id]);
+
+            // 2. Check if assigned to any class
+            $isAssigned = DB::queryValue("SELECT COUNT(*) FROM class_subjects WHERE subject_id = ?", [$id]);
+
+            if ($hasScores > 0) {
+                Session::flash('error', "Cannot delete '{$row['subject_name']}' because it has recorded academic scores.");
+            } elseif ($isAssigned > 0) {
+                Session::flash('error', "Cannot delete '{$row['subject_name']}' because it is assigned to {$isAssigned} active class(es). Please remove it from all classes first.");
             } else {
                 DB::execute("DELETE FROM subjects WHERE id = ?", [$id]);
                 Session::flash('success', "Subject '{$row['subject_name']}' deleted.");

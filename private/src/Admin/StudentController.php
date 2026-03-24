@@ -153,8 +153,14 @@ class StudentController {
             SELECT id FROM attendance WHERE student_id = ?
             UNION ALL
             SELECT id FROM student_remarks WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM computed_scores WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM student_aggregates WHERE student_id = ?
+            UNION ALL
+            SELECT id FROM student_promotions WHERE student_id = ?
             LIMIT 1
-        ", [$id, $id, $id, $id]);
+        ", [$id, $id, $id, $id, $id, $id, $id]);
 
         if ($hasRecords) {
             Session::flash('error', "Cannot delete student with recorded scores. Please set status to 'inactive' instead.");

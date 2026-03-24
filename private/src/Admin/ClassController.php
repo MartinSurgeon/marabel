@@ -120,19 +120,21 @@ class ClassController {
             $this->back();
         }
 
-        // 1. Check for active students
-        $studentCount = (int)DB::queryValue("SELECT COUNT(*) FROM students WHERE current_class_id = ? AND status = 'active'", [$id]);
+        // 1. Check for ANY students tied to this class (active/inactive/transferred)
+        // Foreign key students_ibfk_1 would block this if ANY student exists.
+        $studentCount = (int)DB::queryValue("SELECT COUNT(*) FROM students WHERE current_class_id = ?", [$id]);
         if ($studentCount > 0) {
-            Session::flash('error', "Cannot delete '{$row['class_name']}' because it has {$studentCount} enrolled students. Please move or deactivate the students first.");
+            Session::flash('error', "Cannot delete '{$row['class_name']}' because it has {$studentCount} associated student records. Please move students to another class or academic year first.");
             $this->back();
         }
 
-        // 2. Check for academic records (published or computed data)
+        // 2. Check for academic records or published reports
         $hasScores = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores cs JOIN class_subjects csb ON csb.id = cs.class_subject_id WHERE csb.class_id = ?", [$id]);
         $hasAggs   = (int)DB::queryValue("SELECT COUNT(*) FROM student_aggregates WHERE class_id = ?", [$id]);
+        $isPublished = (int)DB::queryValue("SELECT COUNT(*) FROM report_card_locks WHERE class_id = ?", [$id]);
         
-        if ($hasScores > 0 || $hasAggs > 0) {
-            Session::flash('error', "Cannot delete '{$row['class_name']}' because it contains academic results or computed ranks. Deleting it would break historical data.");
+        if ($hasScores > 0 || $hasAggs > 0 || $isPublished > 0) {
+            Session::flash('error', "Cannot delete '{$row['class_name']}' because it contains academic results, computed ranks, or published report statuses. Deleting it would break historical data.");
             $this->back();
         }
 

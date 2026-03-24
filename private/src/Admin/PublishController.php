@@ -19,12 +19,6 @@ class PublishController {
         if ($method === 'POST') {
             $action = $_POST['_action'] ?? '';
 
-            // preview_class is a read-only AJAX action — skip CSRF so the
-            // DOM token is not consumed and the rotate doesn't break subsequent requests.
-            if ($action === 'preview_class') {
-                Session::requireRole('admin');   // still auth-guarded
-                $this->previewClass();
-            }
 
             if (!CSRF::verify()) {
                 Session::flash('error', 'Invalid request token. Please try again.');
@@ -218,109 +212,6 @@ class PublishController {
         $this->redirect();
     }
 
-    // ── Preview Results (AJAX) ───────────────────────────────────────
-    private function previewClass(): void {
-        [$classId, $termId] = $this->requireClassTerm();
-
-        try {
-            // Compute an ephemeral snapshot (safe — idempotent upserts, not published)
-            $this->computeClassResults($classId, $termId);
-
-            $aggregates = DB::query(
-                "SELECT s.full_name, sa.aggregate_score, sa.number_of_subjects, sa.class_position
-                 FROM student_aggregates sa
-                 JOIN students s ON s.id = sa.student_id
-                 WHERE sa.class_id = ? AND sa.term_id = ? AND s.status = 'active'
-                 ORDER BY sa.class_position ASC, s.full_name ASC",
-                [$classId, $termId]
-            );
-
-            // Proficiency breakdown — proficiency_level stored as int (1-5)
-            $proficiencies = DB::query(
-                "SELECT proficiency_level, COUNT(*) as cnt
-                 FROM computed_scores cs
-                 JOIN students s ON s.id = cs.student_id
-                 WHERE s.current_class_id = ? AND cs.term_id = ? AND s.status = 'active'
-                 GROUP BY proficiency_level
-                 ORDER BY proficiency_level",
-                [$classId, $termId]
-            );
-            $totalGrades = array_sum(array_column($proficiencies, 'cnt'));
-
-            if (empty($aggregates)) {
-                echo '<div style="text-align:center; padding:3rem; color:var(--clr-text-muted);">No score data found. Please ensure SBA scores have been entered first.</div>';
-                exit;
-            }
-
-            // Color palette indexed by proficiency level int
-            $levelColors = [
-                1 => 'var(--clr-success)',
-                2 => 'var(--clr-primary)',
-                3 => 'var(--clr-warning)',
-                4 => '#f97316',
-                5 => 'var(--clr-danger)',
-            ];
-
-            ob_start();
-            ?>
-            <div style="background:var(--clr-surface-2); padding:1rem; border-radius:var(--radius-md); margin-bottom:1.5rem; border:1px solid var(--clr-border);">
-               <div style="font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--clr-text-muted); margin-bottom:.75rem;">Proficiency Breakdown</div>
-               <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(90px, 1fr)); gap:1rem; text-align:center;">
-                  <?php foreach($proficiencies as $p):
-                     $lvl   = (int)$p['proficiency_level'];
-                     $label = PROFICIENCY_SCALE[$lvl]['abbr'] ?? 'N/A';
-                     $color = $levelColors[$lvl] ?? 'var(--clr-text-muted)';
-                     $pct   = $totalGrades ? round(($p['cnt'] / $totalGrades) * 100) : 0;
-                  ?>
-                  <div>
-                    <div style="font-size:1.35rem; font-weight:800; color:<?= $color ?>;"><?= $pct ?>%</div>
-                    <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted);"><?= $label ?></div>
-                    <div style="font-size:9px; color:var(--clr-text-muted);"><?= $p['cnt'] ?> student<?= $p['cnt'] != 1 ? 's' : '' ?></div>
-                  </div>
-                  <?php endforeach; ?>
-               </div>
-            </div>
-
-            <div style="overflow-y:auto; max-height:400px; border:1px solid var(--clr-border); border-radius:var(--radius-md);">
-            <table class="table" style="margin:0; font-size:13px;">
-                <thead style="position:sticky; top:0; background:var(--clr-surface); z-index:10; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
-                    <tr>
-                        <th style="padding-left:1.5rem; width:60px;">Pos</th>
-                        <th>Student Name</th>
-                        <th class="text-right">Agg. Score</th>
-                        <th class="text-center">Subjects</th>
-                        <th class="text-right" style="padding-right:1.5rem;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php 
-                    $base = defined('APP_BASE') ? APP_BASE : '';
-                    foreach($aggregates as $a): 
-                    ?>
-                    <tr>
-                        <td style="padding-left:1.5rem; font-weight:800; color:var(--clr-primary);"><?= $a['class_position'] ?></td>
-                        <td style="font-weight:600; color:var(--clr-text);"><?= htmlspecialchars($a['full_name']) ?></td>
-                        <td class="text-right" style="font-variant-numeric: tabular-nums; font-weight:700;"><?= number_format($a['aggregate_score'], 1) ?></td>
-                        <td class="text-center"><span class="badge" style="font-size:10px; background:var(--clr-surface-2);"><?= $a['number_of_subjects'] ?></span></td>
-                        <td class="text-right" style="padding-right:1.5rem;">
-                            <a href="<?= $base ?>/report?student=<?= $a['student_id'] ?>&term=<?= $termId ?>" target="_blank" class="btn btn-ghost btn-xs" style="color:var(--clr-primary); font-weight:700;">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                                View Report
-                            </a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-
-            </table>
-            </div>
-            <?php
-            echo ob_get_clean();
-        } catch (\Throwable $e) {
-            echo '<div style="padding:2rem; text-align:center; color:var(--clr-danger); font-weight:700;">Error computing preview: ' . htmlspecialchars($e->getMessage()) . '</div>';
-        }
-        exit;
-    }
 
     // ── Core Computation (batch-optimised) ───────────────────────────
     /**
