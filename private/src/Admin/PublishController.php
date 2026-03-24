@@ -170,7 +170,29 @@ class PublishController {
 
             DB::commit();
             $className = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+            
+            require_once __DIR__ . '/../Helpers/Notification.php';
+            // 1. Notify Admins (Global is okay for system update)
             Notification::send(null, "Results Published", "Report cards for {$className} have been published.", 'success', '/admin/publish');
+            
+            // 2. Notify Parents of students in this class
+            $parents = DB::query("
+                SELECT DISTINCT sp.parent_user_id 
+                FROM student_parents sp
+                JOIN students s ON s.id = sp.student_id
+                WHERE s.current_class_id = ? AND s.status = 'active'
+            ", [$classId]);
+            foreach ($parents as $p) {
+                Notification::send($p['parent_user_id'], "Results Released", "Academic results for {$className} are now available for viewing.", 'success', '/parent');
+            }
+            
+            // 3. Notify Students in this class
+            $studentsUsers = DB::query("
+                SELECT user_id FROM students WHERE current_class_id = ? AND status = 'active' AND user_id IS NOT NULL
+            ", [$classId]);
+             foreach ($studentsUsers as $s) {
+                Notification::send($s['user_id'], "Report Card Released", "Your results for the current term have been published.", 'success', '/student');
+            }
             Session::flash('success', "Results published! Parents and students can now view report cards.");
         } catch (\Throwable $e) {
             DB::rollBack();

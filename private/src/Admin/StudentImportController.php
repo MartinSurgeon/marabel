@@ -160,6 +160,17 @@ class StudentImportController {
             'skipped'   => $skipped,
             'rowErrors' => $rowErrors,
         ]);
+
+        if ($inserted > 0) {
+            require_once __DIR__ . '/../Helpers/Notification.php';
+            Notification::sendToRole(
+                'admin',
+                "Bulk Student Import",
+                Session::get('user_name') . " successfully imported {$inserted} students into the system.",
+                'success',
+                '/admin/students'
+            );
+        }
         $this->redirect();
     }
 

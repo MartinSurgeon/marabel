@@ -119,6 +119,24 @@ class TeacherController {
                 array_values($data)
             );
             $this->syncTeacherClassrooms((int)$newId, $_POST['class_ids'] ?? []);
+            
+            // Notifications
+            require_once __DIR__ . '/../Helpers/Notification.php';
+            // 1. Welcome the new teacher
+            Notification::send(
+                (int)$newId,
+                "Welcome to " . SCHOOL_NAME,
+                "Your account has been created. Your default password is: password123",
+                "success"
+            );
+            // 2. Alert admins (Audit)
+            Notification::sendToRole(
+                'admin',
+                "New Teacher Joined",
+                "Staff member '{$data['full_name']}' was registered by " . Session::get('user_name') . ".",
+                "info"
+            );
+
             Session::flash('success', "Teacher created with default password: password123");
         }
         $this->redirect();
@@ -212,6 +230,16 @@ class TeacherController {
             }
             
             if ($successCount > 0) {
+                // Notify Teacher
+                require_once __DIR__ . '/../Helpers/Notification.php';
+                $classNames = [];
+                $q = "SELECT class_name FROM classes WHERE id IN (" . implode(',', array_fill(0, count($classIds), '?')) . ")";
+                $cData = DB::query($q, $classIds);
+                $classNames = array_column($cData, 'class_name');
+                
+                $msg = "You have been assigned new subject(s) in: " . implode(', ', $classNames) . ".";
+                Notification::send($teacherId, "New Subject Assignment", $msg, "success", "/teacher/scores");
+                
                 Session::flash('success', "Assigned {$successCount} subject/class combinations successfully.");
             }
         } else {

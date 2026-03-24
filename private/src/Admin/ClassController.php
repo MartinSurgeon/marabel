@@ -102,11 +102,29 @@ class ClassController {
     }
 
     private function syncClassTeachers(int $classId, array $teacherIds): void {
+        $className = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+        
+        // Get existing assigned teachers to identify new ones
+        $existing = DB::query("SELECT teacher_id FROM class_teachers WHERE class_id = ?", [$classId]);
+        $existingIds = array_column($existing, 'teacher_id');
+
         DB::execute("DELETE FROM class_teachers WHERE class_id = ?", [$classId]);
         foreach ($teacherIds as $tid) {
             $tid = (int)$tid;
             if ($tid && $classId) {
                 DB::execute("INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)", [$classId, $tid]);
+                
+                // Notify ONLY if they weren't already assigned (HCI: reduce spam)
+                if (!in_array($tid, $existingIds)) {
+                    require_once __DIR__ . '/../Helpers/Notification.php';
+                    Notification::send(
+                        $tid, 
+                        "New Classroom Assignment", 
+                        "You have been assigned as a Class Teacher for '{$className}'.", 
+                        "success", 
+                        "/teacher/class?id={$classId}"
+                    );
+                }
             }
         }
     }
