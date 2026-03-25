@@ -175,15 +175,28 @@ class PublishController {
             // 1. Notify Admins (Global is okay for system update)
             Notification::send(null, "Results Published", "Report cards for {$className} have been published.", 'success', '/admin/publish');
             
-            // 2. Notify Parents of students in this class
+            // 2. Notify Parents (Primary Contact)
             $parents = DB::query("
-                SELECT DISTINCT sp.parent_user_id 
-                FROM student_parents sp
-                JOIN students s ON s.id = sp.student_id
-                WHERE s.current_class_id = ? AND s.status = 'active'
+                SELECT DISTINCT u.phone, s.full_name, u.id as parent_user_id
+                FROM users u
+                JOIN student_parents sp ON u.id = sp.parent_user_id
+                JOIN students s ON sp.student_id = s.id
+                WHERE s.current_class_id = ? AND s.status = 'active' AND sp.is_primary = 1
             ", [$classId]);
+
+            $sendSms = (isset($_POST['send_sms']) && $_POST['send_sms'] === '1');
+            $termName = $term['name'] ?? 'Current Term';
+            $yearName = $activeYear['year_name'] ?? '';
+
             foreach ($parents as $p) {
-                Notification::send($p['parent_user_id'], "Results Released", "Academic results for {$className} are now available for viewing.", 'success', '/parent');
+                // In-app notification
+                Notification::send($p['parent_user_id'], "Results Released", "Academic results for {$p['full_name']} ({$className}) are available for viewing.", 'success', '/parent');
+                
+                // Optional SMS notification
+                if ($sendSms && !empty($p['phone'])) {
+                    $smsMsg = "Dear Parent, results for {$p['full_name']} ({$termName} {$yearName}) have been published. View now at the portal.";
+                    SMS::send($p['phone'], $smsMsg, 'report_card');
+                }
             }
             
             /* 

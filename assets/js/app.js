@@ -230,7 +230,7 @@ function confirmAction(options, callback) {
 
   // Set Content
   title.textContent = config.title;
-  msg.textContent   = config.message;
+  msg.innerHTML     = config.message;
   btn.textContent   = config.confirmText;
   
   // Set Type/Styling

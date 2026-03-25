@@ -37,6 +37,7 @@ define('SMS_API_KEY',  '9bb2205bfa7ab3fa695254e68bf44fbcb0ecdaed0757612f9474d167
 define('SMS_HOST',     'api.smsonlinegh.com');
 define('SMS_OTP_EXPIRY_MINUTES', 10);
 define('SMS_OTP_RATE_LIMIT',     3);   // max OTPs per phone per hour
+define('SMS_PORTAL_URL',         'https://school.portal'); // Replace with live URL
 
 // ── Scoring ─────────────────────────────────────────────────────────
 define('SBA_COMPONENT_MAX',    15);   // each component max

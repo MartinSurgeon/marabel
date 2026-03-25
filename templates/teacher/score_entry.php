@@ -463,23 +463,28 @@ document.addEventListener('DOMContentLoaded', () => {
       const el = e.target;
       const max = parseFloat(el.max);
       const min = parseFloat(el.min) || 0;
+      
+      // 1. Block decimals immediately
+      if (el.value.includes('.')) {
+        showInputError(el, "No decimal allowed");
+        el.value = el.value.replace(/\./g, '');
+      }
+
+      // 2. Prevent leading zeros (e.g., "03" -> "3")
+      if (el.value.length > 1 && el.value.startsWith('0')) {
+        el.value = el.value.replace(/^0+/, '');
+      }
+
       let val = parseFloat(el.value);
 
       if (!isNaN(val)) {
-        // Reject decimals immediately (HCI: strict validation)
-        if (el.value.includes('.')) {
-          showInputError(el, "No decimal");
-          el.value = el.value.replace(/\./g, '');
-          val = parseFloat(el.value);
-        }
-
         if (val > max) {
-          showInputError(el, `Max is ${max}`);
-          el.value = ''; // Clear to prevent accidental invalid save
+          showInputError(el, `Max value is ${max}`);
+          el.value = ''; // Reset for safety
           el.classList.add('input-over-limit');
           setTimeout(() => el.classList.remove('input-over-limit'), 1000);
         } else if (val < min) {
-          showInputError(el, "Too low");
+          showInputError(el, `Min value is ${min}`);
           el.value = '';
         } else {
           el.classList.remove('input-over-limit');

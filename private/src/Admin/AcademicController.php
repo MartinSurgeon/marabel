@@ -69,9 +69,32 @@ class AcademicController {
     private function yearDelete(): void {
         $id = (int)($_POST['year_id'] ?? 0);
         if (!$id) $this->back();
+
         $row = DB::queryOne("SELECT year_name FROM academic_years WHERE id = ?", [$id]);
-        DB::execute("DELETE FROM academic_years WHERE id = ?", [$id]);
-        Session::flash('success', "Academic year '{$row['year_name']}' deleted.");
+        if (!$row) $this->back();
+
+        // Check for dependencies (HCI: Prevent accidental data loss and crashes)
+        $classCount = (int)DB::queryValue("SELECT COUNT(*) FROM classes WHERE academic_year_id = ?", [$id]);
+        $studentCount = (int)DB::queryValue("SELECT COUNT(*) FROM students WHERE academic_year_id = ?", [$id]);
+        $promoCount = (int)DB::queryValue("SELECT COUNT(*) FROM student_promotions WHERE academic_year_id = ?", [$id]);
+
+        if ($classCount > 0 || $studentCount > 0 || $promoCount > 0) {
+            $msg = "Cannot delete '{$row['year_name']}' because it contains active data: ";
+            $parts = [];
+            if ($classCount > 0) $parts[] = "{$classCount} Class(es)";
+            if ($studentCount > 0) $parts[] = "{$studentCount} Student(s)";
+            if ($promoCount > 0) $parts[] = "{$promoCount} Promotion Record(s)";
+            
+            Session::flash('error', $msg . implode(', ', $parts) . ". Please remove or reassign these records first.");
+            $this->back();
+        }
+
+        try {
+            DB::execute("DELETE FROM academic_years WHERE id = ?", [$id]);
+            Session::flash('success', "Academic year '{$row['year_name']}' deleted.");
+        } catch (\PDOException $e) {
+            Session::flash('error', "Could not delete '{$row['year_name']}'. It may be referenced by other records (e.g. Terms).");
+        }
         $this->back();
     }
 
@@ -142,9 +165,32 @@ class AcademicController {
     private function termDelete(): void {
         $id = (int)($_POST['term_id'] ?? 0);
         if (!$id) $this->back();
+
         $row = DB::queryOne("SELECT name FROM terms WHERE id = ?", [$id]);
-        DB::execute("DELETE FROM terms WHERE id = ?", [$id]);
-        Session::flash('success', "Term '{$row['name']}' deleted.");
+        if (!$row) $this->back();
+
+        // Check for dependencies (HCI: Prevent accidental data loss and crashes)
+        $subjCount = (int)DB::queryValue("SELECT COUNT(*) FROM class_subjects WHERE term_id = ?", [$id]);
+        $scoreCount = (int)DB::queryValue("SELECT (SELECT COUNT(*) FROM sba_component_scores WHERE term_id = ?) + (SELECT COUNT(*) FROM exam_scores WHERE term_id = ?)", [$id, $id]);
+        $promoCount = (int)DB::queryValue("SELECT COUNT(*) FROM student_promotions WHERE term_id = ?", [$id]);
+
+        if ($subjCount > 0 || $scoreCount > 0 || $promoCount > 0) {
+            $msg = "Cannot delete '{$row['name']}' because it has active data: ";
+            $parts = [];
+            if ($subjCount > 0) $parts[] = "{$subjCount} Subject Assignment(s)";
+            if ($scoreCount > 0) $parts[] = "{$scoreCount} Score Record(s)";
+            if ($promoCount > 0) $parts[] = "{$promoCount} Promotion Record(s)";
+            
+            Session::flash('error', $msg . implode(', ', $parts) . ". Please remove these records first.");
+            $this->back();
+        }
+
+        try {
+            DB::execute("DELETE FROM terms WHERE id = ?", [$id]);
+            Session::flash('success', "Term '{$row['name']}' deleted.");
+        } catch (\PDOException $e) {
+            Session::flash('error', "Could not delete '{$row['name']}'. It may be referenced by other system records.");
+        }
         $this->back();
     }
 

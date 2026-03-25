@@ -294,10 +294,30 @@ function confirmPublish(e, className, students, subjects) {
   e.preventDefault();
   confirmAction({
     title:       `Publish ${className}?`,
-    message:     `This will compute positions and proficiency levels for ${students} student(s) across ${subjects} subject(s). Results will become visible to parents and students immediately.`,
+    message:     `This will compute positions and proficiency levels for ${students} student(s) across ${subjects} subject(s). Results will become visible to parents and students immediately.
+                  <div style="margin-top:1.25rem;">
+                    <label style="display:flex; align-items:center; gap:0.75rem; padding:0.75rem; background:rgba(0,0,0,0.03); border-radius:var(--radius-md); cursor:pointer; border:1px solid rgba(0,0,0,0.05);">
+                      <input type="checkbox" id="sms-notif-check" style="width:18px; height:18px; accent-color:var(--clr-primary);">
+                      <div style="text-align:left;">
+                        <div style="font-weight:800; font-size:13px; color:var(--clr-text);">Notify parents via SMS</div>
+                        <div style="font-size:11px; color:var(--clr-text-muted); font-weight:600;">Optional: Sends a text message to each primary contact.</div>
+                      </div>
+                    </label>
+                  </div>`,
     confirmText: 'Compute & Publish',
     type:        'danger'
-  }, () => { e.target.submit(); Loader.show(); });
+  }, () => { 
+    const isChecked = document.getElementById('sms-notif-check').checked;
+    if (isChecked) {
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'send_sms';
+      hidden.value = '1';
+      e.target.appendChild(hidden);
+    }
+    e.target.submit(); 
+    Loader.show(); 
+  });
   return false;
 }
 

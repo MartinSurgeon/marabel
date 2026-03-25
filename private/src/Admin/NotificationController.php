@@ -12,7 +12,8 @@ class NotificationController {
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $userId = Session::userId();
 
-        if (str_contains($uri, '/read-all')) {
+        // Robust routing check for /read-all suffix
+        if (str_ends_with(rtrim(parse_url($uri, PHP_URL_PATH), '/'), '/read-all')) {
             $this->markAllRead($userId);
             return;
         }
