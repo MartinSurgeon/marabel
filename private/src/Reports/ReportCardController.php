@@ -109,7 +109,7 @@ class ReportCardController {
 
         // ── 5. Aggregate / Class Position ─────────────────────────────
         $aggregate = DB::queryOne(
-            "SELECT aggregate_score, class_position, number_of_subjects
+            "SELECT aggregate_score, class_position, number_of_subjects, aggregate_grade
              FROM student_aggregates
              WHERE student_id = ? AND term_id = ?",
             [$studentId, $termId]

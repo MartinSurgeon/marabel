@@ -96,25 +96,25 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           <td style="padding:0;">
             <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="class_test" 
-                   value="<?= $sba['class_test'] ?? '' ?>" 
+                   value="<?= isset($sba['class_test']) ? (int)$sba['class_test'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
             <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="group_work" 
-                   value="<?= $sba['group_work'] ?? '' ?>" 
+                   value="<?= isset($sba['group_work']) ? (int)$sba['group_work'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
             <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="project" 
-                   value="<?= $sba['project'] ?? '' ?>" 
+                   value="<?= isset($sba['project']) ? (int)$sba['project'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
             <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="individual_test" 
-                   value="<?= $sba['individual_test'] ?? '' ?>" 
+                   value="<?= isset($sba['individual_test']) ? (int)$sba['individual_test'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           
@@ -130,7 +130,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           <td style="padding:0; border-left:2px solid var(--clr-border);">
             <input type="number" step="1" min="0" max="100" 
                    class="score-input" data-field="raw_score" 
-                   value="<?= $exam['raw_score'] ?? '' ?>" 
+                   value="<?= isset($exam['raw_score']) ? (int)$exam['raw_score'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.1); font-weight:800; color:var(--clr-primary-300);">
@@ -139,7 +139,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           
           <!-- Overall -->
           <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.03); font-weight:900; font-size:1.1rem; border-left:1px solid var(--clr-border);">
-            <span class="overall-total"><?= number_format((($sba['class_score'] ?? 0) + ($exam['exam_score'] ?? 0)), 1) ?></span>
+            <span class="overall-total"><?= round(($sba['class_score'] ?? 0) + ($exam['exam_score'] ?? 0), 0) ?></span>
           </td>
         </tr>
         <?php endforeach; ?>
@@ -396,11 +396,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    const scaledSba = parseFloat(((subTotal / 60) * 50).toFixed(2));
+    const scaledSba = Math.round((subTotal / 60) * 50);
     const rawExamInput = row.querySelector('[data-field="raw_score"]');
     const rawExam = rawExamInput ? (parseFloat(rawExamInput.value) || 0) : 0;
-    const scaledExam = parseFloat(((rawExam / 100) * 50).toFixed(2));
-    const finalTotal = parseFloat((scaledSba + scaledExam).toFixed(2));
+    const scaledExam = Math.round((rawExam / 100) * 50);
+    const finalTotal = Math.round(scaledSba + scaledExam);
 
     const subTotalEl = row.querySelector('.sub-total');
     if (subTotalEl) subTotalEl.textContent = subTotal % 1 === 0 ? subTotal : subTotal.toFixed(1);
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (scaledExamEl) scaledExamEl.textContent = scaledExam;
     
     const overallEl = row.querySelector('.overall-total');
-    if (overallEl) overallEl.textContent = finalTotal.toFixed(1);
+    if (overallEl) overallEl.textContent = finalTotal;
   };
 
   // Dropdown Management (HCI: closes on click-outside)

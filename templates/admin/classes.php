@@ -207,7 +207,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
           <label class="form-label" style="display:block; margin-bottom:0.75rem;">Grading Standard (for Reports)</label>
           <div class="flex gap-6">
             <label class="flex items-center gap-2 cursor-pointer">
-              <input type="radio" name="grading_system" value="proficiency" id="grade-prof" checked style="width:18px; height:18px; accent-color:var(--clr-primary);">
+              <input type="radio" name="grading_system" value="proficiency" id="grade-proficiency" checked style="width:18px; height:18px; accent-color:var(--clr-primary);">
               <div style="line-height:1.2;">
                 <div style="font-size:13px; font-weight:700; color:var(--clr-text);">Proficiency</div>
                 <div style="font-size:10px; color:var(--clr-text-muted);">Standard 1-5 scale</div>

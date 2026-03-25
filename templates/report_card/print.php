@@ -262,8 +262,14 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
     <tr>
       <td class="label">Name:</td>
       <td class="value" colspan="3"><?= mb_strtoupper(htmlspecialchars($student['full_name'] ?? '')) ?></td>
-      <td class="label-small">Position:</td>
-      <td class="value-small"><?= $aggregate ? ordinal((int)$aggregate['class_position']) : '—' ?></td>
+      <td class="label-small"><?= ($gradingSystem === 'waec') ? 'Aggregate:' : 'Position:' ?></td>
+      <td class="value-small">
+        <?php if ($gradingSystem === 'waec'): ?>
+           <?= $aggregate['aggregate_grade'] ?? '—' ?>
+        <?php else: ?>
+           <?= $aggregate ? ordinal((int)$aggregate['class_position']) : '—' ?>
+        <?php endif; ?>
+      </td>
     </tr>
     <tr>
       <td class="label">Class:</td>
@@ -301,9 +307,9 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       <?php foreach ($scores as $s): ?>
       <tr>
         <td class="subject-name"><?= htmlspecialchars($s['subject_name']) ?></td>
-        <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 1) : '–' ?></td>
-        <td class="center"><?= $s['exam_score'] !== null ? number_format((float)$s['exam_score'], 1) : '–' ?></td>
-        <td class="center" style="font-weight:800; background:#f9f9f9;"><?= $s['overall_total'] !== null ? number_format((float)$s['overall_total'], 1) : '0' ?></td>
+        <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 0) : '–' ?></td>
+        <td class="center"><?= $s['exam_score'] !== null ? number_format((float)$s['exam_score'], 0) : '–' ?></td>
+        <td class="center" style="font-weight:800; background:#f9f9f9;"><?= $s['overall_total'] !== null ? number_format((float)$s['overall_total'], 0) : '0' ?></td>
         <td class="center"><?= $s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5') ?></td>
         <td class="center"><?= $s['subject_position'] ? ordinal((int)$s['subject_position']) : '—' ?></td>
         <td class="center remarks-cell"><?= htmlspecialchars($scale[$s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5')]['label'] ?? '—') ?></td>
@@ -320,7 +326,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
 
       <tr class="total-row">
         <td colspan="3" style="text-align:right; padding-right:15px; text-transform:uppercase; letter-spacing:1px; font-size:11px;">Overall Total:</td>
-        <td class="center"><?= $aggregate ? number_format((float)$aggregate['aggregate_score'], 1) : '0.0' ?></td>
+        <td class="center"><?= $aggregate ? number_format((float)$aggregate['aggregate_score'], 0) : '0' ?></td>
         <td colspan="3"></td>
       </tr>
 

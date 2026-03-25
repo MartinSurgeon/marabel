@@ -22,7 +22,10 @@ class ResultCalculator {
             [$classId]
         );
         $subjects = DB::query(
-            "SELECT id, subject_id FROM class_subjects WHERE class_id = ? AND term_id = ?",
+            "SELECT cs.id, cs.subject_id, s.subject_name 
+             FROM class_subjects cs
+             JOIN subjects s ON s.id = cs.subject_id
+             WHERE cs.class_id = ? AND cs.term_id = ?",
             [$classId, $termId]
         );
 
@@ -61,7 +64,8 @@ class ResultCalculator {
         }
 
         // 4. Compute scores for each student × subject
-        $computedRows = []; // [class_subject_id => [student_id => result]]
+        $computedRows  = []; // [class_subject_id => [student_id => result]]
+        $studentGrades = []; // [student_id => [subject_name => grade]]
 
         foreach ($students as $student) {
             $sid            = $student['id'];
@@ -101,21 +105,49 @@ class ResultCalculator {
                 );
 
                 $computedRows[$csId][$sid] = $result['overall_total'];
+                $studentGrades[$sid][$cs['subject_name']] = $result['proficiency_level'];
                 $totalAggregate           += $result['overall_total'];
                 $subjectCount++;
             }
 
             // Upsert aggregate
             if ($subjectCount > 0) {
+                $aggGrade = null;
+                if ($gradingSystem === 'waec') {
+                    // WAEC Aggregate (Best 6): 4 Core + 2 Best Electives
+                    $cores = ['English Language', 'Mathematics', 'Integrated Science', 'Social Studies'];
+                    $sGrades = $studentGrades[$sid] ?? [];
+
+                    $coreGrades = [];
+                    $electiveGrades = [];
+
+                    foreach ($sGrades as $name => $g) {
+                        if (in_array($name, $cores)) {
+                            $coreGrades[] = $g;
+                        } else {
+                            $electiveGrades[] = $g;
+                        }
+                    }
+
+                    // Best 6 = All 4 Cores + 2 Best Electives
+                    // Note: Grade 1 is best, so sort ASC
+                    sort($electiveGrades);
+                    $bestElectives = array_slice($electiveGrades, 0, 2);
+
+                    // If missing cores, BECE rules usually substitute or penalize, 
+                    // but for school system we count what's available up to 4+2.
+                    $aggGrade = array_sum($coreGrades) + array_sum($bestElectives);
+                }
+
                 DB::execute(
                     "INSERT INTO student_aggregates
-                        (student_id, class_id, term_id, aggregate_score, number_of_subjects)
-                     VALUES (?, ?, ?, ?, ?)
+                        (student_id, class_id, term_id, aggregate_score, number_of_subjects, aggregate_grade)
+                     VALUES (?, ?, ?, ?, ?, ?)
                      ON DUPLICATE KEY UPDATE
-                        aggregate_score=?, number_of_subjects=?",
+                        aggregate_score=?, number_of_subjects=?, aggregate_grade=?",
                     [
-                        $sid, $classId, $termId, $totalAggregate, $subjectCount,
-                        $totalAggregate, $subjectCount,
+                        $sid, $classId, $termId, $totalAggregate, $subjectCount, $aggGrade,
+                        $totalAggregate, $subjectCount, $aggGrade,
                     ]
                 );
             }

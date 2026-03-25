@@ -34,8 +34,8 @@ class GradingEngine {
         $classScore = ($subTotal / SBA_COMPONENTS_TOTAL) * SBA_CLASS_SCORE_MAX;
 
         return [
-            'sub_total'   => round($subTotal, 2),
-            'class_score' => round($classScore, 2),
+            'sub_total'   => round($subTotal, 0),
+            'class_score' => round($classScore, 0),
         ];
     }
 
@@ -48,14 +48,14 @@ class GradingEngine {
      */
     public static function computeExamScore(?float $rawExam): float {
         $raw = (float)$rawExam;
-        return round(($raw / SBA_EXAM_RAW_MAX) * SBA_EXAM_SCORE_MAX, 2);
+        return round(($raw / SBA_EXAM_RAW_MAX) * SBA_EXAM_SCORE_MAX, 0);
     }
 
     /**
      * Compute overall total (Class Score + Exam Score, out of 100).
      */
     public static function computeOverallTotal(float $classScore, float $examScore): float {
-        return round($classScore + $examScore, 2);
+        return round($classScore + $examScore, 0);
     }
 
     /**
