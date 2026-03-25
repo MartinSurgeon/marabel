@@ -69,16 +69,21 @@ class ClassManagementController {
 
         // 6. Fetch Existing Remarks
         $remarks = DB::query(
-            "SELECT student_id, conduct_character, attitude, teacher_remark 
+            "SELECT student_id, conduct_character, attitude, teacher_remark, 
+                    conduct_remark, interest_remark, attitude_remark
              FROM student_remarks WHERE term_id = ?",
             [$term['id']]
         );
         $remMap = array_column($remarks, null, 'student_id');
 
-        // 7. Fetch Predefined Remarks for Teacher
+        // 7. Fetch Predefined remarks for all categories
         $predefined = DB::query(
-            "SELECT content FROM predefined_remarks WHERE category = 'teacher' ORDER BY is_system DESC, content ASC"
+            "SELECT content, category FROM predefined_remarks ORDER BY is_system DESC, content ASC"
         );
+        $groupedPredefined = [];
+        foreach ($predefined as $p) {
+            $groupedPredefined[$p['category']][] = $p['content'];
+        }
 
         // Pass globals to template
         global $activeTerm, $targetClass, $studentList, $attData, $remData, $predefinedRemarks;
@@ -87,7 +92,7 @@ class ClassManagementController {
         $studentList = $students;
         $attData     = $attMap;
         $remData     = $remMap;
-        $predefinedRemarks = array_column($predefined, 'content');
+        $predefinedRemarks = $groupedPredefined;
     }
 
     /**
@@ -115,7 +120,8 @@ class ClassManagementController {
                 $days = (int)$value;
                 $this->upsertAttendance($studentId, $termId, $days);
             } elseif ($field === 'save_predefined') {
-                $this->savePredefinedRemark($value, 'teacher');
+                $category = $_POST['category'] ?? 'teacher';
+                $this->savePredefinedRemark($value, $category);
             } else {
                 $this->upsertRemark($studentId, $termId, $field, $value);
             }
@@ -142,7 +148,10 @@ class ClassManagementController {
 
     private function upsertRemark(int $sid, int $tid, string $field, string $val): void {
         // Allowed fields for teacher
-        $allowed = ['conduct_character', 'attitude', 'teacher_remark'];
+        $allowed = [
+            'conduct_character', 'attitude', 'teacher_remark', 
+            'conduct_remark', 'interest_remark', 'attitude_remark'
+        ];
         if (!in_array($field, $allowed)) {
             throw new Exception('Invalid field');
         }

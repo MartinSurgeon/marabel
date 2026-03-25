@@ -50,7 +50,8 @@ class RemarkController {
         if ($classId) {
             $students = DB::query("
                 SELECT s.id, s.full_name, s.student_id_number, 
-                       r.teacher_remark, r.headmaster_remark, r.conduct_character, r.attitude
+                       r.teacher_remark, r.headmaster_remark, r.conduct_character, r.attitude,
+                       r.conduct_remark, r.interest_remark, r.attitude_remark
                 FROM students s
                 LEFT JOIN student_remarks r ON r.student_id = s.id AND r.term_id = ?
                 WHERE s.current_class_id = ? AND s.status = 'active'
@@ -58,17 +59,21 @@ class RemarkController {
             ", [$term['id'], $classId]);
         }
 
-        // 4. Fetch Predefined remarks for Headmaster
+        // 4. Fetch Predefined remarks for all categories
         $predefined = DB::query(
-            "SELECT content FROM predefined_remarks WHERE category = 'headmaster' ORDER BY is_system DESC, content ASC"
+            "SELECT content, category FROM predefined_remarks ORDER BY is_system DESC, content ASC"
         );
+        $groupedPredefined = [];
+        foreach ($predefined as $p) {
+            $groupedPredefined[$p['category']][] = $p['content'];
+        }
 
         global $activeTerm, $classList, $studentList, $predefinedRemarks, $selectedClassId;
         $activeTerm = $term;
         $classList  = $classes;
         $studentList = $students;
         $selectedClassId = $classId;
-        $predefinedRemarks = array_column($predefined, 'content');
+        $predefinedRemarks = $groupedPredefined;
     }
 
     private function handleAjax(int $termId): void {
@@ -88,13 +93,8 @@ class RemarkController {
             return;
         }
 
-        if ($field === 'save_predefined') {
-            $this->savePredefined($val);
-            echo json_encode(['success' => true]);
-            return;
-        }
-
-        if ($field !== 'headmaster_remark') {
+        $allowed = ['headmaster_remark', 'teacher_remark', 'conduct_remark', 'interest_remark', 'attitude_remark'];
+        if (!in_array($field, $allowed)) {
             echo json_encode(['success' => false, 'message' => 'Invalid field']);
             return;
         }
@@ -103,12 +103,12 @@ class RemarkController {
             $exists = DB::queryOne("SELECT id FROM student_remarks WHERE student_id = ? AND term_id = ?", [$sid, $termId]);
             if ($exists) {
                 DB::execute(
-                    "UPDATE student_remarks SET headmaster_remark = ?, updated_by = ?, updated_at = NOW() WHERE id = ?",
+                    "UPDATE student_remarks SET $field = ?, updated_by = ?, updated_at = NOW() WHERE id = ?",
                     [$val, Session::userId(), $exists['id']]
                 );
             } else {
                 DB::execute(
-                    "INSERT INTO student_remarks (student_id, term_id, headmaster_remark, updated_by) VALUES (?, ?, ?, ?)",
+                    "INSERT INTO student_remarks (student_id, term_id, $field, updated_by) VALUES (?, ?, ?, ?)",
                     [$sid, $termId, $val, Session::userId()]
                 );
             }
@@ -118,12 +118,12 @@ class RemarkController {
         }
     }
 
-    private function savePredefined(string $content): void {
+    private function savePredefined(string $content, string $category = 'headmaster'): void {
         $content = trim($content);
         if (!$content) return;
-        $exists = DB::queryOne("SELECT id FROM predefined_remarks WHERE category='headmaster' AND content=?", [$content]);
+        $exists = DB::queryOne("SELECT id FROM predefined_remarks WHERE category=? AND content=?", [$category, $content]);
         if (!$exists) {
-            DB::execute("INSERT INTO predefined_remarks (category, content, created_by) VALUES ('headmaster', ?, ?)", [$content, Session::userId()]);
+            DB::execute("INSERT INTO predefined_remarks (category, content, created_by) VALUES (?, ?, ?)", [$category, $content, Session::userId()]);
         }
     }
 

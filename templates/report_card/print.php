@@ -18,6 +18,10 @@ $classSize    = $rc_classSize    ?? 0;
 $remarks      = $rc_remarks      ?? null;
 $attendance   = $rc_attendance   ?? null;
 $classTeacher = $rc_classTeacher ?? null;
+$gradingSystem = $rc_gradingSystem ?? 'proficiency';
+
+$scale = ($gradingSystem === 'waec') ? WAEC_SCALE : PROFICIENCY_SCALE;
+$gradeLabel = ($gradingSystem === 'waec') ? 'Grade' : 'Proficiency';
 
 $base = defined('APP_BASE') ? APP_BASE : '';
 
@@ -288,9 +292,9 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
         <th style="width:70px;">Class<br>Score (50)</th>
         <th style="width:70px;">Exams<br>Score (50)</th>
         <th style="width:70px;">Total<br>Score (100)</th>
-        <th style="width:60px;">Grade</th>
+        <th style="width:60px;"><?= $gradingSystem === 'waec' ? 'Grade' : 'Grade (1-5)' ?></th>
         <th style="width:60px;">Position</th>
-        <th style="width:160px;">Level of Proficiency</th>
+        <th style="width:180px;"><?= $gradingSystem === 'waec' ? 'Remarks' : 'Level of Proficiency' ?></th>
       </tr>
     </thead>
     <tbody>
@@ -300,9 +304,9 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
         <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 1) : '–' ?></td>
         <td class="center"><?= $s['exam_score'] !== null ? number_format((float)$s['exam_score'], 1) : '–' ?></td>
         <td class="center" style="font-weight:800; background:#f9f9f9;"><?= $s['overall_total'] !== null ? number_format((float)$s['overall_total'], 1) : '0' ?></td>
-        <td class="center"><?= $s['proficiency_level'] ?? '5' ?></td>
+        <td class="center"><?= $s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5') ?></td>
         <td class="center"><?= $s['subject_position'] ? ordinal((int)$s['subject_position']) : '—' ?></td>
-        <td class="center remarks-cell"><?= htmlspecialchars(PROFICIENCY_SCALE[$s['proficiency_level'] ?? 5]['label'] ?? 'EMERGING') ?></td>
+        <td class="center remarks-cell"><?= htmlspecialchars($scale[$s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5')]['label'] ?? '—') ?></td>
       </tr>
       <?php endforeach; ?>
 
@@ -330,12 +334,16 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       </tr>
 
       <tr>
-        <td colspan="2" style="font-weight:700;">Conduct / Character:</td>
-        <td colspan="5"><?= htmlspecialchars($remarks['conduct_character'] ?? '–') ?></td>
+        <td style="font-weight:700;">Conduct / Character:</td>
+        <td colspan="6"><?= htmlspecialchars($remarks['conduct_remark'] ?? '–') ?></td>
       </tr>
       <tr>
-        <td colspan="2" style="font-weight:700;">Attitude:</td>
-        <td colspan="5"><?= htmlspecialchars($remarks['attitude'] ?? '–') ?></td>
+        <td style="font-weight:700;">Interest:</td>
+        <td colspan="6"><?= htmlspecialchars($remarks['interest_remark'] ?? '–') ?></td>
+      </tr>
+      <tr>
+        <td style="font-weight:700;">Attitude:</td>
+        <td colspan="6"><?= htmlspecialchars($remarks['attitude_remark'] ?? '–') ?></td>
       </tr>
       <tr>
         <td colspan="2" style="font-weight:700;">Class Teacher's Remarks:</td>
@@ -354,16 +362,17 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
   <table class="prof-table">
     <thead>
       <tr>
-        <th>LEVEL OF PROFICIENCY</th>
+        <th><?= $gradingSystem === 'waec' ? 'WAEC GRADE DEFINITION' : 'LEVEL OF PROFICIENCY' ?></th>
         <th>BENCHMARK</th>
       </tr>
     </thead>
     <tbody>
-      <tr><td>1: HIGHLY PROFICIENT (HP)</td><td>80% +</td></tr>
-      <tr><td>2: PROFICIENT (P)</td><td>68-79%</td></tr>
-      <tr><td>3: APPROACHING PROFICIENCY</td><td>54-67%</td></tr>
-      <tr><td>4: DEVELOPING</td><td>40-53%</td></tr>
-      <tr><td>5: EMERGING</td><td>39% AND BELOW</td></tr>
+      <?php foreach ($scale as $grade => $meta): ?>
+      <tr>
+        <td><?= $grade ?>: <?= $meta['label'] ?> (<?= $meta['abbr'] ?>)</td>
+        <td><?= $meta['range'] ?></td>
+      </tr>
+      <?php endforeach; ?>
     </tbody>
   </table>
 

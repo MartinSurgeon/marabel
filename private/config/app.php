@@ -50,11 +50,24 @@ define('SBA_OVERALL_MAX',      100);  // class score + exam score
 // ── Grading ─────────────────────────────────────────────────────────
 // Level of Proficiency — fixed, not configurable
 define('PROFICIENCY_SCALE', [
-    1 => ['label' => 'HIGHLY PROFICIENT',      'abbr' => 'HP', 'min' => 80,  'max' => 100],
-    2 => ['label' => 'PROFICIENT',             'abbr' => 'P',  'min' => 68,  'max' => 79.99],
-    3 => ['label' => 'APPROACHING PROFICIENCY','abbr' => 'AP', 'min' => 54,  'max' => 67.99],
-    4 => ['label' => 'DEVELOPING',             'abbr' => 'D',  'min' => 40,  'max' => 53.99],
-    5 => ['label' => 'EMERGING',               'abbr' => 'E',  'min' => 0,   'max' => 39.99],
+    1 => ['label' => 'HIGHLY PROFICIENT',      'abbr' => 'HP', 'min' => 80,  'max' => 100,   'range' => '80% +'],
+    2 => ['label' => 'PROFICIENT',             'abbr' => 'P',  'min' => 68,  'max' => 79.99, 'range' => '68-79%'],
+    3 => ['label' => 'APPROACHING PROFICIENCY','abbr' => 'AP', 'min' => 54,  'max' => 67.99, 'range' => '54-67%'],
+    4 => ['label' => 'DEVELOPING',             'abbr' => 'D',  'min' => 40,  'max' => 53.99, 'range' => '40-53%'],
+    5 => ['label' => 'EMERGING',               'abbr' => 'E',  'min' => 0,   'max' => 39.99, 'range' => '39% AND BELOW'],
+]);
+
+// WAEC / BECE Grading Scale (Standard 1-9)
+define('WAEC_SCALE', [
+    1 => ['label' => 'EXCELLENT',      'abbr' => '1', 'min' => 80,  'max' => 100,   'range' => '80-100'],
+    2 => ['label' => 'VERY GOOD',      'abbr' => '2', 'min' => 70,  'max' => 79.99, 'range' => '70-79'],
+    3 => ['label' => 'GOOD',           'abbr' => '3', 'min' => 60,  'max' => 69.99, 'range' => '60-69'],
+    4 => ['label' => 'HIGH CREDIT',    'abbr' => '4', 'min' => 55,  'max' => 59.99, 'range' => '55-59'],
+    5 => ['label' => 'CREDIT',         'abbr' => '5', 'min' => 50,  'max' => 54.99, 'range' => '50-54'],
+    6 => ['label' => 'LOW CREDIT',     'abbr' => '6', 'min' => 45,  'max' => 49.99, 'range' => '45-49'],
+    7 => ['label' => 'PASS',           'abbr' => '7', 'min' => 40,  'max' => 44.99, 'range' => '40-44'],
+    8 => ['label' => 'WEAK PASS',      'abbr' => '8', 'min' => 35,  'max' => 39.99, 'range' => '35-39'],
+    9 => ['label' => 'FAIL',           'abbr' => '9', 'min' => 0,   'max' => 34.99, 'range' => '0-34'],
 ]);
 
 // ── Upload Limits ───────────────────────────────────────────────────

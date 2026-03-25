@@ -59,33 +59,37 @@ class GradingEngine {
     }
 
     /**
-     * Determine Level of Proficiency (1–5) from overall total percentage.
+     * Determine Grade Level (1–5 Proficiency or 1–9 WAEC) from overall total percentage.
      *
      * @param float $overallTotal  Score out of 100
-     * @return int  Proficiency level 1–5
+     * @param string $system       'proficiency' or 'waec'
+     * @return int  Grade level
      */
-    public static function getProficiencyLevel(float $overallTotal): int {
+    public static function getProficiencyLevel(float $overallTotal, string $system = 'proficiency'): int {
         $pct = $overallTotal; // Already out of 100, so percentage = value
-        foreach (PROFICIENCY_SCALE as $level => $range) {
+        $scale = $system === 'waec' ? WAEC_SCALE : PROFICIENCY_SCALE;
+        foreach ($scale as $level => $range) {
             if ($pct >= $range['min'] && $pct <= $range['max']) {
                 return $level;
             }
         }
-        return 5; // Default to EMERGING if out of range
+        return $system === 'waec' ? 9 : 5; // Default to worst grade if out of range
     }
 
     /**
-     * Get proficiency label (e.g. "HIGHLY PROFICIENT") for a level number.
+     * Get grade label (e.g. "HIGHLY PROFICIENT" or "EXCELLENT") for a level number.
      */
-    public static function getProficiencyLabel(int $level): string {
-        return PROFICIENCY_SCALE[$level]['label'] ?? 'EMERGING';
+    public static function getProficiencyLabel(int $level, string $system = 'proficiency'): string {
+        $scale = $system === 'waec' ? WAEC_SCALE : PROFICIENCY_SCALE;
+        return $scale[$level]['label'] ?? ($system === 'waec' ? 'FAIL' : 'EMERGING');
     }
 
     /**
-     * Get proficiency abbreviation (e.g. "HP") for a level number.
+     * Get grade abbreviation (e.g. "HP" or "1") for a level number.
      */
-    public static function getProficiencyAbbr(int $level): string {
-        return PROFICIENCY_SCALE[$level]['abbr'] ?? 'E';
+    public static function getProficiencyAbbr(int $level, string $system = 'proficiency'): string {
+        $scale = $system === 'waec' ? WAEC_SCALE : PROFICIENCY_SCALE;
+        return $scale[$level]['abbr'] ?? ($system === 'waec' ? '9' : 'E');
     }
 
     /**
@@ -163,21 +167,18 @@ class GradingEngine {
         return $studentScores;
     }
 
-    /**
-     * Full computation for a single student-subject pair.
-     * Returns all computed values ready to save to computed_scores.
-     */
     public static function computeFull(
         ?float $indivTest,
         ?float $groupWork,
         ?float $classTest,
         ?float $project,
-        ?float $rawExam
+        ?float $rawExam,
+        string $system = 'proficiency'
     ): array {
         $cs = self::computeClassScore($indivTest, $groupWork, $classTest, $project);
         $es = self::computeExamScore($rawExam);
         $ot = self::computeOverallTotal($cs['class_score'], $es);
-        $pl = self::getProficiencyLevel($ot);
+        $pl = self::getProficiencyLevel($ot, $system);
 
         return [
             'sub_total'        => $cs['sub_total'],
@@ -185,15 +186,24 @@ class GradingEngine {
             'exam_score'       => $es,
             'overall_total'    => $ot,
             'proficiency_level'=> $pl,
-            'proficiency_label'=> self::getProficiencyLabel($pl),
-            'proficiency_abbr' => self::getProficiencyAbbr($pl),
+            'proficiency_label'=> self::getProficiencyLabel($pl, $system),
+            'proficiency_abbr' => self::getProficiencyAbbr($pl, $system),
         ];
     }
 
     /**
-     * CSS colour class for a proficiency level (for UI badge colouring).
+     * CSS colour class for a grade level (for UI badge colouring).
      */
-    public static function levelColourClass(int $level): string {
+    public static function levelColourClass(int $level, string $system = 'proficiency'): string {
+        if ($system === 'waec') {
+            return match($level) {
+                1, 2, 3 => 'level-hp',
+                4, 5, 6 => 'level-p',
+                7, 8    => 'level-ap',
+                9       => 'level-e',
+                default => 'level-e',
+            };
+        }
         return match($level) {
             1 => 'level-hp',
             2 => 'level-p',

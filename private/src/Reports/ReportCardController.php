@@ -10,6 +10,7 @@
 
 require_once PRIVATE_PATH . '/src/Helpers/DB.php';
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
+require_once PRIVATE_PATH . '/src/Helpers/ResultCalculator.php';
 
 class ReportCardController {
 
@@ -28,7 +29,7 @@ class ReportCardController {
         $student = DB::queryOne(
             "SELECT s.id, s.student_id_number, s.full_name, s.surname, s.gender,
                     s.date_of_birth, s.photo_path,
-                    c.class_name, c.section, c.id as class_id,
+                    c.class_name, c.section, c.id as class_id, c.grading_system,
                     sl.name as level_name, sl.code as level_code
              FROM students s
              LEFT JOIN classes c  ON c.id = s.current_class_id
@@ -87,6 +88,11 @@ class ReportCardController {
             }
         }
 
+        // ── 3.5. On-the-fly computation for Previews (Teachers/Admins) ──
+        if (in_array($role, ['admin', 'teacher'])) {
+            ResultCalculator::compute($student['class_id'], $termId);
+        }
+
         // ── 4. Subject Scores ──────────────────────────────────────────
 
         $scores = DB::query(
@@ -117,7 +123,8 @@ class ReportCardController {
 
         // ── 6. Remarks ────────────────────────────────────────────────
         $remarks = DB::queryOne(
-            "SELECT conduct_character, attitude, teacher_remark, headmaster_remark
+            "SELECT conduct_character, attitude, teacher_remark, headmaster_remark,
+                    conduct_remark, interest_remark, attitude_remark
              FROM student_remarks
              WHERE student_id = ? AND term_id = ?",
             [$studentId, $termId]
@@ -142,7 +149,7 @@ class ReportCardController {
 
         // ── 9. Pass globals to template ───────────────────────────────
         global $rc_student, $rc_term, $rc_scores, $rc_aggregate,
-               $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
+               $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished, $rc_gradingSystem;
 
         $rc_student      = $student;
         $rc_term         = $term;
@@ -153,6 +160,7 @@ class ReportCardController {
         $rc_attendance   = $attendance;
         $rc_classTeacher = $classTeacher;
         $rc_isPublished  = $isPublished;
+        $rc_gradingSystem = $student['grading_system'] ?? 'proficiency';
     }
 
 

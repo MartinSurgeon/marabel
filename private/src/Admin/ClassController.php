@@ -72,20 +72,21 @@ class ClassController {
             'class_name'       => strtoupper(trim($_POST['class_name'])),
             'section'          => strtoupper(trim($_POST['section'] ?? '')),
             'academic_year_id' => (int)$_POST['academic_year_id'],
+            'grading_system'    => $_POST['grading_system'] ?? 'proficiency',
         ];
 
         $id = $_POST['class_id'] ?? null;
         try {
             if ($id) {
                 DB::execute(
-                    "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=? WHERE id=?",
+                    "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=?, grading_system=? WHERE id=?",
                     array_merge(array_values($data), [(int)$id])
                 );
                 $this->syncClassTeachers((int)$id, $_POST['teacher_ids'] ?? []);
                 Session::flash('success', "Classroom '{$data['class_name']}' updated.");
             } else {
                 $newId = DB::insert(
-                    "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?,?,?,?)",
+                    "INSERT INTO classes (level_id, class_name, section, academic_year_id, grading_system) VALUES (?,?,?,?,?)",
                     array_values($data)
                 );
                 $this->syncClassTeachers((int)$newId, $_POST['teacher_ids'] ?? []);

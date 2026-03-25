@@ -200,7 +200,27 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
             <option value="<?= $t['id'] ?>"><?= htmlspecialchars($t['full_name']) ?></option>
             <?php endforeach; ?>
           </select>
-          <p class="form-text">Hold Ctrl/Cmd to select multiple teachers. Class teachers manage score entry for their assigned students.</p>
+          <p class="form-text">Hold Ctrl/Cmd to select multiple teachers.</p>
+        </div>
+
+        <div class="form-group" style="padding:1rem; background:var(--clr-surface-2); border-radius:var(--radius-md); border:1px solid var(--clr-border);">
+          <label class="form-label" style="display:block; margin-bottom:0.75rem;">Grading Standard (for Reports)</label>
+          <div class="flex gap-6">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="grading_system" value="proficiency" id="grade-prof" checked style="width:18px; height:18px; accent-color:var(--clr-primary);">
+              <div style="line-height:1.2;">
+                <div style="font-size:13px; font-weight:700; color:var(--clr-text);">Proficiency</div>
+                <div style="font-size:10px; color:var(--clr-text-muted);">Standard 1-5 scale</div>
+              </div>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input type="radio" name="grading_system" value="waec" id="grade-waec" style="width:18px; height:18px; accent-color:var(--clr-primary);">
+              <div style="line-height:1.2;">
+                <div style="font-size:13px; font-weight:700; color:var(--clr-text);">WAEC / BECE</div>
+                <div style="font-size:10px; color:var(--clr-text-muted);">Standard 1-9 scale</div>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -243,6 +263,10 @@ function editClass(cls) {
       if (ids.includes(opt.value)) opt.selected = true;
     });
   }
+
+  // Set grading system radio
+  const sys = cls.grading_system || 'proficiency';
+  document.getElementById('grade-' + sys).checked = true;
   
   document.getElementById('modal-class-title').textContent = 'Edit ' + cls.class_name;
   document.getElementById('class-submit-btn').textContent = 'Update Classroom';

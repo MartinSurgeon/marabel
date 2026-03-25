@@ -1,7 +1,7 @@
 <?php
 /**
  * Teachers Management View
- * HCI/UX: Card-based grid for teachers, status toggles, quick assignment overview
+ * HCI/UX: Hybrid List & Grid view switcher to reduce cognitive overload
  */
 $pageTitle = 'Teachers Management';
 include __DIR__ . '/../layout/header.php';
@@ -14,21 +14,61 @@ $subjects = $subjectsList ?? [];
 $assignments = $assignmentsList ?? [];
 ?>
 
+<!-- DataTables 2.1.8 + Responsive 3.0.3 -->
+<link href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/responsive/3.0.3/css/responsive.dataTables.min.css" rel="stylesheet">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/responsive/3.0.3/js/dataTables.responsive.min.js"></script>
+
+<style>
+/* DataTable 2.x Styling Consistent with Students Page */
+div.dt-container { font-size: 13px; color: var(--clr-text); font-family: var(--font-sans); margin-top: 1rem; }
+div.dt-layout-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+@media (max-width: 768px) {
+    div.dt-layout-row { flex-direction: column; align-items: stretch; text-align: center; }
+}
+div.dt-container .dt-search input { border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 0.5rem 1.75rem 0.5rem 1rem; font-size: 13px; transition: all 0.2s ease; background: var(--clr-surface); width: 240px; }
+div.dt-container .dt-search input:focus { outline: none; border-color: var(--clr-primary); box-shadow: 0 0 0 4px rgba(105, 43, 196, 0.1); }
+div.dt-container .dt-length select { border: 1px solid var(--clr-border); border-radius: var(--radius-md); padding: 0.45rem 2rem 0.45rem 0.8rem; font-size: 13px; background: var(--clr-surface); }
+div.dt-container .dt-paging { display: flex; align-items: center; justify-content: flex-end; gap: 0.25rem; margin-top: 1rem; }
+div.dt-container .dt-paging .dt-paging-button { padding: 0.5rem 1rem; border-radius: var(--radius-md); border: 1px solid var(--clr-border) !important; cursor: pointer; background: var(--clr-surface) !important; transition: all 0.2s; }
+div.dt-container .dt-paging .dt-paging-button.current { background: var(--clr-primary) !important; color: white !important; border-color: var(--clr-primary) !important; }
+table.dataTable thead th { border-bottom: 2px solid var(--clr-border) !important; color: var(--clr-text-muted); text-transform: uppercase; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; padding: 1.25rem 0.75rem !important; }
+table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 0.75rem !important; }
+
+/* View Switcher Styles */
+.view-toggle-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); background: var(--clr-surface-2); color: var(--clr-text-muted); border: 1px solid var(--clr-border); cursor: pointer; transition: all 0.2s; }
+.view-toggle-btn.active { background: var(--clr-primary); color: white; border-color: var(--clr-primary); box-shadow: 0 4px 6px -1px rgba(105, 43, 196, 0.2); }
+.view-toggle-btn:hover:not(.active) { background: var(--clr-surface); color: var(--clr-primary); }
+</style>
+
 <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
     <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Teachers</h1>
-    <p class="text-muted m-0" style="font-size:var(--text-sm); max-width:600px;">
-      Manage your teaching staff and their status. Assignments to specific classes and subjects can be configured here.
-    </p>
+    <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff, status, and class/subject assignments.</p>
   </div>
-  <button class="btn btn-primary shadow-purple" onclick="openTeacherModal()" style="height:42px;">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-    Add Teacher
-  </button>
+  
+  <div class="flex items-center gap-3">
+    <!-- View Switcher (HCI: User Control & Preference) -->
+    <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200" style="background:rgba(0,0,0,0.03);">
+       <button type="button" class="view-toggle-btn" id="btn-view-list" onclick="toggleView('list')" title="List View">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
+       </button>
+       <button type="button" class="view-toggle-btn" id="btn-view-grid" onclick="toggleView('grid')" title="Grid View" style="margin-left:2px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+       </button>
+    </div>
+
+    <button class="btn btn-primary shadow-purple" onclick="openTeacherModal()" style="height:42px;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Add Teacher
+    </button>
+  </div>
 </div>
 
 <?php if (empty($teachers)): ?>
-<div class="card flex flex-col items-center justify-center" style="padding:6rem 2rem; text-align:center; border-style:dashed;">
+<div class="card flex flex-col items-center justify-center shadow-sm" style="padding:6rem 2rem; text-align:center; border-style:dashed; background:rgba(255,255,255,0.5);">
   <div style="background:var(--clr-primary-50); padding:2rem; border-radius:var(--radius-full); margin-bottom:2rem;">
      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
   </div>
@@ -38,7 +78,83 @@ $assignments = $assignmentsList ?? [];
 </div>
 
 <?php else: ?>
-<div class="grid" style="grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem;">
+<!-- ══ List View Container ══════════════════════════════════════ -->
+<div id="view-list" style="display:none;">
+    <div class="card shadow-sm" style="padding:0; overflow:hidden; border:1px solid var(--clr-border);">
+        <table id="teacher-table" class="display responsive nowrap" style="width:100%">
+            <thead>
+                <tr>
+                    <th class="all">Teacher Name</th>
+                    <th class="min-desktop">Contact</th>
+                    <th class="min-tablet">Role</th>
+                    <th class="min-desktop">Assignments</th>
+                    <th class="all text-center">Status</th>
+                    <th class="all text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($teachers as $t): ?>
+                <tr>
+                    <td>
+                        <div class="flex items-center gap-3">
+                            <div style="width:34px; height:34px; background:var(--clr-primary-50); color:var(--clr-primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">
+                                <?= substr($t['full_name'], 0, 1) ?>
+                            </div>
+                            <div>
+                                <div style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($t['full_name']) ?></div>
+                                <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.02em;"><?= htmlspecialchars($t['email']) ?></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <div style="font-size:12px; font-weight:600; color:var(--clr-text-muted);">
+                           <?= htmlspecialchars($t['phone'] ?: 'N/A') ?>
+                        </div>
+                    </td>
+                    <td>
+                        <?php if ($t['lead_classes']): ?>
+                            <span class="badge badge-purple" style="font-size:9px; padding:2px 6px;">CT: <?= htmlspecialchars($t['lead_classes']) ?></span>
+                        <?php else: ?>
+                            <span class="badge badge-gray" style="font-size:9px; padding:2px 6px;">Teacher</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <div style="font-size:12px; font-weight:700; color:var(--clr-text);">
+                            <?= $t['class_count'] ?> Cls · <?= $t['subject_count'] ?> Subj
+                        </div>
+                        <div style="font-size:10px; color:var(--clr-text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                            <?= htmlspecialchars($t['assignment_summary'] ?: 'No assignments') ?>
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <form method="POST" action="<?= $base ?>/admin/teachers" onsubmit="Loader.show()">
+                            <?= CSRF::field() ?>
+                            <input type="hidden" name="_action" value="teacher_toggle">
+                            <input type="hidden" name="teacher_id" value="<?= $t['id'] ?>">
+                            <button type="submit" class="badge <?= $t['is_active'] ? 'badge-success' : 'badge-danger' ?>" style="cursor:pointer; border:none; padding:4px 8px; font-size:9px; font-weight:800; letter-spacing:0.03em;">
+                                <?= $t['is_active'] ? 'ACTIVE' : 'INACTIVE' ?>
+                            </button>
+                        </form>
+                    </td>
+                    <td class="text-right">
+                        <div class="flex justify-end gap-1">
+                            <button class="btn btn-ghost btn-xs act-assign" data-id="<?= $t['id'] ?>" data-name="<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>" style="color:var(--clr-primary);" title="Assign Subjects">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                            </button>
+                            <button class="btn btn-ghost btn-xs act-edit" data-teacher='<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>' title="Edit Profile">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══ Grid View Container ══════════════════════════════════════ -->
+<div id="view-grid" class="grid" style="grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem; display:none;">
   <?php foreach ($teachers as $t): ?>
   <div class="card hover-lift flex flex-col <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>" style="padding:0; overflow:hidden; border:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); border-radius:var(--radius-xl); box-shadow:0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01);">
     <div style="padding:1.5rem 1.5rem 1rem;">
@@ -117,10 +233,7 @@ $assignments = $assignmentsList ?? [];
 </div>
 <?php endif; ?>
 
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>
-
-<!-- ══ Teacher Modal (Integrated) ════════════════════════════════════════ -->
+<!-- ══ Teacher Modal (Integrated Tabbed View) ══════════════════════════════════ -->
 <div id="modal-teacher" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-teacher-title" style="display:none;">
   <div class="modal w-full max-w-2xl mx-4">
     <div class="modal-header">
@@ -128,7 +241,7 @@ $assignments = $assignmentsList ?? [];
       <button class="modal-close" onclick="closeModal('modal-teacher')" aria-label="Close dialog">&times;</button>
     </div>
     
-    <!-- Tabs Header -->
+    <!-- Tabs Header (HCI: Grouping related tasks) -->
     <div class="flex border-b border-gray-200 px-6">
       <button onclick="switchTeacherTab('profile')" id="tab-profile" class="py-3 px-4 text-sm font-bold border-b-2 border-primary text-primary transition-all">Profile Details</button>
       <button onclick="switchTeacherTab('assignments')" id="tab-assignments" class="py-3 px-4 text-sm font-bold border-b-2 border-transparent text-muted hover:text-primary transition-all">Subject Assignments</button>
@@ -233,67 +346,6 @@ $assignments = $assignmentsList ?? [];
   </div>
 </div>
 
-<!-- Delete Form -->
-<form method="POST" action="<?= $base ?>/admin/teachers" id="form-teacher-delete" style="display:none">
-  <?= CSRF::field() ?>
-  <input type="hidden" name="_action" value="teacher_delete">
-  <input type="hidden" name="teacher_id" id="del-teacher-id">
-</form>
-
-<!-- ══ Assign Modal ════════════════════════════════════════ -->
-<div id="modal-assign" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-assign-title" style="display:none;">
-  <div class="modal w-full max-w-lg mx-4">
-    <div class="modal-header">
-      <div>
-        <h3 class="modal-title" id="modal-assign-title">Assign Subjects</h3>
-        <p class="text-muted text-xs mt-1 m-0" id="modal-assign-subtitle"></p>
-      </div>
-      <button class="modal-close" onclick="closeModal('modal-assign')" aria-label="Close dialog">&times;</button>
-    </div>
-    
-    <div class="modal-body" style="padding-bottom:1rem;">
-      <form method="POST" action="<?= $base ?>/admin/teachers" id="form-assign" onsubmit="Loader.show()">
-        <?= CSRF::field() ?>
-        <input type="hidden" name="_action" value="assign_subject">
-        <input type="hidden" name="teacher_id" id="assign-teacher-id" value="">
-        
-        <div class="grid" style="grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
-           <div class="form-group mb-0">
-              <label class="form-label">Classes <span class="required">*</span></label>
-              <div class="form-control" style="height:180px; overflow-y:auto; padding:0; background:var(--clr-surface-2);">
-                 <?php foreach ($classes as $c): ?>
-                    <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; border-bottom:1px solid var(--clr-border); cursor:pointer; font-size:13px; font-weight:500; margin:0; transition:background 0.2s;">
-                       <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>" style="accent-color:var(--clr-primary);">
-                       <span><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?> <span class="text-muted" style="font-size:11px;">(<?= $c['level_name'] ?>)</span></span>
-                    </label>
-                 <?php endforeach; ?>
-              </div>
-           </div>
-           <div class="form-group mb-0">
-              <label class="form-label">Subjects <span class="required">*</span></label>
-              <div class="form-control" style="height:180px; overflow-y:auto; padding:0; background:var(--clr-surface-2);">
-                 <?php foreach ($subjects as $s): ?>
-                    <label style="display:flex; align-items:center; gap:0.5rem; padding:0.5rem 0.75rem; border-bottom:1px solid var(--clr-border); cursor:pointer; font-size:13px; font-weight:500; margin:0; transition:background 0.2s;">
-                       <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>" style="accent-color:var(--clr-primary);">
-                       <span><?= htmlspecialchars($s['subject_name']) ?> <span class="text-muted" style="font-size:11px;">(<?= $s['level_name'] ?>)</span></span>
-                    </label>
-                 <?php endforeach; ?>
-              </div>
-           </div>
-        </div>
-        <button type="submit" class="btn btn-primary mt-4 w-full" style="width:100%; justify-content:center;">Assign Selected Combinations</button>
-      </form>
-
-      <div class="mt-6">
-         <h4 style="font-size:var(--text-sm); font-weight:700; color:var(--clr-text); margin-bottom:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">Current Assignments</h4>
-         <div id="assign-list-container" style="max-height:240px; overflow-y:auto; border:1px solid var(--clr-border); border-radius:var(--radius-md); background:var(--clr-bg);">
-            <!-- Populated via JS -->
-         </div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- Remove Assignment Form -->
 <form method="POST" action="<?= $base ?>/admin/teachers" id="form-assignment-remove" style="display:none">
   <?= CSRF::field() ?>
@@ -301,8 +353,67 @@ $assignments = $assignmentsList ?? [];
   <input type="hidden" name="assignment_id" id="del-assignment-id">
 </form>
 
+<!-- Delete Form -->
+<form method="POST" action="<?= $base ?>/admin/teachers" id="form-teacher-delete" style="display:none">
+  <?= CSRF::field() ?>
+  <input type="hidden" name="_action" value="teacher_delete">
+  <input type="hidden" name="teacher_id" id="del-teacher-id">
+</form>
+
 <script>
 const allAssignments = <?= json_encode($assignments) ?>;
+const allTeachers    = <?= json_encode($teachers) ?>;
+
+$(document).ready(function() {
+    // 1. Initialize DataTable
+    const table = $('#teacher-table').DataTable({
+        responsive: true,
+        pageLength: 25,
+        dom: '<"dt-layout-row"lf>rt<"dt-layout-row"ip>',
+        language: {
+            search: "", searchPlaceholder: "Search teachers...",
+            lengthMenu: "Show _MENU_",
+        },
+        columnDefs: [{ orderable: false, targets: -1 }]
+    });
+
+    // 2. Initial View state
+    const savedView = localStorage.getItem('teacher_view_pref') || 'list';
+    toggleView(savedView);
+
+    // 3. Action Button Delegation (Works for both Table and Grid)
+    $(document).on('click', '.act-edit', function() {
+        const teacher = $(this).data('teacher');
+        editTeacher(teacher);
+    });
+
+    $(document).on('click', '.act-assign', function() {
+        const id = $(this).data('id');
+        openAssignModal(id);
+    });
+});
+
+function toggleView(type) {
+  const list = document.getElementById('view-list');
+  const grid = document.getElementById('view-grid');
+  const btnList = document.getElementById('btn-view-list');
+  const btnGrid = document.getElementById('btn-view-grid');
+  
+  if (!list || !grid) return;
+
+  if (type === 'list') {
+    list.style.display = 'block';
+    grid.style.display = 'none';
+    btnList.classList.add('active');
+    btnGrid.classList.remove('active');
+  } else {
+    list.style.display = 'none';
+    grid.style.display = 'grid';
+    btnGrid.classList.add('active');
+    btnList.classList.remove('active');
+  }
+  localStorage.setItem('teacher_view_pref', type);
+}
 
 function switchTeacherTab(tab) {
   const pProfile = document.getElementById('pane-profile');
@@ -333,7 +444,6 @@ function openTeacherModal() {
   document.getElementById('modal-teacher-title').textContent = 'New Teacher Profile';
   document.getElementById('teacher-submit-btn').textContent = 'Create Profile';
   
-  // Hide assignments for new teacher
   document.getElementById('tab-assignments').style.display = 'none';
   document.getElementById('assign-only-when-exists').style.display = 'none';
   document.getElementById('assign-new-teacher-message').style.display = 'block';
@@ -348,9 +458,9 @@ function editTeacher(t) {
   openModal('modal-teacher');
 }
 
-function openAssignModal(teacherId, teacherName) {
-  // Now uses the same integrated modal but switches to assignments tab
-  const teacher = <?= json_encode($teachers) ?>.find(x => Number(x.id) === Number(teacherId));
+function openAssignModal(teacherId) {
+  const teacher = allTeachers.find(x => Number(x.id) === Number(teacherId));
+  if (!teacher) return;
   populateTeacherData(teacher);
   switchTeacherTab('assignments');
   openModal('modal-teacher');
@@ -380,7 +490,6 @@ function populateTeacherData(t) {
   document.getElementById('modal-teacher-title').textContent = 'Manage: ' + t.full_name;
   document.getElementById('teacher-submit-btn').textContent = 'Update Profile';
   
-  // Show assignments
   document.getElementById('tab-assignments').style.display = 'block';
   document.getElementById('assign-only-when-exists').style.display = 'block';
   document.getElementById('assign-new-teacher-message').style.display = 'none';
@@ -393,7 +502,7 @@ function renderAssignmentsList(teacherId) {
   const teacherAssignments = allAssignments.filter(a => Number(a.teacher_id) === Number(teacherId));
   
   if (teacherAssignments.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-muted text-xs">No active assignments found.</div>`;
+    container.innerHTML = `<div class="p-6 text-center text-muted text-xs font-bold">No active subject assignments.</div>`;
     return;
   }
   
@@ -437,3 +546,5 @@ function escapeHtml(unsafe) {
     return (unsafe||'').toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 </script>
+
+<?php include __DIR__ . '/../layout/footer.php'; ?>
