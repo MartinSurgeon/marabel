@@ -12,7 +12,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 
 <?php if (isset($classSub)): ?>
 <!-- ── Grid Header ────────────────────────────────────────── -->
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 animate-fade-in">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 animate-fade-in" style="position: relative; z-index: 20;">
   <div>
     <div class="flex items-center gap-2 mb-1">
       <a href="<?= $base ?>/teacher/scores" class="btn btn-ghost btn-xs" style="padding:4px; margin-left:-8px;" title="Back to Subjects">
@@ -33,12 +33,12 @@ $base = defined('APP_BASE') ? APP_BASE : '';
        <!-- Dynamically filled by JS -->
     </div>
     <div class="dropdown relative">
-      <button class="btn btn-outline" style="border-radius:var(--radius-full); gap:0.5rem;" onclick="this.nextElementSibling.classList.toggle('hidden')">
+      <button id="preview-btn" class="btn btn-outline" style="border-radius:var(--radius-full); gap:0.5rem;">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
         Preview Reports
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
       </button>
-      <div class="hidden absolute right-0 mt-2 w-64 max-h-96 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50 animate-fade-in">
+      <div id="preview-dropdown" class="hidden absolute right-0 mt-2 w-64 max-h-96 overflow-y-auto bg-white rounded-xl shadow-xl border border-slate-200 z-50 animate-fade-in">
         <div class="p-3 border-b border-slate-100 sticky top-0 bg-white z-10">
           <input type="text" placeholder="Search student..." class="w-full p-2 text-xs border border-slate-200 rounded-lg" oninput="const q=this.value.toLowerCase(); this.parentElement.nextElementSibling.querySelectorAll('a').forEach(a=>a.style.display=a.textContent.toLowerCase().includes(q)?'':'none')">
         </div>
@@ -94,25 +94,25 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           </td>
           
           <td style="padding:0;">
-            <input type="number" step="0.5" min="0" max="15" 
+            <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="class_test" 
                    value="<?= $sba['class_test'] ?? '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="0.5" min="0" max="15" 
+            <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="group_work" 
                    value="<?= $sba['group_work'] ?? '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="0.5" min="0" max="15" 
+            <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="project" 
                    value="<?= $sba['project'] ?? '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="0.5" min="0" max="15" 
+            <input type="number" step="1" min="0" max="15" 
                    class="score-input" data-field="individual_test" 
                    value="<?= $sba['individual_test'] ?? '' ?>" 
                    onfocus="this.select()">
@@ -128,7 +128,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           
           <!-- Exam -->
           <td style="padding:0; border-left:2px solid var(--clr-border);">
-            <input type="number" step="0.5" min="0" max="100" 
+            <input type="number" step="1" min="0" max="100" 
                    class="score-input" data-field="raw_score" 
                    value="<?= $exam['raw_score'] ?? '' ?>" 
                    onfocus="this.select()">
@@ -289,6 +289,37 @@ $base = defined('APP_BASE') ? APP_BASE : '';
   background: rgba(var(--clr-danger-rgb), 0.08) !important;
   animation: shake-red 0.4s ease;
 }
+
+/* Contextual Tooltip Bubble (HCI) */
+.input-error-bubble {
+  position: absolute;
+  background: var(--clr-danger);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+  transform: translateY(-8px);
+  animation: float-up 0.2s ease-out;
+}
+.input-error-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--clr-danger);
+}
+@keyframes float-up {
+  from { opacity: 0; transform: translateY(0); }
+  to { opacity: 1; transform: translateY(-8px); }
+}
 </style>
 
 <!-- ── Grid Logic (JS) ────────────────────────────────────────── -->
@@ -384,6 +415,48 @@ document.addEventListener('DOMContentLoaded', () => {
     if (overallEl) overallEl.textContent = finalTotal.toFixed(1);
   };
 
+  // Dropdown Management (HCI: closes on click-outside)
+  const previewBtn = document.getElementById('preview-btn');
+  const previewDropdown = document.getElementById('preview-dropdown');
+
+  if (previewBtn && previewDropdown) {
+    previewBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      previewDropdown.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!previewDropdown.classList.contains('hidden') && !previewDropdown.contains(e.target) && e.target !== previewBtn) {
+        previewDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  // HCI Tooltip Helper
+  function showInputError(el, message) {
+    // Remove existing bubble if any
+    const existing = el.parentElement.querySelector('.input-error-bubble');
+    if (existing) existing.remove();
+
+    const bubble = document.createElement('div');
+    bubble.className = 'input-error-bubble';
+    bubble.textContent = message;
+    
+    // Position it above the input
+    el.parentElement.style.position = 'relative'; 
+    el.parentElement.appendChild(bubble);
+    
+    bubble.style.left = '50%';
+    bubble.style.marginLeft = `-${bubble.offsetWidth / 2}px`;
+    bubble.style.top = '-20px';
+
+    setTimeout(() => {
+      bubble.style.transition = 'opacity 0.3s ease';
+      bubble.style.opacity = '0';
+      setTimeout(() => bubble.remove(), 300);
+    }, 2200);
+  }
+
   inputs.forEach(input => {
     // Immediate feedback + max-value enforcement
     input.addEventListener('input', (e) => {
@@ -393,13 +466,21 @@ document.addEventListener('DOMContentLoaded', () => {
       let val = parseFloat(el.value);
 
       if (!isNaN(val)) {
+        // Reject decimals immediately (HCI: strict validation)
+        if (el.value.includes('.')) {
+          showInputError(el, "No decimal");
+          el.value = el.value.replace(/\./g, '');
+          val = parseFloat(el.value);
+        }
+
         if (val > max) {
-          el.value = max;
+          showInputError(el, `Max is ${max}`);
+          el.value = ''; // Clear to prevent accidental invalid save
           el.classList.add('input-over-limit');
-          el.title = `Max allowed: ${max}`;
           setTimeout(() => el.classList.remove('input-over-limit'), 1000);
         } else if (val < min) {
-          el.value = min;
+          showInputError(el, "Too low");
+          el.value = '';
         } else {
           el.classList.remove('input-over-limit');
           el.title = '';

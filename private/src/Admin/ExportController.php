@@ -20,7 +20,7 @@ class ExportController {
 
         // GET Request Variables for the UI
         global $classes, $terms;
-        $classes = DB::query("SELECT id, class_name FROM classes ORDER BY class_name ASC");
+        $classes = DB::query("SELECT id, class_name, section FROM classes ORDER BY class_name ASC, section ASC");
         $terms = DB::query("SELECT t.id, t.name, ay.year_name, t.is_active 
                             FROM terms t 
                             JOIN academic_years ay ON ay.id = t.academic_year_id 
@@ -32,7 +32,8 @@ class ExportController {
         $classId = $_POST['class_id']    ?? 'all';
         $termId  = $_POST['term_id']     ?? 0;
         $status  = $_POST['status']      ?? 'active';
-        $columns = $_POST['columns']     ?? [];
+        $format  = $_POST['export_format'] ?? 'csv';
+        $columns = array_unique($_POST['columns'] ?? []);
 
         // Always include basic identifier columns for integrity even if UI disabled input
         if (!in_array('student_id_number', $columns) && in_array($type, ['results', 'attendance'])) {
@@ -44,16 +45,16 @@ class ExportController {
 
         switch ($type) {
             case 'students':
-                $this->exportStudents($classId, $status, $columns);
+                $this->exportStudents($classId, $status, $columns, $format);
                 break;
             case 'results':
-                $this->exportResults($classId, (int)$termId, $status, $columns);
+                $this->exportResults($classId, (int)$termId, $status, $columns, $format);
                 break;
             case 'staff':
-                $this->exportStaff($status, $columns);
+                $this->exportStaff($status, $columns, $format);
                 break;
             case 'attendance':
-                $this->exportAttendance($classId, (int)$termId, $status, $columns);
+                $this->exportAttendance($classId, (int)$termId, $status, $columns, $format);
                 break;
             default:
                 Session::flash('error', 'Invalid export type selected.');
@@ -61,7 +62,7 @@ class ExportController {
         }
     }
 
-    private function exportStudents($classId, $status, array $columns): void {
+    private function exportStudents($classId, $status, array $columns, string $format): void {
         $params = [];
         $where = ["1=1"];
 
@@ -112,10 +113,14 @@ class ExportController {
             'parent_phone' => 'Parent Phone'
         ];
 
-        $this->outputCSV("students_export", $data, $columns, $colMap);
+        if ($format === 'excel') {
+            $this->outputExcel("students_export", $data, $columns, $colMap);
+        } else {
+            $this->outputCSV("students_export", $data, $columns, $colMap);
+        }
     }
 
-    private function exportResults($classId, int $termId, $status, array $columns): void {
+    private function exportResults($classId, int $termId, $status, array $columns, string $format): void {
         $params = [$termId];
         $where = ["sa.term_id = ?"];
 
@@ -186,10 +191,14 @@ class ExportController {
             if(!isset($colMap[$c])) $colMap[$c] = $c;
         }
 
-        $this->outputCSV("results_export_" . $termId, $data, $columns, $colMap);
+        if ($format === 'excel') {
+            $this->outputExcel("results_export_" . $termId, $data, $columns, $colMap);
+        } else {
+            $this->outputCSV("results_export_" . $termId, $data, $columns, $colMap);
+        }
     }
 
-    private function exportStaff($status, array $columns): void {
+    private function exportStaff($status, array $columns, string $format): void {
         $params = ['teacher'];
         $where = ["u.role = ?"];
 
@@ -224,10 +233,14 @@ class ExportController {
             'assigned_classes' => 'Assigned Classes'
         ];
 
-        $this->outputCSV("staff_export", $data, $columns, $colMap);
+        if ($format === 'excel') {
+            $this->outputExcel("staff_export", $data, $columns, $colMap);
+        } else {
+            $this->outputCSV("staff_export", $data, $columns, $colMap);
+        }
     }
 
-    private function exportAttendance($classId, int $termId, $status, array $columns): void {
+    private function exportAttendance($classId, int $termId, $status, array $columns, string $format): void {
         $params = [$termId];
         $where = ["a.term_id = ?"];
 
@@ -276,7 +289,80 @@ class ExportController {
             'days_absent' => 'Days Absent'
         ];
 
-        $this->outputCSV("attendance_export", $data, $columns, $colMap);
+        if ($format === 'excel') {
+            $this->outputExcel("attendance_export", $data, $columns, $colMap);
+        } else {
+            $this->outputCSV("attendance_export", $data, $columns, $colMap);
+        }
+    }
+
+    private function outputExcel(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
+        $date = date('Ymd_His');
+        $filename = "{$filenamePrefix}_{$date}.xls";
+
+        header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        $widths = $this->calculateColumnWidths($data, $selectedColumns, $columnMapping);
+
+        echo '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        echo '<?mso-application progid="Excel.Sheet"?>' . "\n";
+        echo '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet" xmlns:html="http://www.w3.org/TR/REC-html40">' . "\n";
+        echo '<Styles><Style ss:ID="sHeader"><Font ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style></Styles>' . "\n";
+        echo '<Worksheet ss:Name="Export"><Table>' . "\n";
+
+        // 1. Column Widths
+        foreach ($widths as $w) {
+            echo '<Column ss:Width="' . ($w * 7) . '"/>' . "\n";
+        }
+
+        // 2. Headers
+        echo '<Row ss:StyleID="sHeader">' . "\n";
+        foreach ($selectedColumns as $col) {
+            $header = $columnMapping[$col] ?? $col;
+            // Clean up raw database keys as final fallback
+            if ($header === $col) {
+                $header = str_replace('_', ' ', $header);
+                $header = ucwords($header);
+            }
+            echo '<Cell><Data ss:Type="String">' . htmlspecialchars($header) . '</Data></Cell>' . "\n";
+        }
+        echo '</Row>' . "\n";
+
+        // 3. Data
+        foreach ($data as $row) {
+            echo '<Row>' . "\n";
+            foreach ($selectedColumns as $col) {
+                $val = isset($row[$col]) ? $row[$col] : '';
+                $type = is_numeric($val) && !str_starts_with($val, '0') ? 'Number' : 'String';
+                echo '<Cell><Data ss:Type="' . $type . '">' . htmlspecialchars($val) . '</Data></Cell>' . "\n";
+            }
+            echo '</Row>' . "\n";
+        }
+
+        echo '</Table></Worksheet></Workbook>' . "\n";
+    }
+
+    private function calculateColumnWidths(array $data, array $columns, array $mapping): array {
+        $widths = [];
+        foreach ($columns as $idx => $col) {
+            // Header length
+            $header = $mapping[$col] ?? $col;
+            $maxLen = strlen($header);
+            
+            // Sample first 100 rows for performance
+            $sample = array_slice($data, 0, 100);
+            foreach ($sample as $row) {
+                $val = (string)($row[$col] ?? '');
+                if (strlen($val) > $maxLen) $maxLen = strlen($val);
+            }
+            
+            // Constrain width (8.5 multiplier is safer for Excel default fonts)
+            $widths[$idx] = min(60, max(12, ($maxLen * 8.5) / 7)); 
+        }
+        return $widths;
     }
 
     private function outputCSV(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {

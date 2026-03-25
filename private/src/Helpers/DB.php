@@ -85,4 +85,11 @@ class DB {
     public static function rollback(): void {
         self::getInstance()->rollBack();
     }
+
+    /**
+     * Check if a transaction is currently active.
+     */
+    public static function inTransaction(): bool {
+        return self::getInstance()->inTransaction();
+    }
 }

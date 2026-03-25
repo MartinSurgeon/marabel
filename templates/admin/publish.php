@@ -33,8 +33,8 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
           <?= CSRF::field() ?>
           <input type="hidden" name="_action" value="bulk_unpublish">
           <input type="hidden" name="term_id" value="<?= $term['id'] ?>">
-          <button type="submit" class="btn btn-ghost btn-xs text-danger" style="font-weight:700; border:1px solid rgba(239,68,68,0.2);">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
+          <button type="submit" class="btn btn-ghost btn-xs text-danger" style="font-weight:700; border:1px solid rgba(239,68,68,0.2); display:flex; align-items:center; gap:4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/></svg>
             Unpublish All
           </button>
         </form>
@@ -123,16 +123,25 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
         </h3>
       </div>
       <?php if ($isPublished): ?>
-        <span class="badge badge-success" style="font-size:10px; padding:4px 10px; display:flex; align-items:center; gap:4px;">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+        <span class="badge badge-success" style="font-size:10px; padding:4px 10px; display:flex; align-items:center; gap:4px; font-weight:800;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
           PUBLISHED
         </span>
       <?php elseif ($isFullyLocked): ?>
-        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:#fff8e7; color:#b45309; border:1.5px solid #fde68a; border-radius:var(--radius-full);">&#128274; LOCKED</span>
+        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:#fff8e7; color:#b45309; border:1.5px solid #fde68a; border-radius:var(--radius-full); display:flex; align-items:center; gap:4px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          LOCKED
+        </span>
       <?php elseif ($noStudents || $noSubjects): ?>
-        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:rgba(239,68,68,0.08); color:var(--clr-danger); border:1.5px solid rgba(239,68,68,0.2); border-radius:var(--radius-full);">⚠ SETUP NEEDED</span>
+        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:rgba(239,68,68,0.08); color:var(--clr-danger); border:1.5px solid rgba(239,68,68,0.2); border-radius:var(--radius-full); display:flex; align-items:center; gap:4px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          ACTION REQUIRED
+        </span>
       <?php else: ?>
-        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:var(--clr-surface-2); color:var(--clr-text-muted); border-radius:var(--radius-full); border:1.5px solid var(--clr-border);">IN PROGRESS</span>
+        <span style="font-size:10px; font-weight:800; padding:4px 10px; background:var(--clr-surface-2); color:var(--clr-text-muted); border-radius:var(--radius-full); border:1.5px solid var(--clr-border); display:flex; align-items:center; gap:4px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="11" height="11"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          IN PROGRESS
+        </span>
       <?php endif; ?>
     </div>
 
@@ -141,12 +150,14 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
 
       <!-- Warnings -->
       <?php if ($noStudents): ?>
-      <div style="display:flex; gap:0.5rem; align-items:flex-start; background:rgba(239,68,68,0.06); color:var(--clr-danger); border-left:3px solid var(--clr-danger); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:0.6rem 0.75rem; font-size:var(--text-xs); font-weight:600;">
-        No students enrolled in this class for this year.
+      <div style="display:flex; gap:0.5rem; align-items:center; background:rgba(239,68,68,0.06); color:var(--clr-danger); border-left:3px solid var(--clr-danger); border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:0.6rem 0.75rem; font-size:var(--text-xs); font-weight:600;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        No students enrolled in this class.
       </div>
       <?php elseif ($noSubjects): ?>
-      <div style="display:flex; gap:0.5rem; align-items:flex-start; background:rgba(234,179,8,0.08); color:#92400e; border-left:3px solid #d97706; border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:0.6rem 0.75rem; font-size:var(--text-xs); font-weight:600;">
-        No subjects assigned for this term. <a href="<?= $base ?>/admin/teachers" style="color:inherit; text-decoration:underline; margin-left:4px;">Assign subjects →</a>
+      <div style="display:flex; gap:0.5rem; align-items:center; background:rgba(234,179,8,0.08); color:#92400e; border-left:3px solid #d97706; border-radius:0 var(--radius-sm) var(--radius-sm) 0; padding:0.6rem 0.75rem; font-size:var(--text-xs); font-weight:600;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        <span>No subjects assigned. <a href="<?= $base ?>/admin/teachers" style="color:inherit; text-decoration:underline; border-bottom:1px dashed currentColor;">Assign now →</a></span>
       </div>
       <?php endif; ?>
 
@@ -202,7 +213,10 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
           <input type="hidden" name="_action" value="unlock_class">
           <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
           <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-          <button type="submit" class="btn btn-ghost btn-xs text-warning">Unlock Scores</button>
+          <button type="submit" class="btn btn-ghost btn-xs text-warning" style="display:flex; align-items:center; gap:4px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+            Unlock Scores
+          </button>
         </form>
 
       <?php else: ?>
@@ -214,7 +228,10 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
             <input type="hidden" name="_action" value="unlock_class">
             <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-            <button type="submit" class="btn btn-ghost btn-xs text-warning">Unlock</button>
+            <button type="submit" class="btn btn-ghost btn-xs text-warning" style="display:flex; align-items:center; gap:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+              Unlock
+            </button>
           </form>
         <?php elseif (!$noStudents && !$noSubjects): ?>
           <!-- Lock All Scores -->
@@ -223,7 +240,10 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
             <input type="hidden" name="_action" value="lock_class">
             <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-            <button type="submit" class="btn btn-outline btn-xs text-primary">Lock All Scores</button>
+            <button type="submit" class="btn btn-outline btn-xs text-primary" style="display:flex; align-items:center; gap:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+              Lock Scores
+            </button>
           </form>
         <?php endif; ?>
 
@@ -234,7 +254,10 @@ $lockedCount     = count(array_filter($classes, fn($c) => !$c['is_published'] &&
             <input type="hidden" name="_action" value="publish_class">
             <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="term_id"  value="<?= $term['id'] ?>">
-            <button type="submit" class="btn btn-primary btn-xs">Publish Results</button>
+            <button type="submit" class="btn btn-primary btn-xs" style="display:flex; align-items:center; gap:4px;">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              Publish Results
+            </button>
           </form>
         <?php endif; ?>
 

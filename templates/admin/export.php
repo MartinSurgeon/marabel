@@ -86,7 +86,7 @@ require_once __DIR__ . '/../layout/header.php';
                                 <select name="class_id" class="input w-full">
                                     <option value="all">All Classes</option>
                                     <?php foreach ($classes as $c): ?>
-                                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name']) ?></option>
+                                    <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'] . ($c['section'] ? ' ' . $c['section'] : '')) ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -119,7 +119,13 @@ require_once __DIR__ . '/../layout/header.php';
 
                     <!-- 3. Column Selection (Checkboxes) -->
                     <div>
-                        <h3 class="text-sm font-semibold text-gray-900 mb-3 border-b border-gray-100 pb-2">3. Select Columns to Export</h3>
+                        <div class="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
+                            <h3 class="text-sm font-semibold text-gray-900">3. Select Columns to Export</h3>
+                            <div class="flex gap-4">
+                                <button type="button" onclick="toggleAllCheckboxes(true)" class="text-[10px] font-semibold text-primary hover:text-primary-dark transition-colors uppercase tracking-wider">Select All</button>
+                                <button type="button" onclick="toggleAllCheckboxes(false)" class="text-[10px] font-semibold text-gray-400 hover:text-gray-600 transition-colors uppercase tracking-wider">Uncheck All</button>
+                            </div>
+                        </div>
                         
                         <!-- Columns: Students -->
                         <div id="colsStudents" class="export-cols grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -234,13 +240,25 @@ require_once __DIR__ . '/../layout/header.php';
                         </div>
                     </div>
 
+                    <!-- 4. Format Selection -->
+                    <div>
+                        <h3 class="text-sm font-semibold text-gray-900 mb-3 border-b border-gray-100 pb-2">4. Select Export Format</h3>
+                        <div class="max-w-xs">
+                            <select name="export_format" class="input w-full">
+                                <option value="excel">Formatted Excel (.xls) - Recommended</option>
+                                <option value="csv">Standard CSV (.csv)</option>
+                            </select>
+                            <p class="mt-1.5 text-[10px] text-gray-500">Excel format automatically fits column widths for better readability.</p>
+                        </div>
+                    </div>
+
                     <!-- Actions -->
                     <div class="pt-4 border-t border-gray-100 flex items-center justify-end">
                         <button type="submit" class="btn btn-primary shadow-sm group">
                             <svg class="w-4 h-4 mr-2 group-hover:scale-110 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
-                            Download CSV (.csv)
+                            Generate Export File
                         </button>
                     </div>
                 </form>
@@ -326,6 +344,18 @@ function toggleExportPanels(type) {
         statusFilter.classList.remove('hidden');
     }
 }
+
+function toggleAllCheckboxes(checked) {
+    // Only target the currently visible groups
+    document.querySelectorAll('.export-cols:not(.hidden) input[type="checkbox"]:not(:disabled)').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+
+// Initialize on load to ensure hidden checkboxes are unchecked
+document.addEventListener('DOMContentLoaded', function() {
+    toggleExportPanels('students');
+});
 </script>
 
 <?php require_once __DIR__ . '/../layout/footer.php'; ?>

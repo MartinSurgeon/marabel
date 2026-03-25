@@ -195,7 +195,7 @@ class PublishController {
             }
             Session::flash('success', "Results published! Parents and students can now view report cards.");
         } catch (\Throwable $e) {
-            DB::rollBack();
+            if (DB::inTransaction()) DB::rollBack();
             Session::flash('error', "Publishing failed: " . $e->getMessage());
         }
 

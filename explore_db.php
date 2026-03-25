@@ -1,6 +1,10 @@
 <?php
-require_once 'private/src/Helpers/DB.php';
-$res = DB::query("SHOW TABLES");
-foreach($res as $r) {
-    echo array_values($r)[0] . "\n";
+require 'private/src/Helpers/DB.php';
+try {
+    $res = DB::query("SELECT role, COUNT(*) as cnt FROM users GROUP BY role");
+    foreach ($res as $row) {
+        echo "{$row['role']}: {$row['cnt']}\n";
+    }
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage();
 }
