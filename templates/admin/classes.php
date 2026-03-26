@@ -60,13 +60,23 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 
 <?php elseif (empty($classes)): ?>
 <!-- ── Empty Classes State ──────────────────────────────────── -->
-<div class="card flex flex-col items-center justify-center" style="padding:6rem 2rem; text-align:center;">
+<div class="card flex flex-col items-center justify-center p-12 text-center shadow-lg" style="border:1px dashed var(--clr-border);">
   <div style="background:var(--clr-primary-50); padding:2rem; border-radius:var(--radius-full); margin-bottom:2rem;">
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
   </div>
   <h2 style="font-weight:800; color:var(--clr-text); margin-bottom:0.5rem;">Create Your Classes</h2>
-  <p class="text-muted" style="max-width:320px; margin:0 auto 2.5rem;">No class sections have been registered for this academic session yet.</p>
-  <button class="btn btn-primary btn-lg" onclick="openClassModal()">Register First Class</button>
+  <p class="text-muted" style="max-width:320px; margin:0 auto 1.5rem;">No class sections have been registered for this academic session yet.</p>
+  
+  <div class="flex gap-4">
+    <button class="btn btn-primary" onclick="openClassModal()">Register First Class</button>
+    <?php if (count($yearsList) > 1): ?>
+      <button class="btn btn-secondary" onclick="document.querySelector('select[name=year_id]').focus()">Check Other Years</button>
+    <?php endif; ?>
+  </div>
+  
+  <div style="margin-top:2rem; font-size:12px; font-weight:700; color:var(--clr-warning); background:var(--clr-warning-50); padding:10px 20px; border-radius:var(--radius-md); border:1px solid rgba(245, 158, 11, 0.2);">
+     TIP: If you were previously working in another year, select it from the filter at the top right.
+  </div>
 </div>
 
 <?php else: ?>

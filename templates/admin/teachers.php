@@ -46,7 +46,11 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
 <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
     <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Teachers</h1>
-    <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff, status, and class/subject assignments.</p>
+    <div class="flex items-center gap-2 mt-1">
+      <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff and assignments.</p>
+      <span style="height:4px; width:4px; background:var(--clr-border); border-radius:50%;"></span>
+      <span class="badge badge-purple" style="font-size:10px; padding:2px 8px; font-weight:800; opacity:0.8;">SESSION: <?= htmlspecialchars($activeYearName ?? 'None') ?></span>
+    </div>
   </div>
   
   <div class="flex items-center gap-3">
@@ -120,10 +124,15 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                     </td>
                     <td>
                         <div style="font-size:12px; font-weight:700; color:var(--clr-text);">
-                            <?= $t['class_count'] ?> Cls · <?= $t['subject_count'] ?> Subj
+                            <?= $t['current_year_subjects'] ?> Cls · <?= $t['current_year_subjects'] ?> Subj
+                            <?php if ($t['subject_count'] > $t['current_year_subjects']): ?>
+                               <span class="text-warning" title="Teacher has <?= ($t['subject_count'] - $t['current_year_subjects']) ?> assignments in other sessions" style="cursor:help;">
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="display:inline; vertical-align:text-bottom; margin-left:2px;"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                               </span>
+                            <?php endif; ?>
                         </div>
                         <div style="font-size:10px; color:var(--clr-text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            <?= htmlspecialchars($t['assignment_summary'] ?: 'No assignments') ?>
+                            <?= htmlspecialchars($t['assignment_summary'] ?: 'No assignments this session') ?>
                         </div>
                     </td>
                     <td class="text-center">
@@ -207,7 +216,14 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
             </div>
           </div>
         <?php else: ?>
-          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; margin-top:0.5rem;">No subjects assigned yet</div>
+          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; margin-top:0.5rem;">
+             No subjects this session
+             <?php if ($t['subject_count'] > 0): ?>
+                <div style="font-size:10px; color:var(--clr-warning); font-weight:700; margin-top:4px;">
+                   ⚠️ <?= $t['subject_count'] ?> assignments in other sessions
+                </div>
+             <?php endif; ?>
+          </div>
         <?php endif; ?>
       </div>
 

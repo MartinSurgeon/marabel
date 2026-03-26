@@ -28,16 +28,22 @@ class TeacherController {
         // Prepare data for view
         global $teachersList, $classesList, $subjectsList, $assignmentsList;
         
+        $activeYear = DB::queryOne("SELECT id, year_name FROM academic_years WHERE is_active = 1 LIMIT 1");
+        $activeYearId = $activeYear['id'] ?? null;
+        $activeYearName = $activeYear['year_name'] ?? 'None';
+
         $teachersList = DB::query(
             "SELECT u.*, 
                     (SELECT COUNT(*) FROM class_teachers ct WHERE ct.teacher_id = u.id) as class_count,
                     (SELECT COUNT(*) FROM class_subjects cs WHERE cs.teacher_id = u.id) as subject_count,
+                    (SELECT COUNT(*) FROM class_subjects cs 
+                     JOIN classes c ON c.id = cs.class_id
+                     WHERE cs.teacher_id = u.id AND c.academic_year_id = ?) as current_year_subjects,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' (', s.subject_name, ')') SEPARATOR ', ')
                      FROM class_subjects cs 
                      JOIN classes c ON c.id = cs.class_id
                      JOIN subjects s ON s.id = cs.subject_id
-                     JOIN academic_years ay ON ay.id = c.academic_year_id
-                     WHERE cs.teacher_id = u.id AND ay.is_active = 1) as assignment_summary,
+                     WHERE cs.teacher_id = u.id AND c.academic_year_id = ?) as assignment_summary,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, IFNULL(c.section, '')) SEPARATOR ', ')
                      FROM class_teachers ct 
                      JOIN classes c ON c.id = ct.class_id
@@ -46,8 +52,11 @@ class TeacherController {
                      FROM class_teachers ct WHERE ct.teacher_id = u.id) as assigned_class_ids
              FROM users u 
              WHERE u.role = 'teacher' 
-             ORDER BY u.full_name"
+             ORDER BY u.full_name",
+            [$activeYearId, $activeYearId]
         );
+
+        global $activeYearName; // Make it available for template
 
         $classesList = DB::query(
             "SELECT c.id, c.class_name, c.section, sl.name as level_name
