@@ -67,10 +67,10 @@ $base = defined('APP_BASE') ? APP_BASE : '';
         <tr>
           <th style="width:50px; text-align:center; padding:1rem;">#</th>
           <th style="width:200px; text-align:left; padding:1rem;">Student Name</th>
-          <th style="width:160px; text-align:left; padding:1rem;">Conduct</th>
+          <th style="width:160px; text-align:left; padding:1rem;">Conduct / Character</th>
           <th style="width:160px; text-align:left; padding:1rem;">Interest</th>
           <th style="width:160px; text-align:left; padding:1rem;">Attitude</th>
-          <th style="text-align:left; padding:1rem;">Headmaster's Remark</th>
+          <th style="text-align:left; padding:1rem;">Final Remarks</th>
           <th style="width:90px; text-align:center; padding:1rem;">Preview</th>
         </tr>
       </thead>
@@ -83,56 +83,89 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             <div style="font-size:10px; color:var(--clr-text-muted); font-weight:600;"><?= $s['student_id_number'] ?></div>
           </td>
           
+          <?php $isTeacher = Session::role() === 'teacher'; ?>
+          <?php $isAdmin   = Session::role() === 'admin'; ?>
+          
           <td style="padding:0.5rem 0.75rem;">
             <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="conduct_remark" rows="1" placeholder="Conduct..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['conduct_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'conduct')" title="Select Conduct Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <textarea class="manage-input" data-field="conduct_remark" rows="1" placeholder="Conduct..." 
+                        <?= $isAdmin ? 'disabled' : '' ?>
+                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['conduct_remark'] ?? '') ?></textarea>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'conduct')" title="Select Conduct Template" 
+                      <?= $isAdmin ? 'disabled' : '' ?>
+                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
 
           <td style="padding:0.5rem 0.75rem;">
             <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="interest_remark" rows="1" placeholder="Interest..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['interest_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'interest')" title="Select Interest Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <textarea class="manage-input" data-field="interest_remark" rows="1" placeholder="Interest..." 
+                        <?= $isAdmin ? 'disabled' : '' ?>
+                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['interest_remark'] ?? '') ?></textarea>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'interest')" title="Select Interest Template" 
+                      <?= $isAdmin ? 'disabled' : '' ?>
+                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
 
           <td style="padding:0.5rem 0.75rem;">
             <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="attitude_remark" rows="1" placeholder="Attitude..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['attitude_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'attitude')" title="Select Attitude Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              <textarea class="manage-input" data-field="attitude_remark" rows="1" placeholder="Attitude..." 
+                        <?= $isAdmin ? 'disabled' : '' ?>
+                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['attitude_remark'] ?? '') ?></textarea>
+              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'attitude')" title="Select Attitude Template" 
+                      <?= $isAdmin ? 'disabled' : '' ?>
+                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
 
           <td style="padding:0.5rem 1rem;">
-            <div style="display:flex; gap:0.25rem; align-items:flex-start;">
-              <div style="flex:1; position:relative;">
-                <textarea class="manage-input" data-field="headmaster_remark" 
-                          rows="1" placeholder="Enter headmaster remark..."
-                          style="width:100%; border:1px solid var(--clr-border); border-radius:6px; padding:6px; font-size:12px; height:36px; resize:vertical; display:block;"><?= htmlspecialchars($s['headmaster_remark'] ?? '') ?></textarea>
-              </div>
-              <div style="display:flex; flex-direction:column; gap:4px;">
-                <button type="button" class="btn btn-ghost btn-xs" title="Quick Select Remark"
-                        onclick="openRemarkPicker(this, 'headmaster')"
-                        style="padding:4px; height:28px; width:28px; color:var(--clr-primary);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-                </button>
-                <button type="button" class="btn btn-ghost btn-xs btn-save-predefined" title="Save this remark for future use"
-                        onclick="saveAsPredefined(this)"
-                        style="padding:4px; height:28px; width:28px; color:var(--clr-success); display:none;">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
-                </button>
-              </div>
-            </div>
-            <div style="font-size:10px; color:var(--clr-text-muted); margin-top:4px; font-style:italic;">
-              Teacher: <?= $s['teacher_remark'] ? htmlspecialchars($s['teacher_remark']) : 'None' ?>
-            </div>
+            <?php if ($isTeacher): ?>
+               <!-- General Remark for Teacher -->
+               <div style="display:flex; gap:0.25rem; align-items:flex-start; margin-bottom:8px;">
+                  <div style="flex:1; position:relative;">
+                    <textarea class="manage-input" data-field="teacher_remark" 
+                              rows="1" placeholder="General Teacher remark..."
+                              style="width:100%; border:1px solid var(--clr-border); border-radius:6px; padding:6px; font-size:12px; height:36px; resize:vertical; display:block;"><?= htmlspecialchars($s['teacher_remark'] ?? '') ?></textarea>
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'teacher')" title="Select General Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                  </button>
+               </div>
+               <div style="font-size:10px; color:var(--clr-text-muted); font-style:italic;">
+                  Headmaster: <?= $s['headmaster_remark'] ? htmlspecialchars($s['headmaster_remark']) : 'Pending...' ?>
+               </div>
+            <?php else: ?>
+               <!-- Headmaster's Remark for Admin -->
+               <div style="display:flex; gap:0.25rem; align-items:flex-start;">
+                 <div style="flex:1; position:relative;">
+                   <textarea class="manage-input" data-field="headmaster_remark" 
+                             rows="1" placeholder="Enter headmaster remark..."
+                             style="width:100%; border:1px solid var(--clr-border); border-radius:6px; padding:6px; font-size:12px; height:36px; resize:vertical; display:block;"><?= htmlspecialchars($s['headmaster_remark'] ?? '') ?></textarea>
+                 </div>
+                 <div style="display:flex; flex-direction:column; gap:4px;">
+                   <button type="button" class="btn btn-ghost btn-xs" title="Quick Select Remark"
+                           onclick="openRemarkPicker(this, 'headmaster')"
+                           style="padding:4px; height:28px; width:28px; color:var(--clr-primary);">
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                   </button>
+                   <button type="button" class="btn btn-ghost btn-xs btn-save-predefined" title="Save this remark for future use"
+                           onclick="saveAsPredefined(this)"
+                           style="padding:4px; height:28px; width:28px; color:var(--clr-success); display:none;">
+                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/></svg>
+                   </button>
+                 </div>
+               </div>
+               <div style="font-size:10px; color:var(--clr-text-muted); margin-top:4px; font-style:italic;">
+                 Teacher: <?= $s['teacher_remark'] ? htmlspecialchars($s['teacher_remark']) : 'None' ?>
+               </div>
+            <?php endif; ?>
           </td>
 
           <td style="text-align:center; padding:1rem;">
@@ -220,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.openRemarkPicker = function(btn, category = 'headmaster') {
-        const textarea = btn.closest('div').querySelector('textarea');
+        const textarea = btn.closest('td').querySelector('textarea');
         const modalId = 'modal-remark-picker';
         let modal = document.getElementById(modalId);
         

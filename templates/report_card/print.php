@@ -104,7 +104,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       z-index: 0;
     }
 
-    /* Draft Watermark */
+    /* Draft Watermark 
     .draft-watermark {
       position: absolute;
       top: 50%;
@@ -118,7 +118,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
       pointer-events: none;
       z-index: 99;
       white-space: nowrap;
-    }
+    }*/
 
 
     /* Toolbar */

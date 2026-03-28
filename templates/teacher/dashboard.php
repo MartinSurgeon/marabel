@@ -132,7 +132,7 @@ $userName = Session::get('user_name', 'Teacher');
                 <?php foreach ($mySubjects as $s): ?>
                 <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--clr-border); font-size: 13px;">
                     <span style="font-weight: 700; color: var(--clr-text);"><?= htmlspecialchars($s['subject_name']) ?></span>
-                    <span class="text-muted"><?= htmlspecialchars($s['class_name']) ?></span>
+                    <span class="text-muted"><?= htmlspecialchars($s['class_name'] . ($s['section'] ? " ({$s['section']})" : '')) ?></span>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -153,7 +153,7 @@ $userName = Session::get('user_name', 'Teacher');
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
                     Bulk Score Import
                 </a>
-                <a href="<?= $base ?>/report" class="btn btn-ghost" style="justify-content: flex-start; gap: 0.75rem;">
+                <a href="<?= $base ?>/teacher/reports" class="btn btn-ghost" style="justify-content: flex-start; gap: 0.75rem;">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
                     Report Card Preview
                 </a>

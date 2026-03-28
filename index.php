@@ -79,6 +79,8 @@ $routes = [
     '/teacher/scores'           => ['teacher/score_entry', ['admin','teacher'], 'Teacher\\ScoreController'],
     '/teacher/import'           => ['teacher/import',      ['admin','teacher'], 'Teacher\\ImportController'],
     '/teacher/class'            => ['teacher/manage_class', ['admin','teacher'], 'Teacher\\ClassManagementController'],
+    '/teacher/reports'          => ['teacher/reports',      ['admin','teacher'], 'Teacher\\ReportSelectionController'],
+    '/profile/password'         => ['auth/change_password', ['admin','teacher','parent','student'], 'Auth\\ProfileController'],
 
 
     // ── Parent ───────────────────────────────────────────────

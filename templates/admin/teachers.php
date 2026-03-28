@@ -284,18 +284,21 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
               <label class="form-label">Phone Number</label>
               <input type="text" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20">
             </div>
-            <div class="form-group">
-              <label class="form-label">Classroom Assignments</label>
-              <select name="class_ids[]" id="teacher-classrooms" class="form-control" multiple style="min-height:90px; padding:.5rem;">
+            <div class="form-group col-span-1 md:col-span-2">
+              <label class="form-label">Classroom Assignments (Class Teacher Role)</label>
+              <div id="teacher-classrooms-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4 bg-gray-50 border border-gray-200 rounded-lg overflow-y-auto" style="max-height:200px;">
                 <?php foreach ($classes as $c): ?>
-                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['level_name'] . ' - ' . $c['class_name'] . ' ' . $c['section']) ?></option>
+                  <label class="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-white transition-colors border border-transparent hover:border-gray-200 m-0">
+                    <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>" class="w-4 h-4 accent-purple-600">
+                    <span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
+                  </label>
                 <?php endforeach; ?>
-              </select>
-              <p class="form-text">Hold Ctrl/Cmd to select multiple. These represent the teacher's role as a Class Teacher.</p>
+              </div>
+              <p class="form-text mt-2">Check the classes where this teacher serves as the <strong>Class Teacher</strong>.</p>
             </div>
           </div>
           <div class="flex justify-end mt-6">
-            <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save teacher</button>
+            <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save profile changes</button>
           </div>
         </form>
       </div>
@@ -341,16 +344,36 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                 </div>
               </div>
             </div>
-            <button type="submit" class="btn btn-primary w-full mt-4">Assign Selection</button>
+            <button type="submit" class="btn btn-primary w-full mt-4">Assign Selected Subjects</button>
           </form>
 
-          <div class="mt-8">
-            <h4 class="text-xs font-bold text-muted uppercase tracking-wider mb-2">Current Assignments</h4>
-            <div id="inner-assign-list" class="border border-gray-200 rounded-lg overflow-y-auto max-h-48 bg-gray-50">
-               <!-- Populated via JS -->
+          <div class="mt-8 pt-6 border-t border-gray-100">
+            <div class="flex justify-between items-center mb-3">
+               <div>
+                  <h4 class="text-xs font-bold text-gray-800 uppercase tracking-widest m-0">Active Subject Assignments</h4>
+                  <p class="text-[10px] text-muted m-0">Manage which subjects this teacher handles in different classrooms.</p>
+               </div>
+               <button type="button" id="btn-bulk-remove" class="btn btn-ghost btn-xs text-danger font-bold" style="display:none;" onclick="handleBulkRemove()">
+                  REMOVE SELECTED
+               </button>
+            </div>
+            
+            <div id="inner-assign-list-container" class="border border-gray-200 rounded-xl overflow-hidden shadow-sm bg-white">
+               <div class="flex items-center gap-3 bg-gray-50 p-3 border-b border-gray-200">
+                  <input type="checkbox" id="check-all-assignments" onchange="toggleSelectAllAssignments(this)" class="w-4 h-4 accent-purple-600">
+                  <span class="text-[10px] font-black text-gray-500 uppercase tracking-tighter">Select All</span>
+               </div>
+               <div id="inner-assign-list" class="overflow-y-auto max-h-64">
+                  <!-- Populated via JS -->
+               </div>
             </div>
           </div>
         </div>
+        <form method="POST" action="<?= $base ?>/admin/teachers" id="form-bulk-remove" style="display:none;">
+           <?= CSRF::field() ?>
+           <input type="hidden" name="_action" value="bulk_remove_subjects">
+           <div id="bulk-remove-ids-container"></div>
+        </form>
         <div id="assign-new-teacher-message" class="text-center py-12" style="display:none;">
           <p class="text-muted">Please save the teacher profile before managing assignments.</p>
         </div>
@@ -492,13 +515,14 @@ function populateTeacherData(t) {
   document.getElementById('teacher-email').value = t.email;
   document.getElementById('teacher-phone').value = t.phone || '';
   
-  const cSelect = document.getElementById('teacher-classrooms');
-  if (cSelect) {
-      Array.from(cSelect.options).forEach(opt => opt.selected = false);
+  const grid = document.getElementById('teacher-classrooms-grid');
+  if (grid) {
+      const checkboxes = grid.querySelectorAll('input[type="checkbox"]');
+      checkboxes.forEach(cb => cb.checked = false);
       if (t.assigned_class_ids) {
         const ids = t.assigned_class_ids.split(',');
-        Array.from(cSelect.options).forEach(opt => {
-          if (ids.includes(opt.value)) opt.selected = true;
+        checkboxes.forEach(cb => {
+          if (ids.includes(cb.value)) cb.checked = true;
         });
       }
   }
@@ -515,28 +539,69 @@ function populateTeacherData(t) {
 
 function renderAssignmentsList(teacherId) {
   const container = document.getElementById('inner-assign-list');
+  const bulkBtn   = document.getElementById('btn-bulk-remove');
+  const checkAll  = document.getElementById('check-all-assignments');
   const teacherAssignments = allAssignments.filter(a => Number(a.teacher_id) === Number(teacherId));
   
+  checkAll.checked = false;
+  bulkBtn.style.display = 'none';
+
   if (teacherAssignments.length === 0) {
-    container.innerHTML = `<div class="p-6 text-center text-muted text-xs font-bold">No active subject assignments.</div>`;
+    container.innerHTML = `<div class="p-10 text-center text-muted text-xs font-bold italic opacity-60">No active subject assignments.</div>`;
     return;
   }
   
   let html = '';
   teacherAssignments.forEach(a => {
     html += `
-      <div class="flex justify-between items-center p-3 border-b border-gray-100 last:border-0 hover:bg-white transition-colors">
-        <div>
+      <label class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-purple-50 transition-colors cursor-pointer m-0">
+        <input type="checkbox" class="assignment-checkbox w-4 h-4 accent-purple-600" value="${a.id}" onchange="updateBulkRemoveBtn()">
+        <div class="flex-1">
           <div class="text-xs font-bold text-gray-800">${escapeHtml(a.subject_name)}</div>
           <div class="text-[10px] text-muted uppercase font-bold tracking-tight">${escapeHtml(a.class_name)} ${escapeHtml(a.section)}</div>
         </div>
-        <button type="button" class="p-1 text-danger hover:bg-red-50 rounded" onclick="removeAssignment(${a.id})" title="Remove Assignment">
-          <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <button type="button" class="p-2 text-danger hover:bg-red-100 rounded-full transition-colors" onclick="event.preventDefault(); removeAssignment(${a.id})" title="Remove Assignment">
+          <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
-      </div>
+      </label>
     `;
   });
   container.innerHTML = html;
+}
+
+function toggleSelectAllAssignments(master) {
+   const checkboxes = document.querySelectorAll('.assignment-checkbox');
+   checkboxes.forEach(cb => cb.checked = master.checked);
+   updateBulkRemoveBtn();
+}
+
+function updateBulkRemoveBtn() {
+   const checked = document.querySelectorAll('.assignment-checkbox:checked');
+   const bulkBtn = document.getElementById('btn-bulk-remove');
+   bulkBtn.style.display = checked.length > 0 ? 'block' : 'none';
+}
+
+function handleBulkRemove() {
+   const checked = document.querySelectorAll('.assignment-checkbox:checked');
+   const ids = Array.from(checked).map(cb => cb.value);
+   
+   confirmAction({
+     title: 'Remove Multiple Assignments?',
+     message: `You are about to remove ${ids.length} subject assignments. Continue?`,
+     confirmText: 'Yes, Remove Selected',
+     type: 'danger'
+   }, () => {
+      const container = document.getElementById('bulk-remove-ids-container');
+      container.innerHTML = '';
+      ids.forEach(id => {
+         const input = document.createElement('input');
+         input.type = 'hidden';
+         input.name = 'assignment_ids[]';
+         input.value = id;
+         container.appendChild(input);
+      });
+      document.getElementById('form-bulk-remove').submit();
+   });
 }
 
 function confirmDeleteTeacher(id, name) {

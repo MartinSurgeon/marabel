@@ -21,6 +21,7 @@ class TeacherController {
                 'teacher_toggle' => $this->teacherToggle(),
                 'assign_subject' => $this->assignSubject(),
                 'remove_subject' => $this->removeSubject(),
+                'bulk_remove_subjects' => $this->bulkRemoveSubjects(),
                 default => $this->redirect(),
             };
         }
@@ -275,6 +276,33 @@ class TeacherController {
                 DB::execute("DELETE FROM class_subjects WHERE id = ?", [$assignmentId]);
                 Session::flash('success', "Subject assignment removed.");
             }
+        }
+        $this->redirect();
+    }
+
+    private function bulkRemoveSubjects(): void {
+        $assignmentIds = $_POST['assignment_ids'] ?? [];
+        if (!is_array($assignmentIds)) $assignmentIds = [$assignmentIds];
+        $assignmentIds = array_filter(array_map('intval', $assignmentIds));
+
+        if (!empty($assignmentIds)) {
+            $removed = 0;
+            $unassigned = 0;
+            foreach ($assignmentIds as $id) {
+                // Check for scores across all relevant tables (same logic as removeSubject)
+                $hasSba  = (int)DB::queryValue("SELECT COUNT(*) FROM sba_component_scores WHERE class_subject_id = ?", [$id]);
+                $hasEx   = (int)DB::queryValue("SELECT COUNT(*) FROM exam_scores WHERE class_subject_id = ?", [$id]);
+                $hasComp = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores WHERE class_subject_id = ?", [$id]);
+
+                if ($hasSba > 0 || $hasEx > 0 || $hasComp > 0) {
+                    DB::execute("UPDATE class_subjects SET teacher_id = NULL WHERE id = ?", [$id]);
+                    $unassigned++;
+                } else {
+                    DB::execute("DELETE FROM class_subjects WHERE id = ?", [$id]);
+                    $removed++;
+                }
+            }
+            Session::flash('success', "Processed " . ($removed + $unassigned) . " subjects. ($removed deleted, $unassigned unassigned due to existing scores)");
         }
         $this->redirect();
     }

@@ -152,13 +152,18 @@ function navActive(string $path, bool $exact = false): string {
 
   <!-- User footer -->
   <div class="sidebar-footer">
-    <div class="user-avatar" aria-hidden="true">
+    <a href="<?= $base ?>/profile/password" class="user-avatar" aria-label="Change Password" style="display:flex; align-items:center; justify-content:center; text-decoration:none;">
       <?= strtoupper(substr(Session::get('user_name', '?'), 0, 1)) ?>
-    </div>
+    </a>
     <div class="user-info">
       <div class="user-name"><?= htmlspecialchars(Session::get('user_name', 'User')) ?></div>
       <div class="user-role"><?= ucfirst(Session::role() ?? '') ?></div>
     </div>
+    <a href="<?= $base ?>/profile/password" title="Change Password"
+       class="p-2 text-gray-400 hover:text-white transition-colors"
+       style="display:flex; align-items:center;">
+       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+    </a>
     <button
       id="logout-trigger"
       onclick="LogoutModal.open()"

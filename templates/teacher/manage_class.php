@@ -71,7 +71,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             <div style="display:flex; gap:0.25rem;">
               <textarea class="manage-input" data-field="conduct_remark" rows="1" placeholder="Conduct..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['conduct_remark'] ?? '') ?></textarea>
               <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'conduct')" title="Select Conduct Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
@@ -80,7 +80,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             <div style="display:flex; gap:0.25rem;">
               <textarea class="manage-input" data-field="interest_remark" rows="1" placeholder="Interest..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['interest_remark'] ?? '') ?></textarea>
               <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'interest')" title="Select Interest Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
@@ -89,7 +89,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             <div style="display:flex; gap:0.25rem;">
               <textarea class="manage-input" data-field="attitude_remark" rows="1" placeholder="Attitude..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['attitude_remark'] ?? '') ?></textarea>
               <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'attitude')" title="Select Attitude Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
               </button>
             </div>
           </td>
@@ -105,7 +105,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
                 <button type="button" class="btn btn-ghost btn-xs" title="Quick Select Remark"
                         onclick="openRemarkPicker(this, 'teacher')"
                         style="padding:4px; height:28px; width:28px; color:var(--clr-primary);">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                 </button>
                 <button type="button" class="btn btn-ghost btn-xs btn-save-predefined" title="Save this remark for future use"
                         onclick="saveAsPredefined(this)"
