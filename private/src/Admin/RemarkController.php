@@ -50,8 +50,7 @@ class RemarkController {
         if ($classId) {
             $students = DB::query("
                 SELECT s.id, s.full_name, s.student_id_number, 
-                       r.teacher_remark, r.headmaster_remark, r.conduct_character, r.attitude,
-                       r.conduct_remark, r.interest_remark, r.attitude_remark
+                       r.teacher_remark, r.headmaster_remark, r.conduct_character, r.attitude
                 FROM students s
                 LEFT JOIN student_remarks r ON r.student_id = s.id AND r.term_id = ?
                 WHERE s.current_class_id = ? AND s.status = 'active'
@@ -93,7 +92,7 @@ class RemarkController {
             return;
         }
 
-        $allowed = ['headmaster_remark', 'teacher_remark', 'conduct_remark', 'interest_remark', 'attitude_remark'];
+        $allowed = ['headmaster_remark', 'teacher_remark'];
         if (!in_array($field, $allowed)) {
             echo json_encode(['success' => false, 'message' => 'Invalid field']);
             return;

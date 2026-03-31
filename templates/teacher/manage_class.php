@@ -41,10 +41,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           <th style="width:50px; text-align:center; padding:1rem;">#</th>
           <th style="width:230px; text-align:left; padding:1rem; position:sticky; left:0; background:inherit; z-index:11; border-right:1px solid var(--clr-border);">Student Name</th>
           <th style="width:105px; text-align:center; padding:1rem;">Attendance (<?= $activeTerm['total_school_days'] ?>)</th>
-          <th style="width:180px; text-align:left; padding:1rem;">Conduct / Character</th>
-          <th style="width:180px; text-align:left; padding:1rem;">Interest</th>
-          <th style="width:180px; text-align:left; padding:1rem;">Attitude</th>
-          <th style="text-align:left; padding:1rem;">General Remark</th>
+          <th style="text-align:left; padding:1rem;">Teacher Remarks</th>
           <th style="width:90px; text-align:center; padding:1rem;">Preview</th>
         </tr>
       </thead>
@@ -67,32 +64,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
                    style="width:80px; text-align:center; margin:0 auto; display:block;">
           </td>
           
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="conduct_remark" rows="1" placeholder="Conduct..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['conduct_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'conduct')" title="Select Conduct Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
 
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="interest_remark" rows="1" placeholder="Interest..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['interest_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'interest')" title="Select Interest Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
-
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="attitude_remark" rows="1" placeholder="Attitude..." style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($rem['attitude_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'attitude')" title="Select Attitude Template" style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
           
           <td style="padding:0.5rem 1rem;">
             <div style="display:flex; gap:0.25rem; align-items:flex-start;">

@@ -69,8 +69,7 @@ class ClassManagementController {
 
         // 6. Fetch Existing Remarks
         $remarks = DB::query(
-            "SELECT student_id, conduct_character, attitude, teacher_remark, 
-                    conduct_remark, interest_remark, attitude_remark
+            "SELECT student_id, conduct_character, attitude, teacher_remark
              FROM student_remarks WHERE term_id = ?",
             [$term['id']]
         );
@@ -149,8 +148,7 @@ class ClassManagementController {
     private function upsertRemark(int $sid, int $tid, string $field, string $val): void {
         // Allowed fields for teacher
         $allowed = [
-            'conduct_character', 'attitude', 'teacher_remark', 
-            'conduct_remark', 'interest_remark', 'attitude_remark'
+            'conduct_character', 'attitude', 'teacher_remark'
         ];
         if (!in_array($field, $allowed)) {
             throw new Exception('Invalid field');

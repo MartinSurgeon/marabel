@@ -123,8 +123,7 @@ class ReportCardController {
 
         // ── 6. Remarks ────────────────────────────────────────────────
         $remarks = DB::queryOne(
-            "SELECT conduct_character, attitude, teacher_remark, headmaster_remark,
-                    conduct_remark, interest_remark, attitude_remark
+            "SELECT conduct_character, attitude, teacher_remark, headmaster_remark
              FROM student_remarks
              WHERE student_id = ? AND term_id = ?",
             [$studentId, $termId]

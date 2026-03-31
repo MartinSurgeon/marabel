@@ -51,6 +51,7 @@ CREATE TABLE classes (
   class_name        VARCHAR(20) NOT NULL,      -- e.g. "B1A", "B8B"
   section           VARCHAR(5),               -- e.g. "A", "B"
   academic_year_id  INT UNSIGNED NOT NULL,
+  grading_system    ENUM('proficiency', 'waec') NOT NULL DEFAULT 'proficiency',
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_class_year (class_name, academic_year_id),
   FOREIGN KEY (level_id) REFERENCES school_levels(id),
@@ -210,6 +211,7 @@ CREATE TABLE student_aggregates (
   aggregate_score   DECIMAL(8,2),               -- Σ overall_totals
   class_position    INT UNSIGNED,               -- dense rank within section
   number_of_subjects TINYINT UNSIGNED,
+  aggregate_grade   TINYINT UNSIGNED DEFAULT NULL, -- WAEC aggregate grade (sum of best 6)
   computed_at       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_agg (student_id, class_id, term_id),
   FOREIGN KEY (student_id) REFERENCES students(id),

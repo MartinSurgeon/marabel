@@ -67,9 +67,6 @@ $base = defined('APP_BASE') ? APP_BASE : '';
         <tr>
           <th style="width:50px; text-align:center; padding:1rem;">#</th>
           <th style="width:200px; text-align:left; padding:1rem;">Student Name</th>
-          <th style="width:160px; text-align:left; padding:1rem;">Conduct / Character</th>
-          <th style="width:160px; text-align:left; padding:1rem;">Interest</th>
-          <th style="width:160px; text-align:left; padding:1rem;">Attitude</th>
           <th style="text-align:left; padding:1rem;">Final Remarks</th>
           <th style="width:90px; text-align:center; padding:1rem;">Preview</th>
         </tr>
@@ -86,44 +83,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           <?php $isTeacher = Session::role() === 'teacher'; ?>
           <?php $isAdmin   = Session::role() === 'admin'; ?>
           
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="conduct_remark" rows="1" placeholder="Conduct..." 
-                        <?= $isAdmin ? 'disabled' : '' ?>
-                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['conduct_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'conduct')" title="Select Conduct Template" 
-                      <?= $isAdmin ? 'disabled' : '' ?>
-                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
 
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="interest_remark" rows="1" placeholder="Interest..." 
-                        <?= $isAdmin ? 'disabled' : '' ?>
-                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['interest_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'interest')" title="Select Interest Template" 
-                      <?= $isAdmin ? 'disabled' : '' ?>
-                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
-
-          <td style="padding:0.5rem 0.75rem;">
-            <div style="display:flex; gap:0.25rem;">
-              <textarea class="manage-input" data-field="attitude_remark" rows="1" placeholder="Attitude..." 
-                        <?= $isAdmin ? 'disabled' : '' ?>
-                        style="width:100%; font-size:12px; height:36px; padding:6px;"><?= htmlspecialchars($s['attitude_remark'] ?? '') ?></textarea>
-              <button type="button" class="btn btn-ghost btn-xs" onclick="openRemarkPicker(this, 'attitude')" title="Select Attitude Template" 
-                      <?= $isAdmin ? 'disabled' : '' ?>
-                      style="padding:4px; height:34px; width:30px; color:var(--clr-primary);">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
-              </button>
-            </div>
-          </td>
 
           <td style="padding:0.5rem 1rem;">
             <?php if ($isTeacher): ?>

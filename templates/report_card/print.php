@@ -339,18 +339,7 @@ $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltr
         <td colspan="2"></td>
       </tr>
 
-      <tr>
-        <td style="font-weight:700;">Conduct / Character:</td>
-        <td colspan="6"><?= htmlspecialchars($remarks['conduct_remark'] ?? '–') ?></td>
-      </tr>
-      <tr>
-        <td style="font-weight:700;">Interest:</td>
-        <td colspan="6"><?= htmlspecialchars($remarks['interest_remark'] ?? '–') ?></td>
-      </tr>
-      <tr>
-        <td style="font-weight:700;">Attitude:</td>
-        <td colspan="6"><?= htmlspecialchars($remarks['attitude_remark'] ?? '–') ?></td>
-      </tr>
+
       <tr>
         <td colspan="2" style="font-weight:700;">Class Teacher's Remarks:</td>
         <td colspan="5" style="font-style:italic;"><?= htmlspecialchars($remarks['teacher_remark'] ?? '–') ?></td>
