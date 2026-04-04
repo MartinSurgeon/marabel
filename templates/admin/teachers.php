@@ -41,6 +41,11 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
 .view-toggle-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md); background: var(--clr-surface-2); color: var(--clr-text-muted); border: 1px solid var(--clr-border); cursor: pointer; transition: all 0.2s; }
 .view-toggle-btn.active { background: var(--clr-primary); color: white; border-color: var(--clr-primary); box-shadow: 0 4px 6px -1px rgba(105, 43, 196, 0.2); }
 .view-toggle-btn:hover:not(.active) { background: var(--clr-surface); color: var(--clr-primary); }
+
+/* Teacher modal: class-teacher pickers (design tokens, touch-friendly) */
+.teacher-classpick:hover { background: var(--clr-surface); }
+.assign-pick-row:hover { background: var(--clr-surface); }
+.assign-pick-row:last-child { border-bottom: none !important; }
 </style>
 
 <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
@@ -249,62 +254,61 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
 </div>
 <?php endif; ?>
 
-<!-- ══ Teacher Modal (Integrated Tabbed View) ══════════════════════════════════ -->
+<?php include __DIR__ . '/../layout/footer.php'; ?>
+
+<!-- ══ Teacher Modal (after layout close: fixed overlay covers full viewport + sidebar; avoid transformed <main> ancestor) ══ -->
 <div id="modal-teacher" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-teacher-title" style="display:none;">
-  <div class="modal w-full max-w-2xl mx-4">
+  <div id="modal-teacher-inner" class="modal w-full max-w-md mx-4 min-h-0">
     <div class="modal-header">
-      <h3 class="modal-title" id="modal-teacher-title">Teacher Profile</h3>
+      <h3 class="modal-title" id="modal-teacher-title">Teacher Details</h3>
       <button class="modal-close" onclick="closeModal('modal-teacher')" aria-label="Close dialog">&times;</button>
     </div>
-    
-    <!-- Tabs Header (HCI: Grouping related tasks) -->
-    <div class="flex border-b border-gray-200 px-6">
-      <button onclick="switchTeacherTab('profile')" id="tab-profile" class="py-3 px-4 text-sm font-bold border-b-2 border-primary text-primary transition-all">Profile Details</button>
-      <button onclick="switchTeacherTab('assignments')" id="tab-assignments" class="py-3 px-4 text-sm font-bold border-b-2 border-transparent text-muted hover:text-primary transition-all">Subject Assignments</button>
+
+    <div id="teacher-modal-tabs" class="flex shrink-0 overflow-x-auto" role="tablist" aria-label="Teacher sections" style="display:none; border-bottom:1px solid var(--clr-border); padding:0 1rem;">
+      <button type="button" role="tab" id="tab-profile" aria-selected="true" aria-controls="pane-profile" onclick="switchTeacherTab('profile')" class="py-3 px-3 sm:px-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors" style="border-color:var(--clr-primary-500); color:var(--clr-primary-600);">Profile</button>
+      <button type="button" role="tab" id="tab-assignments" aria-selected="false" aria-controls="pane-assignments" onclick="switchTeacherTab('assignments')" class="py-3 px-3 sm:px-4 text-sm font-bold whitespace-nowrap border-b-2 border-transparent text-muted transition-colors" style="color:var(--clr-text-muted);">Subject assignments</button>
     </div>
 
-    <div class="modal-body" style="padding-top:1.5rem;">
+    <div class="modal-flex-stack">
+    <div class="modal-body">
       <!-- Profile Tab -->
-      <div id="pane-profile">
+      <div id="pane-profile" role="tabpanel" aria-labelledby="tab-profile">
         <form method="POST" action="<?= $base ?>/admin/teachers" id="form-teacher" onsubmit="Loader.show()">
           <?= CSRF::field() ?>
           <input type="hidden" name="_action" value="teacher_store">
           <input type="hidden" name="teacher_id" id="teacher-id-field" value="">
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="form-group">
-              <label class="form-label">Full Name <span class="required">*</span></label>
-              <input type="text" name="full_name" id="teacher-name" class="form-control" placeholder="e.g. John Doe" required maxlength="200">
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+            <div class="form-group md:col-span-2">
+              <label class="form-label">Full name <span class="required">*</span></label>
+              <input type="text" name="full_name" id="teacher-name" class="form-control" placeholder="e.g. John Doe" required maxlength="200" autocomplete="name">
             </div>
             <div class="form-group">
-              <label class="form-label">Email Address <span class="required">*</span></label>
-              <input type="email" name="email" id="teacher-email" class="form-control" placeholder="johndoe@example.com" required maxlength="150" oninput="this.value = this.value.toLowerCase()">
+              <label class="form-label">Email <span class="required">*</span></label>
+              <input type="email" name="email" id="teacher-email" class="form-control" placeholder="name@school.edu" required maxlength="150" autocomplete="email" oninput="this.value = this.value.toLowerCase()">
             </div>
             <div class="form-group">
-              <label class="form-label">Phone Number</label>
-              <input type="text" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20">
+              <label class="form-label">Phone</label>
+              <input type="tel" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20" autocomplete="tel">
             </div>
-            <div class="form-group col-span-1 md:col-span-2">
-              <label class="form-label">Classroom Assignments (Class Teacher Role)</label>
-              <div id="teacher-classrooms-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-4 bg-gray-50 border border-gray-200 rounded-lg overflow-y-auto" style="max-height:200px;">
+            <div class="form-group md:col-span-2">
+              <label class="form-label">Class teacher for</label>
+              <div id="teacher-classrooms-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3 sm:p-4 rounded-lg overflow-y-auto" style="max-height:min(200px, 40vh); background:var(--clr-surface-2); border:1px solid var(--clr-border);">
                 <?php foreach ($classes as $c): ?>
-                  <label class="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-white transition-colors border border-transparent hover:border-gray-200 m-0">
-                    <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>" class="w-4 h-4 accent-purple-600">
-                    <span class="text-xs font-bold text-gray-700"><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
+                  <label class="teacher-classpick flex items-center gap-2 p-2 rounded cursor-pointer m-0 transition-colors" style="border:1px solid transparent;">
+                    <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>" class="w-4 h-4 accent-purple-600 shrink-0">
+                    <span class="text-xs font-bold" style="color:var(--clr-text);"><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
                   </label>
                 <?php endforeach; ?>
               </div>
-              <p class="form-text mt-2">Check the classes where this teacher serves as the <strong>Class Teacher</strong>.</p>
+              <p class="form-text mt-2">Select classes where this teacher is the <strong>class teacher</strong>.</p>
             </div>
-          </div>
-          <div class="flex justify-end mt-6">
-            <button type="submit" class="btn btn-primary" id="teacher-submit-btn">Save profile changes</button>
           </div>
         </form>
       </div>
 
       <!-- Assignments Tab -->
-      <div id="pane-assignments" style="display:none;">
+      <div id="pane-assignments" role="tabpanel" aria-labelledby="tab-assignments" style="display:none;">
         <div id="assign-only-when-exists">
           <form method="POST" action="<?= $base ?>/admin/teachers" id="form-assign-inner" onsubmit="Loader.show()">
             <?= CSRF::field() ?>
@@ -314,9 +318,9 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div class="form-group">
                 <label class="form-label">Classes <span class="required">*</span></label>
-                <div class="form-control p-0 overflow-y-auto" style="height:150px; background:var(--clr-surface-2);">
+                <div class="form-control p-0 overflow-y-auto" style="height:min(150px, 42vh); min-height:120px; background:var(--clr-surface-2);">
                   <?php foreach ($classes as $c): ?>
-                    <label class="flex items-center gap-2 p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0">
+                    <label class="assign-pick-row flex items-center gap-2 p-2 cursor-pointer text-xs font-semibold m-0 transition-colors" style="border-bottom:1px solid var(--clr-border);">
                       <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>">
                       <span><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
                     </label>
@@ -325,9 +329,9 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
               </div>
               <div class="form-group">
                 <label class="form-label">Subjects <span class="required">*</span></label>
-                <div class="form-control p-0 overflow-y-auto" style="height:150px; background:var(--clr-surface-2);">
+                <div class="form-control p-0 overflow-y-auto" style="height:min(150px, 42vh); min-height:120px; background:var(--clr-surface-2);">
                   <?php foreach ($subjects as $s): ?>
-                    <label class="flex items-center justify-between p-2 border-b border-gray-100 cursor-pointer hover:bg-white text-xs font-semibold m-0 transition-colors">
+                    <label class="assign-pick-row flex items-center justify-between p-2 cursor-pointer text-xs font-semibold m-0 transition-colors" style="border-bottom:1px solid var(--clr-border);">
                       <div class="flex items-center gap-2">
                         <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>">
                         <span><?= htmlspecialchars($s['subject_name']) ?></span>
@@ -375,12 +379,14 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
            <div id="bulk-remove-ids-container"></div>
         </form>
         <div id="assign-new-teacher-message" class="text-center py-12" style="display:none;">
-          <p class="text-muted">Please save the teacher profile before managing assignments.</p>
+          <p class="text-muted">Save the teacher profile first, then you can assign subjects to classes.</p>
         </div>
       </div>
     </div>
-    <div class="modal-footer bg-gray-50 border-t border-gray-100" style="justify-content:flex-end;">
-      <button type="button" class="btn btn-ghost" onclick="closeModal('modal-teacher')">Close</button>
+    <div class="modal-footer" id="teacher-modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="closeModal('modal-teacher')">Cancel</button>
+      <button type="submit" form="form-teacher" class="btn btn-primary shadow-purple" id="teacher-submit-btn">Save</button>
+    </div>
     </div>
   </div>
 </div>
@@ -454,39 +460,74 @@ function toggleView(type) {
   localStorage.setItem('teacher_view_pref', type);
 }
 
+function setTeacherModalWidth(compact) {
+  const inner = document.getElementById('modal-teacher-inner');
+  if (!inner) return;
+  inner.classList.remove('max-w-md', 'max-w-2xl');
+  inner.classList.add(compact ? 'max-w-md' : 'max-w-2xl');
+}
+
+function styleTeacherTabButton(btn, active) {
+  if (!btn) return;
+  btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  btn.style.borderBottomWidth = '2px';
+  btn.style.borderBottomStyle = 'solid';
+  if (active) {
+    btn.style.borderBottomColor = 'var(--clr-primary-500)';
+    btn.style.color = 'var(--clr-primary-600)';
+  } else {
+    btn.style.borderBottomColor = 'transparent';
+    btn.style.color = 'var(--clr-text-muted)';
+  }
+}
+
 function switchTeacherTab(tab) {
   const pProfile = document.getElementById('pane-profile');
   const pAssign  = document.getElementById('pane-assignments');
   const tProfile = document.getElementById('tab-profile');
   const tAssign  = document.getElementById('tab-assignments');
-  
+  const submitBtn = document.getElementById('teacher-submit-btn');
+
   if (tab === 'profile') {
     pProfile.style.display = 'block';
     pAssign.style.display  = 'none';
-    tProfile.classList.add('border-primary', 'text-primary');
-    tProfile.classList.remove('border-transparent', 'text-muted');
-    tAssign.classList.add('border-transparent', 'text-muted');
-    tAssign.classList.remove('border-primary', 'text-primary');
+    pProfile.setAttribute('aria-hidden', 'false');
+    pAssign.setAttribute('aria-hidden', 'true');
+    styleTeacherTabButton(tProfile, true);
+    styleTeacherTabButton(tAssign, false);
+    if (submitBtn) submitBtn.style.display = '';
   } else {
     pProfile.style.display = 'none';
     pAssign.style.display  = 'block';
-    tAssign.classList.add('border-primary', 'text-primary');
-    tAssign.classList.remove('border-transparent', 'text-muted');
-    tProfile.classList.add('border-transparent', 'text-muted');
-    tProfile.classList.remove('border-primary', 'text-primary');
+    pProfile.setAttribute('aria-hidden', 'true');
+    pAssign.setAttribute('aria-hidden', 'false');
+    styleTeacherTabButton(tProfile, false);
+    styleTeacherTabButton(tAssign, true);
+    if (submitBtn) submitBtn.style.display = 'none';
   }
 }
 
 function openTeacherModal() {
   document.getElementById('form-teacher').reset();
   document.getElementById('teacher-id-field').value = '';
-  document.getElementById('modal-teacher-title').textContent = 'New Teacher Profile';
-  document.getElementById('teacher-submit-btn').textContent = 'Create Profile';
-  
-  document.getElementById('tab-assignments').style.display = 'none';
+  const formAssign = document.getElementById('form-assign-inner');
+  if (formAssign) formAssign.reset();
+  const assignTid = document.getElementById('assign-teacher-id-inner');
+  if (assignTid) assignTid.value = '';
+  document.getElementById('modal-teacher-title').textContent = 'New Teacher';
+  const submitBtn = document.getElementById('teacher-submit-btn');
+  if (submitBtn) {
+    submitBtn.textContent = 'Create Teacher';
+    submitBtn.style.display = '';
+  }
+
+  const tabBar = document.getElementById('teacher-modal-tabs');
+  if (tabBar) tabBar.style.display = 'none';
+  setTeacherModalWidth(true);
+
   document.getElementById('assign-only-when-exists').style.display = 'none';
   document.getElementById('assign-new-teacher-message').style.display = 'block';
-  
+
   switchTeacherTab('profile');
   openModal('modal-teacher');
 }
@@ -503,6 +544,12 @@ function openAssignModal(teacherId) {
   populateTeacherData(teacher);
   switchTeacherTab('assignments');
   openModal('modal-teacher');
+  // openModal() focuses the first input in the dialog; profile fields are hidden on this tab — focus assignments instead
+  setTimeout(() => {
+    const pane = document.getElementById('pane-assignments');
+    const first = pane && pane.querySelector('#form-assign-inner input[type="checkbox"]');
+    if (first) first.focus();
+  }, 200);
 }
 
 function populateTeacherData(t) {
@@ -527,10 +574,14 @@ function populateTeacherData(t) {
       }
   }
   
-  document.getElementById('modal-teacher-title').textContent = 'Manage: ' + t.full_name;
-  document.getElementById('teacher-submit-btn').textContent = 'Update Profile';
-  
-  document.getElementById('tab-assignments').style.display = 'block';
+  document.getElementById('modal-teacher-title').textContent = 'Edit ' + t.full_name;
+  const submitBtn = document.getElementById('teacher-submit-btn');
+  if (submitBtn) submitBtn.textContent = 'Update Teacher';
+
+  const tabBar = document.getElementById('teacher-modal-tabs');
+  if (tabBar) tabBar.style.display = 'flex';
+  setTeacherModalWidth(false);
+
   document.getElementById('assign-only-when-exists').style.display = 'block';
   document.getElementById('assign-new-teacher-message').style.display = 'none';
   
@@ -627,5 +678,3 @@ function escapeHtml(unsafe) {
     return (unsafe||'').toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 </script>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

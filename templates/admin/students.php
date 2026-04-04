@@ -146,6 +146,8 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
 </div>
 <?php endif; ?>
 
+<?php include __DIR__ . '/../layout/footer.php'; ?>
+
 <!-- ══ Student Registration Modal ══════════════════════════════ -->
 <div id="modal-student" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
     <div class="modal w-full max-w-xl mx-4">
@@ -216,7 +218,6 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
     </div>
 </div>
 
-<?php ob_start(); ?>
 <script>
 const allStudents = <?= json_encode($students) ?>;
 $(document).ready(function() {
@@ -399,6 +400,3 @@ $(document).ready(function() {
 const banner = document.getElementById('bulk-result-banner');
 if (banner) setTimeout(() => banner.style.display = 'none', 8000);
 </script>
-<?php $extraJs = ob_get_clean(); ?>
-
-<?php include __DIR__ . '/../layout/footer.php'; ?>

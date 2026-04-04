@@ -615,7 +615,7 @@ thead th.col-sticky { background: var(--clr-surface-2); }
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; /* clip border-radius — body scrolls internally */
 }
 .modal-overlay.open > .modal,
 .modal-overlay.open > [class*="modal"] > .modal {
@@ -969,11 +969,11 @@ thead th.col-sticky { background: var(--clr-surface-2); }
   .modal-overlay > div[class~="modal"] {
     max-width: 100% !important;
     margin: 0;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0; /* Larger radius for sheets */
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    /* Allow up to 92vh — inner .modal-body handles the scrolling */
     max-height: 92vh;
-    padding-top: 24px; /* Space for the handle */
     position: relative;
-    transform: translateY(100%); /* Start completely off-screen below */
+    transform: translateY(100%);
   }
   .modal-overlay.open .modal,
   .modal-backdrop.open .modal {
@@ -983,7 +983,7 @@ thead th.col-sticky { background: var(--clr-surface-2); }
     padding: 0;
     align-items: flex-end;
   }
-  
+
   /* UX Affordance: Drag Handle for the bottom sheet */
   .modal-overlay .modal::before,
   .modal-backdrop .modal::before,
@@ -998,6 +998,19 @@ thead th.col-sticky { background: var(--clr-surface-2); }
     background: var(--clr-border);
     border-radius: var(--radius-full);
     z-index: 10;
+    pointer-events: none;
+  }
+
+  /* Ensure modal header doesn't scroll away */
+  .modal-overlay .modal .modal-header,
+  .modal-backdrop .modal .modal-header {
+    flex-shrink: 0;
+  }
+
+  /* Ensure modal footer stays pinned at bottom */
+  .modal-overlay .modal .modal-footer,
+  .modal-backdrop .modal .modal-footer {
+    flex-shrink: 0;
   }
 } /* <--- RESTORED MISSING CLOSING BRACE FOR @media (max-width: 768px) */
 
@@ -1100,7 +1113,7 @@ thead th.col-sticky { background: var(--clr-surface-2); }
   max-height: calc(100vh - 4rem);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: hidden; /* clip border-radius — body scrolls internally */
   transform: translateY(24px);
   opacity: 0;
   transition: transform var(--dur-slow) var(--ease), opacity var(--dur-slow) var(--ease);
@@ -1115,8 +1128,10 @@ thead th.col-sticky { background: var(--clr-surface-2); }
 .modal-body {
   padding: 1.5rem;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* smooth momentum scrolling on iOS */
+  overscroll-behavior: contain;      /* prevent scroll chaining to page behind */
   flex: 1;
-  min-height: 0;
+  min-height: 0;                     /* critical: allows flex child to scroll */
 }
 .modal-footer {
   padding: 1.125rem 1.5rem;
@@ -1125,6 +1140,20 @@ thead th.col-sticky { background: var(--clr-surface-2); }
   justify-content: flex-end;
   gap: .75rem;
   flex-wrap: wrap;
+  flex-shrink: 0;                    /* keep actions visible; body scrolls above */
+}
+
+/* Tall modals: stack scrollable body + pinned footer inside remaining column space */
+.modal-flex-stack {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+}
+.modal-flex-stack > .modal-body {
+  flex: 1 1 0%;
+  min-height: 0;
 }
 
 /* ── Inline alert in forms / pages ────────────────────────────── */

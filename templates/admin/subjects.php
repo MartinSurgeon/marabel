@@ -123,12 +123,12 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 
 <!-- ══ Subject Modal ═════════════════════════════════════════ -->
 <div id="modal-subject" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-subject-title" style="display:none;">
-  <div class="modal w-full max-w-md mx-4">
+  <div class="modal w-full max-w-md mx-4 min-h-0">
     <div class="modal-header">
       <h3 class="modal-title" id="modal-subject-title">Subject Details</h3>
       <button class="modal-close" onclick="closeModal('modal-subject')" aria-label="Close dialog">&times;</button>
     </div>
-    <form method="POST" action="<?= $base ?>/admin/subjects" id="form-subject" onsubmit="Loader.show()">
+    <form method="POST" action="<?= $base ?>/admin/subjects" id="form-subject" class="modal-flex-stack m-0" onsubmit="Loader.show()">
       <?= CSRF::field() ?>
       <input type="hidden" name="_action" value="subject_store">
       <input type="hidden" name="subject_id" id="subject-id-field" value="">
@@ -163,7 +163,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modal-subject')">Cancel</button>
-        <button type="submit" class="btn btn-primary" id="subject-submit-btn">Save Subject</button>
+        <button type="submit" class="btn btn-primary shadow-purple" id="subject-submit-btn">Save Subject</button>
       </div>
     </form>
   </div>
