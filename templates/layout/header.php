@@ -184,3 +184,133 @@ if (Session::isLoggedIn()) {
     <?php endif; ?>
 
     <main class="app-main animate-fade-in" id="main-content" role="main">
+
+<?php if (Session::isLoggedIn()): ?>
+<!-- ── Inactivity Timeout Modal ─────────────────────────────── -->
+<div id="modal-idle" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="idle-modal-title" style="display:none;">
+  <div class="modal w-full mx-4" style="max-width:400px; min-h-0;">
+
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--clr-warning-bg,#fffbeb);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" style="color:var(--clr-warning,#f59e0b);">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <h3 class="modal-title" id="idle-modal-title">Session Timeout Warning</h3>
+      </div>
+      <button class="modal-close" onclick="IdleTimer.reset()" aria-label="Stay logged in">&times;</button>
+    </div>
+
+    <div class="modal-body" style="text-align:center; padding-top:2rem; padding-bottom:1.5rem;">
+      <p style="color:var(--clr-text-muted); font-size:0.875rem; margin:0 0 1.75rem; line-height:1.6;">
+        You've been inactive for a while.<br>You'll be signed out automatically in:
+      </p>
+
+      <!-- Countdown ring -->
+      <div style="position:relative; width:88px; height:88px; margin:0 auto 1.75rem;">
+        <svg width="88" height="88" viewBox="0 0 88 88" style="transform:rotate(-90deg);">
+          <circle cx="44" cy="44" r="38" fill="none" stroke="var(--clr-surface-2,#f3f4f6)" stroke-width="7"/>
+          <circle id="idle-ring" cx="44" cy="44" r="38" fill="none"
+            stroke="var(--clr-warning,#f59e0b)" stroke-width="7"
+            stroke-linecap="round"
+            stroke-dasharray="238.76"
+            stroke-dashoffset="0"
+            style="transition:stroke-dashoffset 1s linear, stroke 0.5s;"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+          <span id="idle-countdown" style="font-size:1.6rem;font-weight:900;color:var(--clr-text);font-variant-numeric:tabular-nums;letter-spacing:-0.03em;"></span>
+        </div>
+      </div>
+
+      <p style="font-size:0.75rem; color:var(--clr-text-muted); margin:0;">
+        Move your mouse or press any key to stay logged in.
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <a href="<?= $base ?>/logout" class="btn btn-ghost" id="idle-logout-btn">Sign Out Now</a>
+      <button id="idle-stay-btn" class="btn btn-primary shadow-purple" onclick="IdleTimer.reset()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+        </svg>
+        I'm Still Here
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const IdleTimer = (() => {
+  const WARN_AFTER  = 25 * 60; // 25 min of idle → show modal
+  const WARN_WINDOW = 5  * 60; // 5 min countdown before logout
+  const LOGOUT_URL  = '<?= $base ?>/logout?timeout=1';
+  const totalDash   = 238.76;
+
+  let idleSeconds   = 0;
+  let countdownLeft = WARN_WINDOW;
+  let warningShown  = false;
+
+  const countEl = () => document.getElementById('idle-countdown');
+  const ring    = () => document.getElementById('idle-ring');
+
+  function showWarning() {
+    warningShown  = true;
+    countdownLeft = WARN_WINDOW;
+    openModal('modal-idle');
+    document.getElementById('idle-stay-btn')?.focus();
+    tick();
+  }
+
+  function hideWarning() {
+    closeModal('modal-idle');
+  }
+
+  function tick() {
+    if (!warningShown) return;
+    const m = Math.floor(countdownLeft / 60);
+    const s = countdownLeft % 60;
+    const el = countEl();
+    const r  = ring();
+    if (el) el.textContent = m > 0 ? m + ':' + String(s).padStart(2,'0') : String(s);
+    if (r) {
+      const ratio = countdownLeft / WARN_WINDOW;
+      r.style.strokeDashoffset = totalDash * (1 - ratio);
+      r.style.stroke = ratio > 0.5 ? 'var(--clr-warning,#f59e0b)' : ratio > 0.2 ? '#ef4444' : '#dc2626';
+    }
+    if (countdownLeft <= 0) { window.location.href = LOGOUT_URL; return; }
+    countdownLeft--;
+    setTimeout(tick, 1000);
+  }
+
+  function onActivity() {
+    if (!warningShown) idleSeconds = 0;
+  }
+
+  function mainTick() {
+    idleSeconds++;
+    if (!warningShown && idleSeconds >= WARN_AFTER) showWarning();
+  }
+
+  function reset() {
+    idleSeconds   = 0;
+    warningShown  = false;
+    countdownLeft = WARN_WINDOW;
+    hideWarning();
+  }
+
+  function init() {
+    ['mousemove','mousedown','keydown','touchstart','scroll','click'].forEach(e => {
+      document.addEventListener(e, onActivity, { passive: true });
+    });
+    setInterval(mainTick, 1000);
+  }
+
+  return { init, reset };
+})();
+
+document.addEventListener('DOMContentLoaded', IdleTimer.init);
+</script>
+<?php endif; ?>
+

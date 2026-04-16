@@ -228,7 +228,8 @@ class AuthController {
 
     private function logout(): void {
         Session::destroy();
-        $this->redirect('/login');
+        $suffix = isset($_GET['timeout']) ? '?timeout=1' : '';
+        $this->redirect('/login' . $suffix);
     }
 
     private function createSession(array $user): void {
