@@ -7,7 +7,7 @@
 class DashboardController {
 
     public function handle(): void {
-        global $stats, $activeYear, $activeTerm, $gradingProgress, $pendingPublish, $teacherCommitments;
+        global $stats, $activeYear, $activeTerm, $gradingProgress, $pendingPublish, $teacherCommitments, $setupChecklist;
         
         // 1. Basic Stats
         $stats = [
@@ -28,6 +28,61 @@ class DashboardController {
             );
         }
 
+        // ── Setup Health Checklist ────────────────────────────────────
+        $activeTermId   = DB::queryValue("SELECT id FROM terms WHERE is_active = 1 LIMIT 1") ?? 0;
+        $hasActiveYear  = !empty($activeYear);
+        $hasActiveTerm  = !empty($activeTermId);
+        $hasClasses     = $hasActiveYear && ((int)DB::queryValue("SELECT COUNT(*) FROM classes WHERE academic_year_id = ?", [$activeYear['id'] ?? 0]) > 0);
+        $hasAssignments = $hasActiveTerm  && ((int)DB::queryValue("SELECT COUNT(*) FROM class_subjects WHERE term_id = ?", [$activeTermId]) > 0);
+        $hasStudents    = ((int)($stats['students'] ?? 0)) > 0;
+        $hasPublished   = $hasActiveTerm  && ((int)DB::queryValue("SELECT COUNT(*) FROM report_card_locks WHERE is_published = 1") > 0);
+
+        $setupChecklist = [
+            [
+                'done'   => $hasActiveYear,
+                'label'  => 'Create an Academic Year',
+                'detail' => $hasActiveYear ? "Active: {$activeYear['year_name']}" : 'No academic year is active.',
+                'link'   => '/admin/years',
+                'action' => 'Go to Sessions',
+            ],
+            [
+                'done'   => $hasActiveTerm,
+                'label'  => 'Activate a Term',
+                'detail' => $hasActiveTerm ? 'A term is currently active.' : 'No term is active. Activate one in Sessions.',
+                'link'   => '/admin/years',
+                'action' => 'Manage Terms',
+            ],
+            [
+                'done'   => $hasClasses,
+                'label'  => 'Set Up Classes',
+                'detail' => $hasClasses ? "{$stats['classes']} class(es) set up for this year." : 'No classes created yet.',
+                'link'   => '/admin/classes',
+                'action' => 'Add Classes',
+            ],
+            [
+                'done'   => $hasAssignments,
+                'label'  => 'Assign Teachers to Subjects',
+                'detail' => $hasAssignments ? 'Teachers are assigned this term.' : 'No teacher-subject assignments for the active term.',
+                'link'   => '/admin/teachers',
+                'action' => 'Assign Teachers',
+            ],
+            [
+                'done'   => $hasStudents,
+                'label'  => 'Enrol Students',
+                'detail' => $hasStudents ? "{$stats['students']} active student(s) enrolled." : 'No students enrolled yet.',
+                'link'   => '/admin/students',
+                'action' => 'Add Students',
+            ],
+            [
+                'done'   => $hasPublished,
+                'label'  => 'Publish Report Cards',
+                'detail' => $hasPublished ? 'At least one class result has been published.' : 'No results published yet for this session.',
+                'link'   => '/admin/publish',
+                'action' => 'Go to Publish',
+            ],
+        ];
+        // ─────────────────────────────────────────────────────────────
+
         // Initialize empty arrays if no valid term is found
         if (!$activeTerm || !$activeYear) {
             $gradingProgress = ['expected_scores' => 0, 'entered_sba' => 0, 'entered_exam' => 0];
@@ -37,7 +92,6 @@ class DashboardController {
         }
 
         // 3. Grading Progress (School-wide for the active term)
-        // expected_scores = (Total Students in each active Class) * (Number of Subjects assigned to that class)
         $progressStats = DB::queryOne("
             SELECT 
                 (SELECT SUM(student_count * subject_count) FROM (
@@ -53,11 +107,11 @@ class DashboardController {
 
         $gradingProgress = [
             'expected_scores' => (int)($progressStats['expected_scores'] ?? 0),
-            'entered_sba'    => (int)($progressStats['entered_sba'] ?? 0),
-            'entered_exam'   => (int)($progressStats['entered_exam'] ?? 0)
+            'entered_sba'     => (int)($progressStats['entered_sba'] ?? 0),
+            'entered_exam'    => (int)($progressStats['entered_exam'] ?? 0),
         ];
 
-        // 4. Pending Publish (Classes that have locked subjects but haven't published yet)
+        // 4. Pending Publish
         $pendingPublish = DB::query("
             SELECT c.id, c.class_name, c.section, sl.name AS level_name,
                    (SELECT COUNT(*) FROM class_subjects cs WHERE cs.class_id = c.id AND cs.term_id = ?) as total_subjects,
@@ -70,15 +124,11 @@ class DashboardController {
             ORDER BY sl.sort_order, c.class_name
         ", [$activeTerm['id'], $activeTerm['id'], $activeYear['id'], $activeTerm['id']]);
 
-
         // 5. Teacher SBA Commitment Levels
-        // Calculate the ratio of entered SBA scores vs expected SBA scores for each teacher's assigned subjects
         $teacherCommitments = DB::query("
             SELECT u.id, u.full_name, u.phone,
                    COUNT(DISTINCT cs.id) as subjects_assigned,
-                   -- Expected scores: Sum of students in each assigned class
                    SUM((SELECT COUNT(*) FROM students s WHERE s.current_class_id = cs.class_id AND s.status = 'active')) as expected_entries,
-                   -- Actual scores entered by this teacher for this term
                    (SELECT COUNT(*) FROM sba_component_scores scs 
                     JOIN class_subjects inner_cs ON inner_cs.id = scs.class_subject_id
                     WHERE inner_cs.teacher_id = u.id AND scs.term_id = ?) as actual_entries

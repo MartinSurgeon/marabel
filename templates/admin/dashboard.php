@@ -6,7 +6,7 @@
 $pageTitle = 'Dashboard Overview';
 include __DIR__ . '/../layout/header.php';
 
-global $stats, $activeYear, $activeTerm, $gradingProgress, $pendingPublish, $teacherCommitments;
+global $stats, $activeYear, $activeTerm, $gradingProgress, $pendingPublish, $teacherCommitments, $setupChecklist;
 $base = defined('APP_BASE') ? APP_BASE : '';
 $s = $stats ?? ['students' => 0, 'teachers' => 0, 'classes' => 0];
 
@@ -15,7 +15,74 @@ $expected = max(1, $gradingProgress['expected_scores']);
 $sbaPct = min(100, round(($gradingProgress['entered_sba'] / $expected) * 100));
 $examPct = min(100, round(($gradingProgress['entered_exam'] / $expected) * 100));
 $totalPct = min(100, round((($gradingProgress['entered_sba'] + $gradingProgress['entered_exam']) / ($expected * 2)) * 100));
+
+// Checklist calculations
+$checklist  = $setupChecklist ?? [];
+$doneCount  = count(array_filter($checklist, fn($c) => $c['done']));
+$totalSteps = count($checklist);
+$allDone    = $doneCount === $totalSteps;
+$checkPct   = $totalSteps > 0 ? round(($doneCount / $totalSteps) * 100) : 0;
+$nextStep   = null;
+foreach ($checklist as $step) { if (!$step['done']) { $nextStep = $step; break; } }
 ?>
+
+<?php // Always show checklist — permanent health status panel ?>
+<div id="setup-checklist-panel" style="background:linear-gradient(135deg,#1a0824 0%,#3d1261 100%);border-radius:var(--radius-xl);padding:1.75rem 2rem;margin-bottom:2rem;color:white;position:relative;overflow:hidden;" class="animate-fade-in">
+
+  <div style="position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-40px;right:60px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,0.03);pointer-events:none;"></div>
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem;">
+    <div>
+      <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:0.35rem;">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20" style="color:#c084fc;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+        <h2 style="margin:0;font-size:1.1rem;font-weight:800;color:white;">System Setup Checklist</h2>
+      </div>
+      <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.6);"><?php if($nextStep): ?>Next step: <strong style="color:#e9d5ff;"><?= htmlspecialchars($nextStep['label']) ?></strong><?php else: ?>All steps completed!<?php endif; ?></p>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:2rem;font-weight:900;line-height:1;color:white;"><?= $doneCount ?><span style="font-size:1rem;color:rgba(255,255,255,0.5);">/<?= $totalSteps ?></span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,0.5);font-weight:700;text-transform:uppercase;letter-spacing:0.05em;">Steps Done</div>
+    </div>
+  </div>
+
+  <div style="height:6px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;margin-bottom:1.5rem;">
+    <div style="height:100%;width:<?= $checkPct ?>%;background:linear-gradient(to right,#a855f7,#c084fc);border-radius:10px;transition:width 1s ease;"></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:0.75rem;">
+    <?php foreach ($checklist as $i => $step): ?>
+    <a href="<?= $base . htmlspecialchars($step['link']) ?>" class="checklist-step" data-done="<?= $step['done'] ? '1':'0' ?>" style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.875rem 1rem;background:<?= $step['done'] ? 'rgba(255,255,255,0.06)':'rgba(168,85,247,0.12)' ?>;border:1px solid <?= $step['done'] ? 'rgba(255,255,255,0.08)':'rgba(168,85,247,0.3)' ?>;border-radius:12px;text-decoration:none;transition:background 0.2s;">
+      <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;<?= $step['done'] ? 'background:#10b981;color:white;':'background:rgba(168,85,247,0.2);border:2px solid rgba(168,85,247,0.5);color:#c084fc;' ?>font-size:12px;font-weight:800;">
+        <?php if($step['done']): ?><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg><?php else: ?><?= $i+1 ?><?php endif; ?>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;color:<?= $step['done'] ? 'rgba(255,255,255,0.55)':'white' ?>;<?= $step['done'] ? 'text-decoration:line-through;':'' ?>"><?= htmlspecialchars($step['label']) ?></div>
+        <div style="font-size:11px;color:rgba(255,255,255,0.45);margin-top:2px;line-height:1.4;"><?= htmlspecialchars($step['detail']) ?></div>
+        <?php if(!$step['done']): ?><div style="font-size:10px;color:#c084fc;font-weight:800;margin-top:6px;text-transform:uppercase;letter-spacing:0.04em;"><?= htmlspecialchars($step['action']) ?> &rarr;</div><?php endif; ?>
+      </div>
+    </a>
+    <?php endforeach; ?>
+  </div>
+
+  <div style="text-align:right;margin-top:1rem;">
+    <button onclick="dismissChecklist()" style="background:none;border:none;cursor:pointer;color:rgba(255,255,255,0.35);font-size:11px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;">Hide this panel</button>
+  </div>
+</div>
+<script>
+(function(){
+  if(localStorage.getItem('checklist_dismissed')==='<?= $doneCount ?>of<?= $totalSteps ?>'){var el=document.getElementById('setup-checklist-panel');if(el)el.style.display='none';}
+  document.querySelectorAll('.checklist-step').forEach(function(a){
+    a.addEventListener('mouseenter',function(){this.style.background='rgba(255,255,255,0.1)';});
+    a.addEventListener('mouseleave',function(){this.style.background=this.dataset.done==='1'?'rgba(255,255,255,0.06)':'rgba(168,85,247,0.12)';});
+  });
+})();
+function dismissChecklist(){
+  localStorage.setItem('checklist_dismissed','<?= $doneCount ?>of<?= $totalSteps ?>');
+  var el=document.getElementById('setup-checklist-panel');
+  if(el){el.style.transition='opacity 0.3s';el.style.opacity='0';setTimeout(function(){el.style.display='none';},300);}
+}
+</script>
 
 <div class="stat-grid mb-8" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
   <!-- Stat Card: Term Info -->

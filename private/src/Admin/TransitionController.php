@@ -90,6 +90,7 @@ class TransitionController {
             DB::execute("UPDATE terms SET is_active = 0 WHERE id = ?", [$sourceTermId]);
             DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$targetTermId]);
 
+            DB::commit();
             Session::updateActiveTerm();
             Notification::send(null, "Term Transition Complete", "Successfully transitioned to a new term. {$cloned} subject assignments cloned.", 'success', '/admin/transition');
             Session::flash('success', "Term transition complete! {$cloned} subject assignments cloned to the new term.");
@@ -200,6 +201,7 @@ class TransitionController {
             DB::execute("UPDATE terms SET is_active = 0");
             DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$targetTermId]);
 
+            DB::commit();
             Session::updateActiveTerm();
             Notification::send(null, "Year Transition Complete", "Successfully transitioned to a new academic year. {$promotedTotal} students promoted.", 'success', '/admin/transition');
             Session::flash('success', "Year transition complete! {$promotedTotal} students promoted. Classes and assignments migrated to the new session.");

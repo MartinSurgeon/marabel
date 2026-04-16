@@ -53,8 +53,6 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
     <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Teachers</h1>
     <div class="flex items-center gap-2 mt-1">
       <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff and assignments.</p>
-      <span style="height:4px; width:4px; background:var(--clr-border); border-radius:50%;"></span>
-      <span class="badge badge-purple" style="font-size:10px; padding:2px 8px; font-weight:800; opacity:0.8;">SESSION: <?= htmlspecialchars($activeYearName ?? 'None') ?></span>
     </div>
   </div>
   
