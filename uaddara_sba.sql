@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 25, 2026 at 06:29 PM
+-- Generation Time: Apr 07, 2026 at 11:24 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -99,29 +99,30 @@ CREATE TABLE `classes` (
   `class_name` varchar(20) NOT NULL,
   `section` varchar(5) DEFAULT NULL,
   `academic_year_id` int(10) UNSIGNED NOT NULL,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `grading_system` enum('proficiency','waec') NOT NULL DEFAULT 'proficiency'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `classes`
 --
 
-INSERT INTO `classes` (`id`, `level_id`, `class_name`, `section`, `academic_year_id`, `created_at`) VALUES
-(1, 1, 'BASIC 1', '', 1, '2026-03-20 18:06:58'),
-(2, 3, 'BASIC 7', 'A', 1, '2026-03-20 18:24:59'),
-(5, 3, 'BASIC 7', 'B', 1, '2026-03-21 09:20:10'),
-(6, 1, 'BASIC 2', '', 1, '2026-03-21 09:24:05'),
-(7, 1, 'BASIC 3', '', 1, '2026-03-21 09:24:22'),
-(8, 1, 'BASIC 4', '', 1, '2026-03-21 09:24:47'),
-(9, 2, 'BASIC 5', 'A', 1, '2026-03-22 09:05:04'),
-(10, 2, 'BASIC 5', 'B', 1, '2026-03-22 18:47:33'),
-(11, 2, 'BASIC 6', 'A', 1, '2026-03-22 18:50:42'),
-(12, 2, 'BASIC 6', 'B', 1, '2026-03-22 18:51:02'),
-(13, 3, 'BASIC 8', 'A', 1, '2026-03-22 18:51:37'),
-(14, 3, 'BASIC 8', 'B', 1, '2026-03-22 18:51:59'),
-(15, 3, 'BASIC 9', 'A', 1, '2026-03-22 18:52:25'),
-(16, 3, 'BASIC 9', 'B', 1, '2026-03-22 18:54:50'),
-(20, 3, 'B-Test', 'T', 1, '2026-03-23 11:15:49');
+INSERT INTO `classes` (`id`, `level_id`, `class_name`, `section`, `academic_year_id`, `created_at`, `grading_system`) VALUES
+(1, 1, 'BASIC 1', '', 1, '2026-03-20 18:06:58', 'proficiency'),
+(2, 3, 'BASIC 7', 'A', 1, '2026-03-20 18:24:59', 'proficiency'),
+(5, 3, 'BASIC 7', 'B', 1, '2026-03-21 09:20:10', 'proficiency'),
+(6, 1, 'BASIC 2', '', 1, '2026-03-21 09:24:05', 'proficiency'),
+(7, 1, 'BASIC 3', '', 1, '2026-03-21 09:24:22', 'proficiency'),
+(8, 1, 'BASIC 4', '', 1, '2026-03-21 09:24:47', 'proficiency'),
+(9, 2, 'BASIC 5', 'A', 1, '2026-03-22 09:05:04', 'proficiency'),
+(10, 2, 'BASIC 5', 'B', 1, '2026-03-22 18:47:33', 'proficiency'),
+(11, 2, 'BASIC 6', 'A', 1, '2026-03-22 18:50:42', 'proficiency'),
+(12, 2, 'BASIC 6', 'B', 1, '2026-03-22 18:51:02', 'proficiency'),
+(13, 3, 'BASIC 8', 'A', 1, '2026-03-22 18:51:37', 'proficiency'),
+(14, 3, 'BASIC 8', 'B', 1, '2026-03-22 18:51:59', 'proficiency'),
+(15, 3, 'BASIC 9', 'A', 1, '2026-03-22 18:52:25', 'proficiency'),
+(16, 3, 'BASIC 9', 'B', 1, '2026-03-22 18:54:50', 'proficiency'),
+(20, 3, 'B-Test', 'T', 1, '2026-03-23 11:15:49', 'proficiency');
 
 -- --------------------------------------------------------
 
@@ -167,7 +168,19 @@ INSERT INTO `class_subjects` (`id`, `class_id`, `subject_id`, `teacher_id`, `ter
 (50, 15, 46, 6, 1, 0, NULL),
 (51, 14, 51, 11, 1, 0, NULL),
 (52, 13, 51, 11, 1, 0, NULL),
-(53, 16, 51, 11, 1, 0, NULL);
+(53, 16, 51, 11, 1, 0, NULL),
+(54, 8, 51, 5, 1, 0, NULL),
+(55, 10, 51, 5, 1, 0, NULL),
+(56, 9, 51, 5, 1, 0, NULL),
+(58, 5, 51, 5, 1, 0, NULL),
+(83, 1, 56, 12, 1, 0, NULL),
+(84, 6, 56, 12, 1, 0, NULL),
+(85, 7, 56, 12, 1, 0, NULL),
+(86, 8, 56, 12, 1, 0, NULL),
+(87, 10, 56, 12, 1, 0, NULL),
+(88, 9, 56, 12, 1, 0, NULL),
+(89, 12, 56, 12, 1, 0, NULL),
+(90, 11, 56, 12, 1, 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -216,62 +229,64 @@ CREATE TABLE `computed_scores` (
 INSERT INTO `computed_scores` (`id`, `student_id`, `class_subject_id`, `term_id`, `class_score`, `exam_score`, `overall_total`, `proficiency_level`, `subject_position`, `computed_at`) VALUES
 (1, 1, 11, 1, 40.00, 50.00, 90.00, 1, 1, '2026-03-21 01:07:47'),
 (25, 3, 18, 1, 0.00, 0.00, 0.00, 5, 1, '2026-03-21 20:26:35'),
-(26, 112, 19, 1, 46.67, 42.50, 89.17, 1, 8, '2026-03-22 09:44:46'),
-(27, 113, 19, 1, 29.17, 23.50, 52.67, 4, 43, '2026-03-22 09:44:46'),
-(28, 114, 19, 1, 49.17, 45.50, 94.67, 1, 4, '2026-03-25 09:50:51'),
-(29, 115, 19, 1, 49.17, 46.50, 95.67, 1, 2, '2026-03-25 09:50:51'),
-(30, 116, 19, 1, 30.00, 27.50, 57.50, 3, 37, '2026-03-25 09:50:51'),
-(31, 117, 19, 1, 40.00, 35.50, 75.50, 2, 19, '2026-03-25 09:50:51'),
-(32, 118, 19, 1, 33.33, 30.00, 63.33, 3, 34, '2026-03-25 09:50:51'),
+(26, 112, 19, 1, 47.00, 43.00, 90.00, 1, 8, '2026-03-31 12:20:40'),
+(27, 113, 19, 1, 29.00, 24.00, 53.00, 4, 43, '2026-03-31 12:22:17'),
+(28, 114, 19, 1, 49.00, 46.00, 95.00, 1, 4, '2026-03-31 12:22:17'),
+(29, 115, 19, 1, 49.00, 47.00, 96.00, 1, 2, '2026-03-31 12:22:17'),
+(30, 116, 19, 1, 30.00, 28.00, 58.00, 3, 37, '2026-03-31 12:22:17'),
+(31, 117, 19, 1, 40.00, 36.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(32, 118, 19, 1, 33.00, 30.00, 63.00, 3, 34, '2026-03-31 12:22:17'),
 (33, 119, 19, 1, 35.00, 29.00, 64.00, 3, 32, '2026-03-25 09:50:51'),
-(34, 120, 19, 1, 46.67, 42.50, 89.17, 1, 8, '2026-03-22 09:44:46'),
-(35, 121, 19, 1, 29.17, 23.50, 52.67, 4, 43, '2026-03-22 09:44:46'),
-(36, 122, 19, 1, 35.00, 31.50, 66.50, 3, 28, '2026-03-22 09:44:46'),
-(37, 123, 19, 1, 27.50, 26.00, 53.50, 4, 40, '2026-03-22 09:44:46'),
-(38, 124, 19, 1, 35.83, 30.50, 66.33, 3, 30, '2026-03-25 09:50:51'),
-(39, 125, 19, 1, 23.33, 21.50, 44.83, 4, 46, '2026-03-22 09:44:46'),
+(34, 120, 19, 1, 47.00, 43.00, 90.00, 1, 8, '2026-03-31 12:22:17'),
+(35, 121, 19, 1, 29.00, 24.00, 53.00, 4, 43, '2026-03-31 12:22:17'),
+(36, 122, 19, 1, 35.00, 32.00, 67.00, 3, 27, '2026-03-31 12:22:17'),
+(37, 123, 19, 1, 28.00, 26.00, 54.00, 3, 40, '2026-03-31 12:22:17'),
+(38, 124, 19, 1, 36.00, 31.00, 67.00, 3, 27, '2026-03-31 12:22:17'),
+(39, 125, 19, 1, 23.00, 22.00, 45.00, 4, 46, '2026-03-31 12:22:17'),
 (40, 126, 19, 1, 35.00, 29.00, 64.00, 3, 32, '2026-03-25 09:50:51'),
-(41, 127, 19, 1, 46.67, 42.50, 89.17, 1, 8, '2026-03-22 09:44:46'),
-(42, 128, 19, 1, 29.17, 23.50, 52.67, 4, 43, '2026-03-22 09:44:46'),
-(43, 129, 19, 1, 27.50, 26.00, 53.50, 4, 40, '2026-03-22 09:44:46'),
+(41, 127, 19, 1, 47.00, 43.00, 90.00, 1, 8, '2026-03-31 12:22:17'),
+(42, 128, 19, 1, 29.00, 24.00, 53.00, 4, 43, '2026-03-31 12:22:17'),
+(43, 129, 19, 1, 28.00, 26.00, 54.00, 3, 40, '2026-03-31 12:22:17'),
 (44, 130, 19, 1, 50.00, 50.00, 100.00, 1, 1, '2026-03-25 09:50:51'),
-(45, 131, 19, 1, 27.50, 29.00, 56.50, 3, 39, '2026-03-25 09:50:51'),
+(45, 131, 19, 1, 28.00, 29.00, 57.00, 3, 39, '2026-03-31 12:22:17'),
 (46, 132, 19, 1, 35.00, 38.00, 73.00, 2, 24, '2026-03-25 09:50:51'),
-(47, 133, 19, 1, 28.33, 31.50, 59.83, 3, 36, '2026-03-25 09:50:51'),
-(48, 134, 19, 1, 27.50, 26.00, 53.50, 4, 40, '2026-03-22 09:44:46'),
-(49, 135, 19, 1, 40.83, 34.50, 75.33, 2, 21, '2026-03-25 09:50:51'),
-(50, 136, 19, 1, 35.83, 30.50, 66.33, 3, 30, '2026-03-25 09:50:51'),
-(51, 137, 19, 1, 23.33, 21.50, 44.83, 4, 46, '2026-03-22 09:44:46'),
-(52, 138, 19, 1, 46.67, 44.00, 90.67, 1, 6, '2026-03-22 09:44:46'),
-(53, 139, 19, 1, 37.50, 33.00, 70.50, 2, 25, '2026-03-25 09:50:51'),
-(54, 140, 19, 1, 39.17, 37.00, 76.17, 2, 17, '2026-03-25 09:50:51'),
-(55, 141, 19, 1, 22.50, 19.50, 42.00, 4, 48, '2026-03-22 09:44:46'),
-(56, 142, 19, 1, 43.33, 39.50, 82.83, 1, 11, '2026-03-22 09:44:46'),
-(57, 143, 19, 1, 41.67, 36.00, 77.67, 2, 15, '2026-03-25 09:50:51'),
-(58, 144, 19, 1, 49.17, 45.50, 94.67, 1, 4, '2026-03-25 09:50:51'),
-(59, 145, 19, 1, 40.83, 34.50, 75.33, 2, 21, '2026-03-25 09:50:51'),
-(60, 146, 19, 1, 46.67, 44.00, 90.67, 1, 6, '2026-03-22 09:44:46'),
-(61, 147, 19, 1, 37.50, 33.00, 70.50, 2, 25, '2026-03-25 09:50:51'),
-(62, 148, 19, 1, 22.50, 19.50, 42.00, 4, 48, '2026-03-22 09:44:46'),
-(63, 149, 19, 1, 43.33, 39.50, 82.83, 1, 11, '2026-03-22 09:44:46'),
-(64, 150, 19, 1, 49.17, 46.50, 95.67, 1, 2, '2026-03-25 09:50:51'),
-(65, 151, 19, 1, 30.00, 27.50, 57.50, 3, 37, '2026-03-25 09:50:51'),
-(66, 152, 19, 1, 40.00, 35.50, 75.50, 2, 19, '2026-03-25 09:50:51'),
-(67, 153, 19, 1, 33.33, 30.00, 63.33, 3, 34, '2026-03-25 09:50:51'),
-(68, 154, 19, 1, 41.67, 36.00, 77.67, 2, 15, '2026-03-25 09:50:51'),
-(69, 155, 19, 1, 43.33, 38.00, 81.33, 1, 13, '2026-03-22 09:44:46'),
-(70, 156, 19, 1, 35.00, 31.50, 66.50, 3, 28, '2026-03-22 09:44:46'),
-(71, 157, 19, 1, 39.17, 28.00, 67.17, 3, 27, '2026-03-25 09:50:51'),
-(72, 158, 19, 1, 40.83, 34.50, 75.33, 2, 21, '2026-03-25 09:50:51'),
-(73, 159, 19, 1, 39.17, 37.00, 76.17, 2, 17, '2026-03-25 09:50:51'),
-(74, 160, 19, 1, 43.33, 38.00, 81.33, 1, 13, '2026-03-22 09:44:46'),
+(47, 133, 19, 1, 28.00, 32.00, 60.00, 3, 36, '2026-03-31 12:22:17'),
+(48, 134, 19, 1, 28.00, 26.00, 54.00, 3, 40, '2026-03-31 12:22:17'),
+(49, 135, 19, 1, 41.00, 35.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(50, 136, 19, 1, 36.00, 31.00, 67.00, 3, 27, '2026-03-31 12:22:17'),
+(51, 137, 19, 1, 23.00, 22.00, 45.00, 4, 46, '2026-03-31 12:22:17'),
+(52, 138, 19, 1, 47.00, 44.00, 91.00, 1, 6, '2026-03-31 12:22:17'),
+(53, 139, 19, 1, 38.00, 33.00, 71.00, 2, 25, '2026-03-31 12:22:17'),
+(54, 140, 19, 1, 39.00, 37.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(55, 141, 19, 1, 23.00, 20.00, 43.00, 4, 48, '2026-03-31 12:22:17'),
+(56, 142, 19, 1, 43.00, 40.00, 83.00, 1, 11, '2026-03-31 12:22:17'),
+(57, 143, 19, 1, 42.00, 36.00, 78.00, 2, 15, '2026-03-31 12:22:17'),
+(58, 144, 19, 1, 49.00, 46.00, 95.00, 1, 4, '2026-03-31 12:22:17'),
+(59, 145, 19, 1, 41.00, 35.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(60, 146, 19, 1, 47.00, 44.00, 91.00, 1, 6, '2026-03-31 12:22:17'),
+(61, 147, 19, 1, 38.00, 33.00, 71.00, 2, 25, '2026-03-31 12:22:17'),
+(62, 148, 19, 1, 23.00, 20.00, 43.00, 4, 48, '2026-03-31 12:22:17'),
+(63, 149, 19, 1, 43.00, 40.00, 83.00, 1, 11, '2026-03-31 12:22:17'),
+(64, 150, 19, 1, 49.00, 47.00, 96.00, 1, 2, '2026-03-31 12:22:17'),
+(65, 151, 19, 1, 30.00, 28.00, 58.00, 3, 37, '2026-03-31 12:22:17'),
+(66, 152, 19, 1, 40.00, 36.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(67, 153, 19, 1, 33.00, 30.00, 63.00, 3, 34, '2026-03-31 12:22:17'),
+(68, 154, 19, 1, 42.00, 36.00, 78.00, 2, 15, '2026-03-31 12:22:17'),
+(69, 155, 19, 1, 43.00, 38.00, 81.00, 1, 13, '2026-03-31 12:22:17'),
+(70, 156, 19, 1, 35.00, 32.00, 67.00, 3, 27, '2026-03-31 12:22:17'),
+(71, 157, 19, 1, 39.00, 28.00, 67.00, 3, 27, '2026-03-31 12:22:17'),
+(72, 158, 19, 1, 41.00, 35.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(73, 159, 19, 1, 39.00, 37.00, 76.00, 2, 17, '2026-03-31 12:22:17'),
+(74, 160, 19, 1, 43.00, 38.00, 81.00, 1, 13, '2026-03-31 12:22:17'),
 (712, 2, 10, 1, 33.33, 30.00, 63.33, 3, 2, '2026-03-22 10:18:46'),
 (713, 4, 10, 1, 27.50, 42.50, 70.00, 2, 1, '2026-03-22 10:18:46'),
 (714, 5, 10, 1, 12.50, 0.00, 12.50, 5, 3, '2026-03-23 16:09:36'),
 (715, 18, 10, 1, 34.17, 25.00, 59.17, 3, 2, '2026-03-23 16:09:36'),
 (4731, 113, 22, 1, 0.00, 0.00, 0.00, 5, 2, '2026-03-25 09:50:51'),
-(4749, 130, 22, 1, 47.50, 50.00, 97.50, 1, 1, '2026-03-25 09:50:51'),
-(4751, 131, 22, 1, 0.00, 0.00, 0.00, 5, 2, '2026-03-25 09:50:51');
+(4749, 130, 22, 1, 48.00, 50.00, 98.00, 1, 1, '2026-03-31 12:22:17'),
+(4751, 131, 22, 1, 0.00, 0.00, 0.00, 5, 2, '2026-03-25 09:50:51'),
+(5274, 130, 54, 1, 49.00, 28.00, 77.00, 2, 1, '2026-03-31 12:22:17'),
+(5277, 131, 54, 1, 44.00, 21.00, 65.00, 3, 2, '2026-03-31 12:22:17');
 
 -- --------------------------------------------------------
 
@@ -349,7 +364,9 @@ INSERT INTO `exam_scores` (`id`, `student_id`, `class_subject_id`, `term_id`, `r
 (52, 129, 19, 1, 52.00, 26.00, 7, '2026-03-22 09:42:27'),
 (53, 158, 19, 1, 69.00, 34.50, 7, '2026-03-22 09:42:27'),
 (54, 3, 19, 1, NULL, NULL, 7, '2026-03-22 22:45:42'),
-(55, 130, 22, 1, 100.00, 50.00, 7, '2026-03-24 11:53:40');
+(55, 130, 22, 1, 100.00, 50.00, 7, '2026-03-24 11:53:40'),
+(56, 130, 54, 1, 56.00, 28.00, 5, '2026-03-31 11:58:46'),
+(57, 131, 54, 1, 42.00, 21.00, 5, '2026-03-31 11:59:29');
 
 -- --------------------------------------------------------
 
@@ -408,7 +425,8 @@ INSERT INTO `login_attempts` (`id`, `identifier`, `ip_address`, `attempted_at`) 
 (52, 'admin@gmail.com', '::1', '2026-03-23 16:05:50'),
 (54, 'admin@uaddara.edu.ghadmin@marabel.com', '::1', '2026-03-23 16:47:31'),
 (55, 'admin@marabel.com', '::1', '2026-03-23 16:47:45'),
-(56, 'admin@marabel.com', '::1', '2026-03-23 16:47:52');
+(56, 'admin@marabel.com', '::1', '2026-03-23 16:47:52'),
+(57, 'admin', '::1', '2026-04-04 21:39:44');
 
 -- --------------------------------------------------------
 
@@ -471,13 +489,19 @@ INSERT INTO `notifications` (`id`, `user_id`, `title`, `message`, `type`, `link`
 (37, NULL, 'Term Activated', '\'Term 2\' has been set as the active term.', 'success', '/admin/terms', 1, '2026-03-25 14:28:01'),
 (38, NULL, 'Academic Year Activated', '\'2024/2025\' has been set as the active academic year.', 'success', '/admin/years', 1, '2026-03-25 14:31:24'),
 (39, 10, 'Welcome to Uaddara Basic School', 'Your account has been created. Your default password is: password123', 'success', NULL, 0, '2026-03-25 14:38:08'),
-(40, 2, 'New Teacher Joined', 'Staff member \'Dorcas AFUA OSEI\' was registered by System Administrator.', 'info', NULL, 0, '2026-03-25 14:38:08'),
+(40, 2, 'New Teacher Joined', 'Staff member \'Dorcas AFUA OSEI\' was registered by System Administrator.', 'info', NULL, 1, '2026-03-25 14:38:08'),
 (41, NULL, 'Academic Year Activated', '\'2025/2026\' has been set as the active academic year.', 'success', '/admin/years', 1, '2026-03-25 14:39:09'),
 (42, 10, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 7, BASIC 8, BASIC 8.', 'success', '/teacher/scores', 0, '2026-03-25 14:40:43'),
-(43, 6, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 8, BASIC 8, BASIC 9, BASIC 9.', 'success', '/teacher/scores', 0, '2026-03-25 14:43:45'),
+(43, 6, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 8, BASIC 8, BASIC 9, BASIC 9.', 'success', '/teacher/scores', 1, '2026-03-25 14:43:45'),
 (44, 11, 'Welcome to Uaddara Basic School', 'Your account has been created. Your default password is: password123', 'success', NULL, 0, '2026-03-25 14:45:45'),
-(45, 2, 'New Teacher Joined', 'Staff member \'Kennedy SARFO KANKAM\' was registered by System Administrator.', 'info', NULL, 0, '2026-03-25 14:45:45'),
-(46, 11, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 8, BASIC 8, BASIC 9.', 'success', '/teacher/scores', 0, '2026-03-25 14:53:49');
+(45, 2, 'New Teacher Joined', 'Staff member \'Kennedy SARFO KANKAM\' was registered by System Administrator.', 'info', NULL, 1, '2026-03-25 14:45:45'),
+(46, 11, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 8, BASIC 8, BASIC 9.', 'success', '/teacher/scores', 0, '2026-03-25 14:53:49'),
+(47, 5, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 4, BASIC 5, BASIC 5, BASIC 7, BASIC 7.', 'success', '/teacher/scores', 0, '2026-03-31 11:53:17'),
+(48, 12, 'Welcome to Uaddara Basic School', 'Your account has been created. Your default password is: password123', 'success', NULL, 0, '2026-04-04 21:00:18'),
+(49, 2, 'New Teacher Joined', 'Staff member \'Christiana OBIRI\' was registered by System Administrator.', 'info', NULL, 1, '2026-04-04 21:00:18'),
+(50, 12, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 1, BASIC 2, BASIC 3, BASIC 4, BASIC 5, BASIC 5, BASIC 6, BASIC 6.', 'success', '/teacher/scores', 0, '2026-04-04 21:01:21'),
+(51, 12, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 1, BASIC 2, BASIC 3, BASIC 4, BASIC 5, BASIC 5, BASIC 6, BASIC 6.', 'success', '/teacher/scores', 0, '2026-04-04 21:05:36'),
+(52, 12, 'New Subject Assignment', 'You have been assigned new subject(s) in: BASIC 1, BASIC 2, BASIC 3, BASIC 4, BASIC 5, BASIC 5, BASIC 6, BASIC 6.', 'success', '/teacher/scores', 0, '2026-04-04 21:07:22');
 
 -- --------------------------------------------------------
 
@@ -500,7 +524,7 @@ CREATE TABLE `otp_tokens` (
 
 INSERT INTO `otp_tokens` (`id`, `phone`, `token_hash`, `expires_at`, `used_at`, `created_at`) VALUES
 (6, '0501345770', '01887b84cacc4dd22befe85987277917de770115f75b0e35901901f61238c633', '2026-03-22 20:29:57', '2026-03-22 20:29:57', '2026-03-22 20:29:25'),
-(9, '0557869989', '4ba4cb40e6d196d36055e6eadc420fb9fb7f3c193a6f3d15a0041d42c3710b88', '2026-03-25 11:47:38', '2026-03-25 11:47:38', '2026-03-25 11:47:21');
+(10, '0557869989', 'ca45640ee7f3ecf08a683a15caf06ab89ef0c6663f969ecd6c39db5fdc54b936', '2026-04-04 20:13:53', '2026-04-04 20:13:53', '2026-04-04 20:13:35');
 
 -- --------------------------------------------------------
 
@@ -653,7 +677,9 @@ INSERT INTO `sba_component_scores` (`id`, `student_id`, `class_subject_id`, `ter
 (56, 3, 19, 1, NULL, NULL, NULL, NULL, 0.00, 0.00, 7, '2026-03-22 22:45:34'),
 (57, 130, 22, 1, 15.00, 15.00, 12.00, 15.00, 57.00, 47.50, 7, '2026-03-24 11:53:38'),
 (58, 131, 22, 1, NULL, NULL, NULL, NULL, 0.00, 0.00, 7, '2026-03-25 01:58:24'),
-(59, 113, 22, 1, NULL, NULL, NULL, NULL, 0.00, 0.00, 7, '2026-03-25 01:58:40');
+(59, 113, 22, 1, NULL, NULL, NULL, NULL, 0.00, 0.00, 7, '2026-03-25 01:58:40'),
+(60, 130, 54, 1, 15.00, 14.00, 15.00, 15.00, 59.00, 49.17, 5, '2026-03-31 11:58:33'),
+(61, 131, 54, 1, 10.00, 15.00, 13.00, 15.00, 53.00, 44.17, 5, '2026-03-31 11:59:38');
 
 -- --------------------------------------------------------
 
@@ -709,7 +735,8 @@ INSERT INTO `sms_logs` (`id`, `recipient_phone`, `message`, `sms_type`, `sent_at
 (9, '0557869989', 'Your Uaddara Basic School login code is: 501358. Valid for 5 minutes. Do not share.', 'broadcast', '2026-03-24 05:49:29', 'sent', '{}'),
 (10, '0557869989', 'Your Uaddara Basic School login code is: 540285. Valid for 5 minutes. Do not share.', 'broadcast', '2026-03-25 11:46:13', 'failed', 'Unknown request error <0>.'),
 (11, '0557869989', 'Your Uaddara Basic School login code is: 155459. Valid for 5 minutes. Do not share.', 'broadcast', '2026-03-25 11:47:23', 'sent', '{}'),
-(12, '0557869989', 'Dear Parent, results for ADU DARKO NATHANIEL (Current Term ) have been published. View now at the portal.', 'report_card', '2026-03-25 12:16:17', 'sent', '{}');
+(12, '0557869989', 'Dear Parent, results for ADU DARKO NATHANIEL (Current Term ) have been published. View now at the portal.', 'report_card', '2026-03-25 12:16:17', 'sent', '{}'),
+(13, '0557869989', 'Your Uaddara Basic School login code is: 355800. Valid for 5 minutes. Do not share.', 'broadcast', '2026-04-04 20:13:36', 'sent', '{}');
 
 -- --------------------------------------------------------
 
@@ -1414,69 +1441,70 @@ CREATE TABLE `student_aggregates` (
   `aggregate_score` decimal(8,2) DEFAULT NULL,
   `class_position` int(10) UNSIGNED DEFAULT NULL,
   `number_of_subjects` tinyint(3) UNSIGNED DEFAULT NULL,
-  `computed_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `computed_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `aggregate_grade` tinyint(3) UNSIGNED DEFAULT NULL COMMENT 'WAEC aggregate grade (sum of best 6)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `student_aggregates`
 --
 
-INSERT INTO `student_aggregates` (`id`, `student_id`, `class_id`, `term_id`, `aggregate_score`, `class_position`, `number_of_subjects`, `computed_at`) VALUES
-(1, 1, 2, 1, 90.00, 1, 1, '2026-03-21 01:07:47'),
-(25, 3, 8, 1, 0.00, 50, 1, '2026-03-22 09:44:46'),
-(26, 112, 8, 1, 89.17, 8, 1, '2026-03-22 09:44:46'),
-(27, 113, 8, 1, 52.67, 43, 2, '2026-03-25 09:50:51'),
-(28, 114, 8, 1, 94.67, 4, 1, '2026-03-25 09:50:51'),
-(29, 115, 8, 1, 95.67, 2, 1, '2026-03-25 09:50:51'),
-(30, 116, 8, 1, 57.50, 37, 1, '2026-03-25 09:50:51'),
-(31, 117, 8, 1, 75.50, 19, 1, '2026-03-25 09:50:51'),
-(32, 118, 8, 1, 63.33, 34, 1, '2026-03-25 09:50:51'),
-(33, 119, 8, 1, 64.00, 32, 1, '2026-03-25 09:50:51'),
-(34, 120, 8, 1, 89.17, 8, 1, '2026-03-22 09:44:46'),
-(35, 121, 8, 1, 52.67, 43, 1, '2026-03-22 09:44:46'),
-(36, 122, 8, 1, 66.50, 28, 1, '2026-03-22 09:44:46'),
-(37, 123, 8, 1, 53.50, 40, 1, '2026-03-22 09:44:46'),
-(38, 124, 8, 1, 66.33, 30, 1, '2026-03-25 09:50:51'),
-(39, 125, 8, 1, 44.83, 46, 1, '2026-03-22 09:44:46'),
-(40, 126, 8, 1, 64.00, 32, 1, '2026-03-25 09:50:51'),
-(41, 127, 8, 1, 89.17, 8, 1, '2026-03-22 09:44:46'),
-(42, 128, 8, 1, 52.67, 43, 1, '2026-03-22 09:44:46'),
-(43, 129, 8, 1, 53.50, 40, 1, '2026-03-22 09:44:46'),
-(44, 130, 8, 1, 197.50, 1, 2, '2026-03-25 09:50:51'),
-(45, 131, 8, 1, 56.50, 39, 2, '2026-03-25 09:50:51'),
-(46, 132, 8, 1, 73.00, 24, 1, '2026-03-25 09:50:51'),
-(47, 133, 8, 1, 59.83, 36, 1, '2026-03-25 09:50:51'),
-(48, 134, 8, 1, 53.50, 40, 1, '2026-03-22 09:44:46'),
-(49, 135, 8, 1, 75.33, 21, 1, '2026-03-25 09:50:51'),
-(50, 136, 8, 1, 66.33, 30, 1, '2026-03-25 09:50:51'),
-(51, 137, 8, 1, 44.83, 46, 1, '2026-03-22 09:44:46'),
-(52, 138, 8, 1, 90.67, 6, 1, '2026-03-22 09:44:46'),
-(53, 139, 8, 1, 70.50, 25, 1, '2026-03-25 09:50:51'),
-(54, 140, 8, 1, 76.17, 17, 1, '2026-03-25 09:50:51'),
-(55, 141, 8, 1, 42.00, 48, 1, '2026-03-22 09:44:46'),
-(56, 142, 8, 1, 82.83, 11, 1, '2026-03-22 09:44:46'),
-(57, 143, 8, 1, 77.67, 15, 1, '2026-03-25 09:50:51'),
-(58, 144, 8, 1, 94.67, 4, 1, '2026-03-25 09:50:51'),
-(59, 145, 8, 1, 75.33, 21, 1, '2026-03-25 09:50:51'),
-(60, 146, 8, 1, 90.67, 6, 1, '2026-03-22 09:44:46'),
-(61, 147, 8, 1, 70.50, 25, 1, '2026-03-25 09:50:51'),
-(62, 148, 8, 1, 42.00, 48, 1, '2026-03-22 09:44:46'),
-(63, 149, 8, 1, 82.83, 11, 1, '2026-03-22 09:44:46'),
-(64, 150, 8, 1, 95.67, 2, 1, '2026-03-25 09:50:51'),
-(65, 151, 8, 1, 57.50, 37, 1, '2026-03-25 09:50:51'),
-(66, 152, 8, 1, 75.50, 19, 1, '2026-03-25 09:50:51'),
-(67, 153, 8, 1, 63.33, 34, 1, '2026-03-25 09:50:51'),
-(68, 154, 8, 1, 77.67, 15, 1, '2026-03-25 09:50:51'),
-(69, 155, 8, 1, 81.33, 13, 1, '2026-03-22 09:44:46'),
-(70, 156, 8, 1, 66.50, 28, 1, '2026-03-22 09:44:46'),
-(71, 157, 8, 1, 67.17, 27, 1, '2026-03-25 09:50:51'),
-(72, 158, 8, 1, 75.33, 21, 1, '2026-03-25 09:50:51'),
-(73, 159, 8, 1, 76.17, 17, 1, '2026-03-25 09:50:51'),
-(74, 160, 8, 1, 81.33, 13, 1, '2026-03-22 09:44:46'),
-(712, 2, 1, 1, 63.33, 2, 1, '2026-03-22 10:18:46'),
-(713, 4, 1, 1, 70.00, 1, 1, '2026-03-22 10:18:46'),
-(714, 5, 1, 1, 12.50, 4, 1, '2026-03-22 10:18:46'),
-(715, 18, 1, 1, 59.17, 3, 1, '2026-03-22 10:18:46');
+INSERT INTO `student_aggregates` (`id`, `student_id`, `class_id`, `term_id`, `aggregate_score`, `class_position`, `number_of_subjects`, `computed_at`, `aggregate_grade`) VALUES
+(1, 1, 2, 1, 90.00, 1, 1, '2026-03-21 01:07:47', NULL),
+(25, 3, 8, 1, 0.00, 50, 1, '2026-03-22 09:44:46', NULL),
+(26, 112, 8, 1, 90.00, 9, 1, '2026-03-31 12:22:17', NULL),
+(27, 113, 8, 1, 53.00, 43, 2, '2026-03-31 12:22:17', NULL),
+(28, 114, 8, 1, 95.00, 5, 1, '2026-03-31 12:22:17', NULL),
+(29, 115, 8, 1, 96.00, 3, 1, '2026-03-31 12:22:17', NULL),
+(30, 116, 8, 1, 58.00, 38, 1, '2026-03-31 12:22:17', NULL),
+(31, 117, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(32, 118, 8, 1, 63.00, 35, 1, '2026-03-31 12:22:17', NULL),
+(33, 119, 8, 1, 64.00, 33, 1, '2026-03-31 12:22:17', NULL),
+(34, 120, 8, 1, 90.00, 9, 1, '2026-03-31 12:22:17', NULL),
+(35, 121, 8, 1, 53.00, 43, 1, '2026-03-31 12:22:17', NULL),
+(36, 122, 8, 1, 67.00, 28, 1, '2026-03-31 12:22:17', NULL),
+(37, 123, 8, 1, 54.00, 40, 1, '2026-03-31 12:22:17', NULL),
+(38, 124, 8, 1, 67.00, 28, 1, '2026-03-31 12:22:17', NULL),
+(39, 125, 8, 1, 45.00, 46, 1, '2026-03-31 12:22:17', NULL),
+(40, 126, 8, 1, 64.00, 33, 1, '2026-03-31 12:22:17', NULL),
+(41, 127, 8, 1, 90.00, 9, 1, '2026-03-31 12:22:17', NULL),
+(42, 128, 8, 1, 53.00, 43, 1, '2026-03-31 12:22:17', NULL),
+(43, 129, 8, 1, 54.00, 40, 1, '2026-03-31 12:22:17', NULL),
+(44, 130, 8, 1, 275.00, 1, 3, '2026-03-31 12:22:17', NULL),
+(45, 131, 8, 1, 122.00, 2, 3, '2026-03-31 12:22:17', NULL),
+(46, 132, 8, 1, 73.00, 25, 1, '2026-03-31 12:22:17', NULL),
+(47, 133, 8, 1, 60.00, 37, 1, '2026-03-31 12:22:17', NULL),
+(48, 134, 8, 1, 54.00, 40, 1, '2026-03-31 12:22:17', NULL),
+(49, 135, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(50, 136, 8, 1, 67.00, 28, 1, '2026-03-31 12:22:17', NULL),
+(51, 137, 8, 1, 45.00, 46, 1, '2026-03-31 12:22:17', NULL),
+(52, 138, 8, 1, 91.00, 7, 1, '2026-03-31 12:22:17', NULL),
+(53, 139, 8, 1, 71.00, 26, 1, '2026-03-31 12:22:17', NULL),
+(54, 140, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(55, 141, 8, 1, 43.00, 48, 1, '2026-03-31 12:22:17', NULL),
+(56, 142, 8, 1, 83.00, 12, 1, '2026-03-31 12:22:17', NULL),
+(57, 143, 8, 1, 78.00, 16, 1, '2026-03-31 12:22:17', NULL),
+(58, 144, 8, 1, 95.00, 5, 1, '2026-03-31 12:22:17', NULL),
+(59, 145, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(60, 146, 8, 1, 91.00, 7, 1, '2026-03-31 12:22:17', NULL),
+(61, 147, 8, 1, 71.00, 26, 1, '2026-03-31 12:22:17', NULL),
+(62, 148, 8, 1, 43.00, 48, 1, '2026-03-31 12:22:17', NULL),
+(63, 149, 8, 1, 83.00, 12, 1, '2026-03-31 12:22:17', NULL),
+(64, 150, 8, 1, 96.00, 3, 1, '2026-03-31 12:22:17', NULL),
+(65, 151, 8, 1, 58.00, 38, 1, '2026-03-31 12:22:17', NULL),
+(66, 152, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(67, 153, 8, 1, 63.00, 35, 1, '2026-03-31 12:22:17', NULL),
+(68, 154, 8, 1, 78.00, 16, 1, '2026-03-31 12:22:17', NULL),
+(69, 155, 8, 1, 81.00, 14, 1, '2026-03-31 12:22:17', NULL),
+(70, 156, 8, 1, 67.00, 28, 1, '2026-03-31 12:22:17', NULL),
+(71, 157, 8, 1, 67.00, 28, 1, '2026-03-31 12:22:17', NULL),
+(72, 158, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(73, 159, 8, 1, 76.00, 18, 1, '2026-03-31 12:22:17', NULL),
+(74, 160, 8, 1, 81.00, 14, 1, '2026-03-31 12:22:17', NULL),
+(712, 2, 1, 1, 63.33, 2, 1, '2026-03-22 10:18:46', NULL),
+(713, 4, 1, 1, 70.00, 1, 1, '2026-03-22 10:18:46', NULL),
+(714, 5, 1, 1, 12.50, 4, 1, '2026-03-22 10:18:46', NULL),
+(715, 18, 1, 1, 59.17, 3, 1, '2026-03-22 10:18:46', NULL);
 
 -- --------------------------------------------------------
 
@@ -1580,7 +1608,7 @@ INSERT INTO `subjects` (`id`, `level_id`, `subject_name`, `subject_code`, `sort_
 (13, 2, 'Ghanaian Language', 'GL', 6, 1),
 (14, 2, 'History', 'HIST', 7, 1),
 (15, 2, 'French', 'FR', 8, 1),
-(16, 2, 'COMPUTING', 'COMPUTING', 9, 1),
+(16, 2, 'Computing', 'COMP.', 9, 1),
 (17, 2, 'Social Studies', 'SS', 10, 1),
 (19, 3, 'Mathematics', 'MATH', 2, 1),
 (20, 3, 'Integrated Science', 'ISCI', 3, 1),
@@ -1601,8 +1629,9 @@ INSERT INTO `subjects` (`id`, `level_id`, `subject_name`, `subject_code`, `sort_
 (46, 3, 'Mathematics', 'MATH', 2, 1),
 (47, 3, 'Integrated Science', 'ISCI', 3, 1),
 (48, 3, 'Social Studies', 'SS', 4, 1),
-(51, 3, 'COMPUTING', 'COMP', 7, 1),
-(54, 3, 'Career Technology', 'CT', 10, 1);
+(51, 3, 'Computing', 'COMP.', 7, 1),
+(54, 3, 'Career Technology', 'CT', 10, 1),
+(56, 1, 'French', 'FR', 6, 1);
 
 -- --------------------------------------------------------
 
@@ -1657,16 +1686,17 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `is_active`, `last_login_at`, `created_by`, `created_at`) VALUES
 (1, 'Martin Kwame Agbenyenunse', 'agbenyenusemartin@gmail.com', '0557869989', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'teacher', 1, '2026-03-22 10:12:04', NULL, '2026-03-20 15:57:20'),
-(2, 'System Administrator', 'admin@uaddara.edu.gh', '0240000000', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'admin', 1, '2026-03-25 16:47:23', NULL, '2026-03-20 16:10:00'),
+(2, 'System Administrator', 'admin@uaddara.edu.gh', '0240000000', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'admin', 1, '2026-04-04 22:40:54', NULL, '2026-03-20 16:10:00'),
 (3, 'Samuel Obeng', 'samuel@gmail.com', '0557869989', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'teacher', 1, '2026-03-23 16:06:40', NULL, '2026-03-20 22:30:15'),
 (4, 'agbenyenuse samuel', NULL, '0557869989', NULL, 'parent', 1, NULL, NULL, '2026-03-21 00:15:18'),
-(5, 'Sarkodie Addo', 'sarkodie@gmail.com', '0502536351', '$2y$10$C06og2XbTLbDyTt.10Hl9.rvA5q4kYlgHGqQazPUxo4iWfxve2NMq', 'teacher', 1, '2026-03-21 09:15:51', NULL, '2026-03-21 08:23:41'),
-(6, 'Samuel Appiah', 'sam@gmail.com', '0240967072', '$2y$10$syA9HLxcKL6mXhv0eXLwnuSZRpcdyNridLzb3mxDgGrrNVjOJr43O', 'teacher', 1, '2026-03-23 15:16:24', NULL, '2026-03-21 09:03:11'),
-(7, 'Diana Asiamah', 'diana@gmail.com', '0557869989', '$2y$10$7l0h9vpULSaJVR/iwXWfmenb69XTzHP/icbmGro6nJIamGYBOQx7u', 'teacher', 1, '2026-03-25 16:36:48', NULL, '2026-03-21 09:25:21'),
+(5, 'Sarkodie ADDO', 'sarkodie@gmail.com', '0502536351', '$2y$10$C06og2XbTLbDyTt.10Hl9.rvA5q4kYlgHGqQazPUxo4iWfxve2NMq', 'teacher', 1, '2026-03-31 12:20:26', NULL, '2026-03-21 08:23:41'),
+(6, 'Samuel APPIAH', 'sam@gmail.com', '0240967072', '$2y$10$syA9HLxcKL6mXhv0eXLwnuSZRpcdyNridLzb3mxDgGrrNVjOJr43O', 'teacher', 1, '2026-04-04 20:03:04', NULL, '2026-03-21 09:03:11'),
+(7, 'Diana ASIAMAH', 'diana@gmail.com', '0557869989', '$2y$10$7l0h9vpULSaJVR/iwXWfmenb69XTzHP/icbmGro6nJIamGYBOQx7u', 'teacher', 1, '2026-04-04 19:00:46', NULL, '2026-03-21 09:25:21'),
 (8, 'Samuel Obeng', NULL, '0501345770', NULL, 'parent', 1, NULL, NULL, '2026-03-22 20:28:37'),
-(9, 'Marrion Philips', 'marrion@gmail.com', '0557869989', '$2y$10$IcNiFq9ekcvRq4n44eFk4.81xYEgRjOHtWMQ2vZbcYGIyquHjlLgy', 'teacher', 1, NULL, NULL, '2026-03-23 04:53:49'),
+(9, 'Marrion PHILIPS', 'marrion@gmail.com', '0557869989', '$2y$10$IcNiFq9ekcvRq4n44eFk4.81xYEgRjOHtWMQ2vZbcYGIyquHjlLgy', 'teacher', 1, NULL, NULL, '2026-03-23 04:53:49'),
 (10, 'Dorcas AFUA OSEI', 'dorcas@gmail.com', '0247568034', '$2y$10$gCLK.Tqf4.yaOzFNAhZ4KOHVplcZb/0cr5u5p/dIotwJIVJDF/Lgm', 'teacher', 1, NULL, NULL, '2026-03-25 14:38:08'),
-(11, 'Kennedy SARFO KANKAM', 'ken@gmail.com', '0244455226', '$2y$10$SnuMKnzEYfNPGnwnEofWJekah1wL.t/odwaVhzlL2hGcCydClJ5ey', 'teacher', 1, NULL, NULL, '2026-03-25 14:45:45');
+(11, 'Kennedy SARFO KANKAM', 'ken@gmail.com', '0244455226', '$2y$10$SnuMKnzEYfNPGnwnEofWJekah1wL.t/odwaVhzlL2hGcCydClJ5ey', 'teacher', 1, NULL, NULL, '2026-03-25 14:45:45'),
+(12, 'Christiana OBIRI', 'christianaobiri333@gmail.com', '0240071532', '$2y$10$KFkYxM9fOq/vWraPEPXebuk/.ImIuirMSkpZDUUA3laEvbsIxn4wa', 'teacher', 1, '2026-04-04 21:15:48', NULL, '2026-04-04 21:00:18');
 
 --
 -- Indexes for dumped tables
@@ -1897,37 +1927,37 @@ ALTER TABLE `classes`
 -- AUTO_INCREMENT for table `class_subjects`
 --
 ALTER TABLE `class_subjects`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=54;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=91;
 
 --
 -- AUTO_INCREMENT for table `computed_scores`
 --
 ALTER TABLE `computed_scores`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5252;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5307;
 
 --
 -- AUTO_INCREMENT for table `exam_scores`
 --
 ALTER TABLE `exam_scores`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `login_attempts`
 --
 ALTER TABLE `login_attempts`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=58;
 
 --
 -- AUTO_INCREMENT for table `notifications`
 --
 ALTER TABLE `notifications`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=47;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=53;
 
 --
 -- AUTO_INCREMENT for table `otp_tokens`
 --
 ALTER TABLE `otp_tokens`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `predefined_remarks`
@@ -1945,7 +1975,7 @@ ALTER TABLE `report_card_locks`
 -- AUTO_INCREMENT for table `sba_component_scores`
 --
 ALTER TABLE `sba_component_scores`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=60;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `school_levels`
@@ -1957,7 +1987,7 @@ ALTER TABLE `school_levels`
 -- AUTO_INCREMENT for table `sms_logs`
 --
 ALTER TABLE `sms_logs`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `students`
@@ -1969,7 +1999,7 @@ ALTER TABLE `students`
 -- AUTO_INCREMENT for table `student_aggregates`
 --
 ALTER TABLE `student_aggregates`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5222;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5271;
 
 --
 -- AUTO_INCREMENT for table `student_parents`
@@ -1993,7 +2023,7 @@ ALTER TABLE `student_remarks`
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `terms`
@@ -2005,7 +2035,7 @@ ALTER TABLE `terms`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables

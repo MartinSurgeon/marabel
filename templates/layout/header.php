@@ -25,7 +25,7 @@ if (Session::isLoggedIn()) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?> — Uaddara SBA</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css">
+  <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css?v=<?= time() ?>">
   <link rel="icon" type="image/png" href="<?= $base ?>/assets/img/school-logo.png">
 </head>
 <body>

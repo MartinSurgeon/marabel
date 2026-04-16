@@ -12,8 +12,10 @@ class TransitionController {
         $uri    = $_SERVER['REQUEST_URI'] ?? '/';
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
+        $path = parse_url($uri, PHP_URL_PATH);
+
         // ── AJAX: Fetch terms for target year ────────────────────────
-        if (isset($_GET['year_id']) && str_ends_with($uri, '/terms')) {
+        if (isset($_GET['year_id']) && str_ends_with($path, '/terms')) {
             $this->ajaxFetchTerms((int)$_GET['year_id']);
             return;
         }

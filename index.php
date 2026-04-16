@@ -36,12 +36,18 @@ require_once PRIVATE_PATH . '/src/Engine/GradingEngine.php';
 session_start();
 
 // ── Configuration ───────────────────────────────────────────────────────────
-$rawUri  = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+$rawUri  = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
-// Strip the subdirectory base so routes work at /marabel/ or /
-// Detect base path from SCRIPT_NAME (e.g. /marabel/index.php  → /marabel)
-$basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
-$uri      = '/' . ltrim(substr($rawUri, strlen($basePath)), '/');
+// Strip the structured base path so routes accurately match / or /login
+$basePath = defined('APP_BASE') ? APP_BASE : '';
+
+if ($basePath !== '' && strpos($rawUri, $basePath) === 0) {
+    $uri = substr($rawUri, strlen($basePath));
+} else {
+    $uri = $rawUri;
+}
+
+$uri      = '/' . ltrim($uri, '/');
 $uri      = rtrim($uri, '/') ?: '/';
 $method   = $_SERVER['REQUEST_METHOD'];
 

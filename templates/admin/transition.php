@@ -48,7 +48,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             </div>
         </div>
 
-        <form action="<?= $base ?>/admin/transition" method="POST" onsubmit="return confirm('BE CAREFUL: This will deactivate the current term and activate the selected target term. Continue?')">
+        <form action="<?= $base ?>/admin/transition" method="POST" onsubmit="event.preventDefault(); confirmAction({title: 'Confirm Term Transition', message: 'BE CAREFUL: This will deactivate the current term and activate the selected target term. Continue?', type: 'warning', confirmText: 'Proceed'}, () => this.submit());">
             <?= CSRF::field() ?>
             <input type="hidden" name="_action" value="term_transition">
             <input type="hidden" name="source_term_id" value="<?= $activeTerm['id'] ?>">
@@ -97,7 +97,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
             </ul>
         </div>
 
-        <form action="<?= $base ?>/admin/transition" method="POST" onsubmit="return confirm('HIGH IMPACT ACTION: This will perform a full year migration, promoting students and cloning structures. This CANNOT be easily undone. Proceed?')">
+        <form action="<?= $base ?>/admin/transition" method="POST" onsubmit="event.preventDefault(); confirmAction({title: 'HIGH IMPACT ACTION', message: 'This will perform a full year migration, promoting students and cloning structures.<br><br><b>This CANNOT be easily undone.</b> Proceed?', type: 'danger', confirmText: 'Execute Migration'}, () => this.submit());">
             <?= CSRF::field() ?>
             <input type="hidden" name="_action" value="year_transition">
 

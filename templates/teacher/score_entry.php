@@ -177,8 +177,8 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           $examDone   = (int)$b['exam_completed_count'];
           $isComplete = ($totalSt > 0 && $sbaDone >= $totalSt && $examDone >= $totalSt);
           
-          $sbaPercent = ($totalSt > 0) ? round(($sbaDone / $totalSt) * 100) : 0;
-          $examPercent = ($totalSt > 0) ? round(($examDone / $totalSt) * 100) : 0;
+          $sbaPercent  = ($totalSt > 0) ? min(100, round(($sbaDone  / $totalSt) * 100)) : 0;
+          $examPercent = ($totalSt > 0) ? min(100, round(($examDone / $totalSt) * 100)) : 0;
       ?>
       <div class="card hover-lift animate-fade-in" style="padding:0; overflow:hidden; border:1px solid var(--clr-border); display:flex; flex-direction:column;">
         <div style="padding:1.5rem; background:var(--clr-surface-2); border-bottom:1px solid var(--clr-border);">

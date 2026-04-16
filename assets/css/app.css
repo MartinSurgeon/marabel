@@ -20,6 +20,9 @@
   --clr-primary-900: #36124c;
   --clr-primary-950: #1a0824;
 
+  --clr-primary:     var(--clr-primary-600);
+  --clr-primary-rgb: 126, 43, 179;
+
   /* Semantic colours */
   --clr-success:     #10b981; /* Emerald */
   --clr-success-bg:  #ecfdf5;

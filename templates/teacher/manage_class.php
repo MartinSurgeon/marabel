@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.openRemarkPicker = function(btn, category = 'teacher') {
-        const textarea = btn.closest('div').querySelector('textarea');
+        const textarea = btn.closest('td').querySelector('textarea');
         const modalId = 'modal-remark-picker';
         let modal = document.getElementById(modalId);
         
