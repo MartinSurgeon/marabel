@@ -41,9 +41,21 @@ class SettingsController {
 
     private function handleUploads(): void {
         $type = $_POST['type'] ?? '';
+        $action = $_POST['action'] ?? 'upload';
 
         if (!in_array($type, ['signature', 'stamp'])) {
-            Session::flash('error', 'Invalid upload type.');
+            Session::flash('error', 'Invalid target type.');
+            header('Location: ' . APP_BASE . '/admin/settings');
+            exit;
+        }
+
+        $basename = ($type === 'signature') ? 'headmaster_signature' : 'school_stamp';
+
+        if ($action === 'delete') {
+            @unlink($this->uploadDir . '/' . $basename . '.png');
+            @unlink($this->uploadDir . '/' . $basename . '.jpg');
+            @unlink($this->uploadDir . '/' . $basename . '.jpeg');
+            Session::flash('success', ucfirst($type) . ' removed successfully.');
             header('Location: ' . APP_BASE . '/admin/settings');
             exit;
         }
@@ -70,8 +82,6 @@ class SettingsController {
              exit;
         }
 
-        $basename = ($type === 'signature') ? 'headmaster_signature' : 'school_stamp';
-        
         // Remove existing variations Before saving the new one
         @unlink($this->uploadDir . '/' . $basename . '.png');
         @unlink($this->uploadDir . '/' . $basename . '.jpg');

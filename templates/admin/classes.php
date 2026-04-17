@@ -96,7 +96,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 
   <div class="grid" style="grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.5rem;">
     <?php foreach ($levelClasses as $cls): ?>
-    <div class="card hover-lift flex flex-col" style="padding:0; overflow:hidden; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02); background:rgba(255,255,255,0.8); backdrop-filter:blur(10px);">
+    <div class="mgmt-card hover-lift">
       <div style="padding:1.5rem 1.5rem 1rem;">
         <div class="flex justify-between items-start mb-3">
           <div style="font-size:2rem; font-weight:900; letter-spacing:-0.04em; color:var(--clr-primary); line-height:1;">

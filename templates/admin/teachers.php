@@ -12,6 +12,33 @@ $teachers = $teachersList ?? [];
 $classes  = $classesList ?? [];
 $subjects = $subjectsList ?? [];
 $assignments = $assignmentsList ?? [];
+
+// Avatar Color Helper (HCI Scanability - High Contrast Deep Palette)
+$avatarPalettes = [
+    '#6b21a8', // Deep Purple
+    '#1e40af', // Royal Blue
+    '#166534', // Forest Green
+    '#9f1239', // Crimson
+    '#9a3412', // Terracotta
+    '#134e4a', // Teal
+    '#334155', // Charcoal
+    '#3730a3', // Deep Indigo
+    '#155e75', // Dark Cyan
+    '#7f1d1d', // Maroon
+    '#78350f', // Bronze
+    '#1e3a8a', // Navy
+    '#581c87', // Violet
+    '#065f46', // Emerald
+    '#831843', // Pink
+];
+
+function getAvatarStyle(string $id, string $name) {
+    global $avatarPalettes;
+    // Combine ID and Name for a more unique seed
+    $hash = crc32($id . $name);
+    $color = $avatarPalettes[abs($hash) % count($avatarPalettes)];
+    return "background: $color; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);";
+}
 ?>
 
 <!-- DataTables 2.1.8 + Responsive 3.0.3 -->
@@ -104,7 +131,7 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                 <tr>
                     <td>
                         <div class="flex items-center gap-3">
-                            <div style="width:34px; height:34px; background:var(--clr-primary-50); color:var(--clr-primary); border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">
+                            <div style="width:34px; height:34px; <?= getAvatarStyle($t['id'], $t['full_name']) ?> border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">
                                 <?= substr($t['full_name'], 0, 1) ?>
                             </div>
                             <div>
@@ -168,11 +195,11 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
 <!-- ══ Grid View Container ══════════════════════════════════════ -->
 <div id="view-grid" class="grid" style="grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem; display:none;">
   <?php foreach ($teachers as $t): ?>
-  <div class="card hover-lift flex flex-col <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>" style="padding:0; overflow:hidden; border:1px solid rgba(0,0,0,0.05); background:rgba(255,255,255,0.7); backdrop-filter:blur(10px); border-radius:var(--radius-xl); box-shadow:0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -1px rgba(0,0,0,0.01);">
+  <div class="mgmt-card hover-lift <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>">
     <div style="padding:1.5rem 1.5rem 1rem;">
       <div class="flex justify-between items-start mb-4">
         <div class="flex items-center gap-3">
-           <div style="width:48px; height:48px; background:var(--clr-primary-50); color:var(--clr-primary); border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; font-size:1.25rem; font-weight:800;">
+           <div style="width:48px; height:48px; <?= getAvatarStyle($t['id'], $t['full_name']) ?> border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; font-size:1.25rem; font-weight:800;">
               <?= substr($t['full_name'], 0, 1) ?>
            </div>
            <div>

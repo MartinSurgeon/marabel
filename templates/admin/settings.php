@@ -48,7 +48,15 @@ $stampPath = $getSettingImagePath('school_stamp');
             <input type="file" name="image" accept=".png,.jpg,.jpeg" required class="input" style="padding:0.4rem; flex:1; font-size:13px;">
             <button type="submit" class="btn btn-primary btn-sm flex-shrink-0" onclick="Loader.show()">Upload</button>
         </form>
-        <p style="font-size:11px; margin-top:0.5rem; color:var(--clr-text-muted);">Recommended: Transparent PNG, max 400x150px.</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
+            <p style="font-size:11px; margin:0; color:var(--clr-text-muted);">Recommended: Transparent PNG, max 400x150px.</p>
+            <?php if ($sigPath): ?>
+                <button type="button" class="btn btn-ghost btn-xs text-red-600 hover:bg-red-50" onclick="confirmDelete('signature', 'remove the headmaster signature')" style="padding:2px 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12" style="display:inline-block; margin-right:2px; margin-top:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Remove
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
 
     <!-- Stamp Card -->
@@ -69,8 +77,56 @@ $stampPath = $getSettingImagePath('school_stamp');
             <input type="file" name="image" accept=".png,.jpg,.jpeg" required class="input" style="padding:0.4rem; flex:1; font-size:13px;">
             <button type="submit" class="btn btn-primary btn-sm flex-shrink-0" onclick="Loader.show()">Upload</button>
         </form>
-        <p style="font-size:11px; margin-top:0.5rem; color:var(--clr-text-muted);">Recommended: Circular PNG with transparent background.</p>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:0.5rem;">
+            <p style="font-size:11px; margin:0; color:var(--clr-text-muted);">Recommended: Circular PNG with transparent background.</p>
+            <?php if ($stampPath): ?>
+                <button type="button" class="btn btn-ghost btn-xs text-red-600 hover:bg-red-50" onclick="confirmDelete('stamp', 'remove the official school stamp')" style="padding:2px 6px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="12" height="12" style="display:inline-block; margin-right:2px; margin-top:-2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    Remove
+                </button>
+            <?php endif; ?>
+        </div>
     </div>
 </div>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
+
+<!-- ── Delete Confirmation Modal ─────────────────────────────── -->
+<div id="modal-delete" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-delete-title" style="display:none;">
+  <div class="modal w-full mx-4" style="max-width:400px; min-height: 0;">
+
+    <div class="modal-header">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(239, 68, 68, 0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" style="color:#ef4444;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+        </div>
+        <h3 class="modal-title" id="modal-delete-title">Confirm Removal</h3>
+      </div>
+    </div>
+    
+    <div class="modal-body py-4">
+      <p style="margin:0; color:var(--clr-text-muted); font-size:14px; line-height:1.5;">Are you sure you want to <span id="modal-target-text" style="font-weight:700; color:var(--clr-text);"></span>? This action will remove it from all report cards instantly.</p>
+    </div>
+    
+    <div class="modal-footer" style="display:flex; gap:0.75rem; border-top:1px solid var(--clr-border); padding-top:1rem;">
+      <button type="button" class="btn btn-outline" style="flex:1;" onclick="closeModal('modal-delete')">Cancel</button>
+      <form id="delete-form" method="POST" action="<?= $base ?>/admin/settings" style="flex:1; margin:0;" onsubmit="Loader.show()">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="action" value="delete">
+          <input type="hidden" name="type" id="delete-type-input" value="">
+          <button type="submit" class="btn" style="width:100%; background:#ef4444; color:#fff; border:none;">Remove Image</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script>
+function confirmDelete(type, targetText) {
+    document.getElementById('delete-type-input').value = type;
+    document.getElementById('modal-target-text').textContent = targetText;
+    openModal('modal-delete');
+}
+</script>
