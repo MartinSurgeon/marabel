@@ -188,7 +188,7 @@ if (Session::isLoggedIn()) {
 <?php if (Session::isLoggedIn()): ?>
 <!-- ── Inactivity Timeout Modal ─────────────────────────────── -->
 <div id="modal-idle" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="idle-modal-title" style="display:none;">
-  <div class="modal w-full mx-4" style="max-width:400px; min-h-0;">
+  <div class="modal w-full mx-4" style="max-width:400px; min-height: 0;">
 
     <div class="modal-header">
       <div style="display:flex; align-items:center; gap:0.75rem;">

@@ -184,7 +184,23 @@ class ScoreController {
                     (float)($scores['group_work'] ?? 0) + 
                     (float)($scores['class_test'] ?? 0) + 
                     (float)($scores['project'] ?? 0);
-        
+
+        // If every component is now null/zero AND the incoming value was null
+        // (meaning the teacher cleared the field), delete the row entirely
+        // instead of leaving a 0.00 ghost record.
+        $allEmpty = ($scores['individual_test'] === null || (float)$scores['individual_test'] === 0.0)
+                 && ($scores['group_work']       === null || (float)$scores['group_work']       === 0.0)
+                 && ($scores['class_test']       === null || (float)$scores['class_test']       === 0.0)
+                 && ($scores['project']          === null || (float)$scores['project']          === 0.0);
+
+        if ($allEmpty && $value === null) {
+            DB::execute(
+                "DELETE FROM sba_component_scores WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
+                [$studentId, $csId, $termId]
+            );
+            return;
+        }
+
         // Scale 60 -> 50
         $classScore = round(($subTotal / 60) * 50, 2);
 
@@ -241,10 +257,10 @@ class ScoreController {
                     (SELECT COUNT(*) FROM students st WHERE st.current_class_id = c.id AND st.status = 'active') as student_count,
                     (SELECT COUNT(*) FROM sba_component_scores scs
                      JOIN students st2 ON scs.student_id = st2.id AND st2.current_class_id = c.id AND st2.status = 'active'
-                     WHERE scs.class_subject_id = cs.id AND scs.term_id = ? AND scs.sub_total IS NOT NULL) as sba_completed_count,
+                     WHERE scs.class_subject_id = cs.id AND scs.term_id = ? AND scs.sub_total > 0) as sba_completed_count,
                     (SELECT COUNT(*) FROM exam_scores es
                      JOIN students st3 ON es.student_id = st3.id AND st3.current_class_id = c.id AND st3.status = 'active'
-                     WHERE es.class_subject_id = cs.id AND es.term_id = ? AND es.raw_score IS NOT NULL) as exam_completed_count
+                     WHERE es.class_subject_id = cs.id AND es.term_id = ? AND es.raw_score > 0) as exam_completed_count
                  FROM class_subjects cs
                  JOIN classes c ON cs.class_id = c.id
                  JOIN subjects s ON cs.subject_id = s.id

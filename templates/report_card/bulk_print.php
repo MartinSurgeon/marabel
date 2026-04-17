@@ -1,39 +1,29 @@
 <?php
 /**
- * Report Card — Individual Term Report
+ * Bulk Print Report Cards
  * Uaddara Basic School — SBA Management System
  * 
  * PREMIUM VERSION: Optimized for official presentation and print.
+ * Prints all students in a class.
  */
 
-global $rc_student, $rc_term, $rc_scores, $rc_aggregate,
-       $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
+global $bp_classInfo, $bp_term, $bp_students, $bp_scores, $bp_aggregates,
+       $bp_remarks, $bp_attendance, $bp_classSize, $bp_classTeacher, $bp_isPublished;
 
-
-$student      = $rc_student      ?? [];
-$term         = $rc_term         ?? [];
-$scores       = $rc_scores       ?? [];
-$aggregate    = $rc_aggregate    ?? null;
-$classSize    = $rc_classSize    ?? 0;
-$remarks      = $rc_remarks      ?? null;
-$attendance   = $rc_attendance   ?? null;
-$classTeacher = $rc_classTeacher ?? null;
-$gradingSystem = $rc_gradingSystem ?? 'proficiency';
+$classInfo    = $bp_classInfo ?? [];
+$term         = $bp_term ?? [];
+$students     = $bp_students ?? [];
+$scoresData   = $bp_scores ?? [];
+$aggregates   = $bp_aggregates ?? [];
+$remarksData  = $bp_remarks ?? [];
+$attendance   = $bp_attendance ?? [];
+$classSize    = $bp_classSize ?? 0;
+// $classTeacher = $bp_classTeacher ?? null;
+$gradingSystem = $classInfo['grading_system'] ?? 'proficiency';
 
 $scale = ($gradingSystem === 'waec') ? WAEC_SCALE : PROFICIENCY_SCALE;
-$gradeLabel = ($gradingSystem === 'waec') ? 'Grade' : 'Proficiency';
 
 $base = defined('APP_BASE') ? APP_BASE : '';
-
-function ordinal(int $n): string {
-    $s = ['th','st','nd','rd'];
-    $v = $n % 100;
-    return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
-}
-
-$photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltrim($student['photo_path'], '/')))
-  ? $base . '/' . ltrim($student['photo_path'], '/')
-  : null;
 
 // Signature and Stamp Paths
 $sigPath = null;
@@ -43,12 +33,20 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
     if (!$sigPath && file_exists("$sigDir/headmaster_signature.$ext")) $sigPath = "$base/assets/uploads/signatures/headmaster_signature.$ext";
     if (!$stampPath && file_exists("$sigDir/school_stamp.$ext")) $stampPath = "$base/assets/uploads/signatures/school_stamp.$ext";
 }
+
+function ordinal(int $n): string {
+    $s = ['th','st','nd','rd'];
+    $v = $n % 100;
+    return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Report: <?= htmlspecialchars($student['full_name'] ?? 'Student') ?></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Print: <?= htmlspecialchars($classInfo['class_name'] ?? 'Class') ?></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Old+Standard+TT:wght@400;700&display=swap" rel="stylesheet">
@@ -65,7 +63,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       line-height: 1.4;
       color: var(--charcoal);
       margin: 0;
-      padding: 30px;
+      padding: 20px;
       background: #f0f0f2;
     }
     @page {
@@ -85,12 +83,57 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
         overflow: visible !important;
       }
       .container::before { opacity: 0.03 !important; }
+      .page-break { page-break-after: always; margin: 0; padding: 0; border: none; }
+      /* Ensure the last page doesn't have an empty blank page after it */
+      .page-break:last-of-type { page-break-after: auto; }
     }
     
+    .toolbar {
+      max-width: 820px;
+      margin: 0 auto 30px auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 20px;
+      z-index: 100;
+      border: 1px solid #e2e8f0;
+    }
+    .toolbar-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .toolbar-title { font-weight: 800; font-size: 16px; color: #111; margin:0;}
+    .toolbar-meta { font-size: 12px; color: #64748b; font-weight: 500; margin-top:2px; }
+    .toolbar-actions { display: flex; gap: 10px; }
+    .btn {
+      text-decoration: none;
+      padding: 10px 20px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 13.5px;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-outline { background: transparent; border: 1.5px solid #cbd5e1; color: #475569; }
+    .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; color: #0f172a; }
+    .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 4px 12px rgba(79, 29, 150, 0.25); }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
     .container {
       background: #fff;
       max-width: 820px;
-      margin: 0 auto;
+      margin: 0 auto 40px auto;
       padding: 40px;
       border: 1px solid #ddd;
       box-shadow: 0 4px 20px rgba(0,0,0,0.05);
@@ -113,94 +156,17 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       z-index: 0;
     }
 
-    /* Draft Watermark 
-    .draft-watermark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: 150px;
-      font-weight: 900;
-      color: rgba(200, 0, 0, 0.1);
-      text-transform: uppercase;
-      letter-spacing: 20px;
-      pointer-events: none;
-      z-index: 99;
-      white-space: nowrap;
-    }*/
-
-
-    /* Toolbar */
-    .toolbar {
-      max-width: 820px;
-      margin: 0 auto 20px auto;
-      display: flex;
-      justify-content: space-between;
-    }
-    .toolbar button, .toolbar a {
-      text-decoration: none;
-      padding: 10px 20px;
-      background: var(--primary);
-      color: #fff;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      border-radius: 8px;
-      font-size: 13px;
-      transition: opacity 0.2s;
-    }
-    .toolbar button:hover, .toolbar a:hover { opacity: 0.9; }
-
     /* Header Components */
-    .school-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 25px;
-      position: relative;
-      z-index: 1;
-    }
+    .school-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; position: relative; z-index: 1; }
     .school-logo { width: 110px; }
     .school-logo img { width: 100%; height: auto; display: block; }
     
     .school-text { text-align: center; flex: 1; padding: 0 15px; }
-    .school-text h1 {
-      margin: 0;
-      font-family: 'Old Standard TT', serif;
-      font-size: 26px;
-      font-weight: 700;
-      color: #111;
-      letter-spacing: 0.5px;
-    }
-    .school-text h2 {
-      margin: 8px 0 0 0;
-      font-size: 20px;
-      font-weight: 800;
-      color: #000;
-      letter-spacing: -0.2px;
-    }
-    .pupil-badge {
-      display: inline-block;
-      margin-top: 15px;
-      background: #c00000;
-      color: #fff;
-      padding: 5px 25px;
-      font-size: 14px;
-      font-weight: 800;
-      letter-spacing: 1px;
-      border: 1px solid #000;
-      box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
-    }
+    .school-text h1 { margin: 0; font-family: 'Old Standard TT', serif; font-size: 26px; font-weight: 700; color: #111; letter-spacing: 0.5px; }
+    .school-text h2 { margin: 8px 0 0 0; font-size: 20px; font-weight: 800; color: #000; letter-spacing: -0.2px; }
+    .pupil-badge { display: inline-block; margin-top: 15px; background: #c00000; color: #fff; padding: 5px 25px; font-size: 14px; font-weight: 800; letter-spacing: 1px; border: 1px solid #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
     
-    .student-photo {
-      width: 110px;
-      height: 120px;
-      background: #f8f8f8;
-      border: 1px solid #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
+    .student-photo { width: 110px; height: 120px; background: #f8f8f8; border: 1px solid #000; display: flex; align-items: center; justify-content: center; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
 
     /* Layout Tables */
@@ -227,27 +193,47 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
     .prof-table th, .prof-table td { border: 1px solid #000; padding: 5px 12px; }
     .prof-table th { background: #eee; font-weight: 800; text-align: left; }
     .prof-table td { font-weight: 700; }
-
-    .sh-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #444; margin-bottom: 3px; display: block; }
-
-    /* Signature Line */
-    .sig-area { height: 45px; border-bottom: 1.5px solid #000; margin-bottom: 5px; }
   </style>
 </head>
 <body>
 
 <div class="toolbar no-print">
-  <a href="javascript:history.back()">← Return to Dashboard</a>
-  <button onclick="window.print()">Print Official Report</button>
+  <div class="toolbar-info">
+      <h2 class="toolbar-title">Bulk Print: <?= htmlspecialchars($classInfo['class_name'] ?? '') ?><?= $classInfo['section'] ? " ({$classInfo['section']})" : '' ?></h2>
+      <div class="toolbar-meta"><?= htmlspecialchars($term['name'] ?? '') ?> &middot; <?= $classSize ?> Students Formatted for Printing</div>
+  </div>
+  <div class="toolbar-actions">
+      <a href="<?= $base ?>/admin/publish" class="btn btn-outline">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        Back
+      </a>
+      <button onclick="window.print()" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          Print All Reports
+      </button>
+  </div>
 </div>
 
-<div class="container">
-  <?php if (!$rc_isPublished): ?>
-    <div class="draft-watermark">DRAFT PREVIEW</div>
+<?php 
+$count = 0;
+foreach ($students as $student): 
+    $s_id = $student['id'];
+    $agg  = $aggregates[$s_id] ?? null;
+    $rem  = $remarksData[$s_id] ?? null;
+    $att  = $attendance[$s_id] ?? null;
+    $scs  = $scoresData[$s_id] ?? [];
+
+    $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltrim($student['photo_path'], '/')))
+      ? $base . '/' . ltrim($student['photo_path'], '/')
+      : null;
+?>
+
+<div class="container page-break">
+  <?php if (!$bp_isPublished): ?>
+    <!-- <div class="draft-watermark">DRAFT PREVIEW</div> -->
   <?php endif; ?>
   
   <div class="school-header">
-
     <div class="school-logo">
       <img src="<?= $base ?>/assets/img/school-logo.png" alt="School Badge" onerror="this.style.visibility='hidden'">
     </div>
@@ -274,15 +260,15 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       <td class="label-small"><?= ($gradingSystem === 'waec') ? 'Aggregate:' : 'Position:' ?></td>
       <td class="value-small">
         <?php if ($gradingSystem === 'waec'): ?>
-           <?= $aggregate['aggregate_grade'] ?? '—' ?>
+           <?= $agg['aggregate_grade'] ?? '—' ?>
         <?php else: ?>
-           <?= $aggregate ? ordinal((int)$aggregate['class_position']) : '—' ?>
+           <?= $agg ? ordinal((int)$agg['class_position']) : '—' ?>
         <?php endif; ?>
       </td>
     </tr>
     <tr>
       <td class="label">Class:</td>
-      <td class="value" colspan="3"><?= mb_strtoupper(htmlspecialchars(($student['class_name'] ?? '') . ' ' . ($student['section'] ?? ''))) ?></td>
+      <td class="value" colspan="3"><?= mb_strtoupper(htmlspecialchars(($classInfo['class_name'] ?? '') . ' ' . ($classInfo['section'] ?? ''))) ?></td>
       <td class="label-small">No on Roll:</td>
       <td class="value-small"><?= $classSize ?></td>
     </tr>
@@ -313,7 +299,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($scores as $s): ?>
+      <?php foreach ($scs as $s): ?>
       <tr>
         <td class="subject-name"><?= htmlspecialchars($s['subject_name']) ?></td>
         <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 0) : '–' ?></td>
@@ -326,7 +312,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       <?php endforeach; ?>
 
       <?php 
-      $rowsToFill = max(0, 5 - count($scores));
+      $rowsToFill = max(0, 5 - count($scs));
       for($i=0; $i<$rowsToFill; $i++): ?>
       <tr style="height:26px;">
         <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
@@ -335,28 +321,27 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
 
       <tr class="total-row">
         <td colspan="3" style="text-align:right; padding-right:15px; text-transform:uppercase; letter-spacing:1px; font-size:11px;">Overall Total:</td>
-        <td class="center"><?= $aggregate ? number_format((float)$aggregate['aggregate_score'], 0) : '0' ?></td>
+        <td class="center"><?= $agg ? number_format((float)$agg['aggregate_score'], 0) : '0' ?></td>
         <td colspan="3"></td>
       </tr>
 
       <tr>
         <td style="font-weight:700;">Attendance:</td>
-        <td class="center"><?= $attendance['days_present'] ?? '0' ?></td>
+        <td class="center"><?= $att['days_present'] ?? '0' ?></td>
         <td style="text-align:right; font-weight:700;">Out of:</td>
         <td class="center"><?= $term['total_school_days'] ?? '60' ?></td>
         <td style="font-weight:700;">Promoted to:</td>
         <td colspan="2"></td>
       </tr>
 
-
       <tr>
         <td colspan="2" style="font-weight:700;">Class Teacher's Remarks:</td>
-        <td colspan="5" style="font-style:italic;"><?= htmlspecialchars($remarks['teacher_remark'] ?? '–') ?></td>
+        <td colspan="5" style="font-style:italic;"><?= htmlspecialchars($rem['teacher_remark'] ?? '–') ?></td>
       </tr>
       <tr>
         <td colspan="2" style="font-weight:700; height:60px; vertical-align:top; border-bottom:2px solid #000;">Headteacher's Remarks:</td>
         <td colspan="5" style="border-bottom:2px solid #000; vertical-align:top; padding-top:5px;">
-          <div style="min-height:30px;"><?= htmlspecialchars($remarks['headmaster_remark'] ?? '') ?></div>
+          <div style="min-height:30px;"><?= htmlspecialchars($rem['headmaster_remark'] ?? '') ?></div>
           <div style="margin-top:20px; text-align:right; font-size:10px; font-weight:700; opacity:0.6; position:relative; min-height:40px;">
               <?php if ($stampPath): ?>
                 <img src="<?= $stampPath ?>" alt="Stamp" style="position:absolute; right:150px; bottom:-10px; max-height:85px; opacity:0.85; mix-blend-mode:multiply; pointer-events:none;">
@@ -393,5 +378,11 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   </div>
 
 </div>
+
+<?php 
+$count++;
+endforeach; 
+?>
+
 </body>
 </html>
