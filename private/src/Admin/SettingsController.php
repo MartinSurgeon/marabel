@@ -19,17 +19,46 @@ class SettingsController {
     public function handle(): void {
         Session::requireRole('admin');
 
-        // Create directory if it doesn't exist
-        if (!is_dir($this->uploadDir)) {
-            @mkdir($this->uploadDir, 0755, true);
+        // Create directories if they don't exist
+        $brandingDir = ROOT_PATH . '/assets/uploads/branding';
+        foreach ([$this->uploadDir, $brandingDir] as $dir) {
+            if (!is_dir($dir)) {
+                @mkdir($dir, 0755, true);
+            }
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $this->handleUploads();
+            $type = $_POST['type'] ?? '';
+            
+            if ($type === 'branding') {
+                $this->handleBrandingUpdate();
+            } else {
+                $this->handleUploads();
+            }
             return;
         }
 
         $this->displaySettings();
+    }
+
+    private function handleBrandingUpdate(): void {
+        $schoolName        = $_POST['school_name'] ?? '';
+        $schoolBody        = $_POST['school_body'] ?? '';
+        $schoolTagline     = $_POST['school_tagline'] ?? '';
+        $brandAccentColor  = $_POST['brand_accent_color'] ?? '#c00000';
+
+        if (empty($schoolName)) {
+            Session::flash('error', 'School name cannot be empty.');
+        } else {
+            Config::set('school_name', $schoolName, 'branding');
+            Config::set('school_body', $schoolBody, 'branding');
+            Config::set('school_tagline', $schoolTagline, 'branding');
+            Config::set('brand_accent_color', $brandAccentColor, 'branding');
+            Session::flash('success', 'Branding settings updated successfully.');
+        }
+
+        header('Location: ' . APP_BASE . '/admin/settings');
+        exit;
     }
 
     private function displaySettings(): void {
@@ -43,18 +72,24 @@ class SettingsController {
         $type = $_POST['type'] ?? '';
         $action = $_POST['action'] ?? 'upload';
 
-        if (!in_array($type, ['signature', 'stamp'])) {
+        if (!in_array($type, ['signature', 'stamp', 'logo'])) {
             Session::flash('error', 'Invalid target type.');
             header('Location: ' . APP_BASE . '/admin/settings');
             exit;
         }
 
-        $basename = ($type === 'signature') ? 'headmaster_signature' : 'school_stamp';
+        $dir = ($type === 'logo') ? ROOT_PATH . '/assets/uploads/branding' : $this->uploadDir;
+        $basename = ($type === 'logo') ? 'school_logo' : (($type === 'signature') ? 'headmaster_signature' : 'school_stamp');
 
         if ($action === 'delete') {
-            @unlink($this->uploadDir . '/' . $basename . '.png');
-            @unlink($this->uploadDir . '/' . $basename . '.jpg');
-            @unlink($this->uploadDir . '/' . $basename . '.jpeg');
+            @unlink($dir . '/' . $basename . '.png');
+            @unlink($dir . '/' . $basename . '.jpg');
+            @unlink($dir . '/' . $basename . '.jpeg');
+            
+            if ($type === 'logo') {
+                Config::set('school_logo', '/assets/img/school-logo.png', 'branding');
+            }
+            
             Session::flash('success', ucfirst($type) . ' removed successfully.');
             header('Location: ' . APP_BASE . '/admin/settings');
             exit;
@@ -83,13 +118,16 @@ class SettingsController {
         }
 
         // Remove existing variations Before saving the new one
-        @unlink($this->uploadDir . '/' . $basename . '.png');
-        @unlink($this->uploadDir . '/' . $basename . '.jpg');
-        @unlink($this->uploadDir . '/' . $basename . '.jpeg');
+        @unlink($dir . '/' . $basename . '.png');
+        @unlink($dir . '/' . $basename . '.jpg');
+        @unlink($dir . '/' . $basename . '.jpeg');
 
-        $destination = $this->uploadDir . '/' . $basename . '.' . $ext;
+        $destination = $dir . '/' . $basename . '.' . $ext;
 
         if (move_uploaded_file($file['tmp_name'], $destination)) {
+            if ($type === 'logo') {
+                Config::set('school_logo', '/assets/uploads/branding/' . $basename . '.' . $ext, 'branding');
+            }
             Session::flash('success', ucfirst($type) . ' uploaded successfully.');
         } else {
             Session::flash('error', 'Failed to save the uploaded image.');

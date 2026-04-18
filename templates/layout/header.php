@@ -1,8 +1,6 @@
 <?php
 /**
- * Header Layout Partial
- * Uaddara Basic School — SBA Management System
- *
+ * Branding: Dynamic via Config helper
  * Usage: include this file from within app templates.
  * Variables expected: $pageTitle (string), $actions (string HTML — optional)
  */
@@ -23,10 +21,10 @@ if (Session::isLoggedIn()) {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= htmlspecialchars($pageTitle) ?> — Uaddara SBA</title>
+  <title><?= htmlspecialchars($pageTitle) ?> — <?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css?v=<?= time() ?>">
-  <link rel="icon" type="image/png" href="<?= $base ?>/assets/img/school-logo.png">
+  <link rel="icon" type="image/png" href="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>">
 </head>
 <body>
 <div class="app-layout">

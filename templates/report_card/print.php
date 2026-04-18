@@ -54,7 +54,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Old+Standard+TT:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #4f1d96;
+      --primary: #7e2bb3;
       --charcoal: #1a1a1b;
       --border: #222;
       --bg-soft: #fcfcfc;
@@ -106,7 +106,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       left: 50%;
       width: 400px;
       height: 400px;
-      background: url('<?= $base ?>/assets/img/school-logo.png') center/contain no-repeat;
+      background: url('<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>') center/contain no-repeat;
       transform: translate(-50%, -50%) rotate(-15deg);
       opacity: 0.04;
       pointer-events: none;
@@ -182,7 +182,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
     .pupil-badge {
       display: inline-block;
       margin-top: 15px;
-      background: #c00000;
+      background: <?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>;
       color: #fff;
       padding: 5px 25px;
       font-size: 14px;
@@ -249,12 +249,12 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   <div class="school-header">
 
     <div class="school-logo">
-      <img src="<?= $base ?>/assets/img/school-logo.png" alt="School Badge" onerror="this.style.visibility='hidden'">
+      <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="School Badge" onerror="this.style.visibility='hidden'">
     </div>
     
     <div class="school-text">
-      <h1>ARMED FORCES EDUCATION UNIT</h1>
-      <h2>UADDARA BASIC SCHOOL</h2>
+      <h1 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></h1>
+      <h2 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_name', 'MARABEL SBA')) ?></h2>
       <div class="pupil-badge">PUPIL'S REPORT FORM</div>
     </div>
 
@@ -389,7 +389,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   </table>
 
   <div style="margin-top:30px; text-align:center; font-size:10px; color:#999; text-transform:uppercase; letter-spacing:1px; z-index:1; position:relative;">
-    © <?= date('Y') ?> <?= SCHOOL_NAME ?> — Official Student Record
+    © <?= date('Y') ?> <?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?> — Official Student Record
   </div>
 
 </div>

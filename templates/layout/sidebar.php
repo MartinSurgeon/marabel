@@ -1,7 +1,6 @@
 <?php
 /**
- * Sidebar Layout Partial
- * Uaddara Basic School — SBA Management System
+ * Sidebar Layout Partial — Dynamic Branding
  */
 $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $role = Session::role();
@@ -30,10 +29,10 @@ if (!function_exists('navActive')) {
 
   <!-- Logo / School brand -->
   <div class="sidebar-logo">
-    <img src="<?= $base ?>/assets/img/school-logo.png" alt="Uaddara Basic School">
+    <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="<?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?>">
     <div>
-      <div class="school-name">Uaddara Basic School</div>
-      <div class="school-sub">SBA System</div>
+      <div class="school-name"><?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?></div>
+      <div class="school-sub"><?= htmlspecialchars(Config::get('school_tagline', 'SBA System')) ?></div>
     </div>
   </div>
 

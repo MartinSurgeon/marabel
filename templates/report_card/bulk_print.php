@@ -52,7 +52,7 @@ function ordinal(int $n): string {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Old+Standard+TT:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #4f1d96;
+      --primary: #7e2bb3;
       --charcoal: #1a1a1b;
       --border: #222;
       --bg-soft: #fcfcfc;
@@ -149,7 +149,7 @@ function ordinal(int $n): string {
       left: 50%;
       width: 400px;
       height: 400px;
-      background: url('<?= $base ?>/assets/img/school-logo.png') center/contain no-repeat;
+      background: url('<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>') center/contain no-repeat;
       transform: translate(-50%, -50%) rotate(-15deg);
       opacity: 0.04;
       pointer-events: none;
@@ -164,7 +164,7 @@ function ordinal(int $n): string {
     .school-text { text-align: center; flex: 1; padding: 0 15px; }
     .school-text h1 { margin: 0; font-family: 'Old Standard TT', serif; font-size: 26px; font-weight: 700; color: #111; letter-spacing: 0.5px; }
     .school-text h2 { margin: 8px 0 0 0; font-size: 20px; font-weight: 800; color: #000; letter-spacing: -0.2px; }
-    .pupil-badge { display: inline-block; margin-top: 15px; background: #c00000; color: #fff; padding: 5px 25px; font-size: 14px; font-weight: 800; letter-spacing: 1px; border: 1px solid #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
+    .pupil-badge { display: inline-block; margin-top: 15px; background: <?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>; color: #fff; padding: 5px 25px; font-size: 14px; font-weight: 800; letter-spacing: 1px; border: 1px solid #000; box-shadow: 2px 2px 0 rgba(0,0,0,0.1); }
     
     .student-photo { width: 110px; height: 120px; background: #f8f8f8; border: 1px solid #000; display: flex; align-items: center; justify-content: center; }
     .student-photo img { width: 100%; height: 100%; object-fit: cover; }
@@ -235,12 +235,12 @@ foreach ($students as $student):
   
   <div class="school-header">
     <div class="school-logo">
-      <img src="<?= $base ?>/assets/img/school-logo.png" alt="School Badge" onerror="this.style.visibility='hidden'">
+      <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="School Badge" onerror="this.style.visibility='hidden'">
     </div>
     
     <div class="school-text">
-      <h1>ARMED FORCES EDUCATION UNIT</h1>
-      <h2>UADDARA BASIC SCHOOL</h2>
+      <h1 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></h1>
+      <h2 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_name', 'MARABEL SBA')) ?></h2>
       <div class="pupil-badge">PUPIL'S REPORT FORM</div>
     </div>
 
@@ -374,7 +374,7 @@ foreach ($students as $student):
   </table>
 
   <div style="margin-top:30px; text-align:center; font-size:10px; color:#999; text-transform:uppercase; letter-spacing:1px; z-index:1; position:relative;">
-    © <?= date('Y') ?> <?= SCHOOL_NAME ?> — Official Student Record
+    © <?= date('Y') ?> <?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?> — Official Student Record
   </div>
 
 </div>

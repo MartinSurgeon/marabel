@@ -25,7 +25,7 @@ require_once PRIVATE_PATH . '/config/database.php';
 require_once PRIVATE_PATH . '/config/app.php';
 
 // Autoload helpers
-foreach (['DB', 'Session', 'CSRF', 'Validator', 'SMS', 'Notification'] as $helper) {
+foreach (['DB', 'Config', 'Session', 'CSRF', 'Validator', 'SMS', 'Notification'] as $helper) {
     require_once PRIVATE_PATH . "/src/Helpers/{$helper}.php";
 }
 
