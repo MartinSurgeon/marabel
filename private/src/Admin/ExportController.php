@@ -56,6 +56,9 @@ class ExportController {
             case 'attendance':
                 $this->exportAttendance($classId, (int)$termId, $status, $columns, $format);
                 break;
+            case 'sms':
+                $this->exportSmsLogs($columns, $format);
+                break;
             default:
                 Session::flash('error', 'Invalid export type selected.');
                 $this->redirect();
@@ -211,6 +214,7 @@ class ExportController {
         $query = "
             SELECT 
                 u.full_name,
+                u.gender,
                 u.email,
                 u.phone,
                 u.role,
@@ -226,10 +230,11 @@ class ExportController {
         $data = DB::query($query, $params);
 
         $colMap = [
-            'full_name' => 'Full Name',
-            'email' => 'Email Address',
-            'phone' => 'Phone Number',
-            'role' => 'Role',
+            'full_name'        => 'Full Name',
+            'gender'           => 'Gender',
+            'email'            => 'Email Address',
+            'phone'            => 'Phone Number',
+            'role'             => 'Role',
             'assigned_classes' => 'Assigned Classes'
         ];
 
@@ -296,9 +301,39 @@ class ExportController {
         }
     }
 
+    private function exportSmsLogs(array $columns, string $format): void {
+        $query = "
+            SELECT
+                DATE_FORMAT(sl.sent_at, '%d-%b-%Y %H:%i') AS sent_at,
+                sl.sms_type,
+                sl.recipient_phone,
+                sl.status,
+                LEFT(sl.message, 160)                     AS message
+            FROM sms_logs sl
+            ORDER BY sl.sent_at DESC
+        ";
+
+        $data = DB::query($query);
+
+        $colMap = [
+            'sent_at'         => 'Date & Time Sent',
+            'sms_type'        => 'Message Type',
+            'recipient_phone' => 'Recipient Phone',
+            'status'          => 'Delivery Status',
+            'message'         => 'Message Preview (160 chars)',
+        ];
+
+        if ($format === 'excel') {
+            $this->outputExcel('sms_history_export', $data, $columns, $colMap);
+        } else {
+            $this->outputCSV('sms_history_export', $data, $columns, $colMap);
+        }
+    }
+
     private function outputExcel(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
         $date = date('Ymd_His');
         $filename = "{$filenamePrefix}_{$date}.xls";
+
 
         header('Content-Type: application/vnd.ms-excel; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');

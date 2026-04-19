@@ -53,17 +53,22 @@ class DashboardController {
             );
 
             // 4. Calculate Stats for Summary Cards
+            $managedClassIds = array_column($classTeacherFor, 'id');
+            $subjectClassIds = array_column($assigned, 'class_id'); // Not in current select, need to add it or use union
+            
+            $allClassIds = array_unique(array_merge($managedClassIds, $subjectClassIds));
+            
+            $queryBase = "FROM students st WHERE st.current_class_id IN (
+                            SELECT class_id FROM class_subjects WHERE teacher_id = ? AND term_id = ?
+                            UNION
+                            SELECT class_id FROM class_teachers WHERE teacher_id = ?
+                         ) AND st.status = 'active'";
+
             $stats = [
-                'students' => (int)DB::queryValue(
-                    "SELECT COUNT(DISTINCT st.id) 
-                     FROM students st
-                     WHERE st.current_class_id IN (
-                        SELECT class_id FROM class_subjects WHERE teacher_id = ? AND term_id = ?
-                        UNION
-                        SELECT class_id FROM class_teachers WHERE teacher_id = ?
-                     ) AND st.status = 'active'",
-                    [$teacherId, $term['id'], $teacherId]
-                ),
+                'students'        => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase", [$teacherId, $term['id'], $teacherId]),
+                'students_male'   => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Male'", [$teacherId, $term['id'], $teacherId]),
+                'students_female' => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Female'", [$teacherId, $term['id'], $teacherId]),
+                
                 'subjects' => (int)DB::queryValue(
                     "SELECT COUNT(DISTINCT subject_id) FROM class_subjects WHERE teacher_id = ? AND term_id = ?",
                     [$teacherId, $term['id']]

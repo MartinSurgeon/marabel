@@ -107,9 +107,15 @@ function dismissChecklist(){
     <div>
       <div class="stat-label">Total Students</div>
       <div class="stat-value"><?= number_format($s['students']) ?></div>
-      <div class="stat-sub up">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd"/></svg>
-        Active enrollment
+      <div class="stat-sub flex items-center gap-3">
+        <span style="font-weight:800; color:var(--clr-info); display:flex; align-items:center; gap:3px;">
+            <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <?= number_format($s['students_male']) ?>M
+        </span>
+        <span style="font-weight:800; color:#ec4899; display:flex; align-items:center; gap:3px;">
+            <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <?= number_format($s['students_female']) ?>F
+        </span>
       </div>
     </div>
   </div>
@@ -122,7 +128,16 @@ function dismissChecklist(){
     <div>
       <div class="stat-label">Teachers</div>
       <div class="stat-value"><?= number_format($s['teachers']) ?></div>
-      <div class="stat-sub">Active teaching staff</div>
+      <div class="stat-sub flex items-center gap-3">
+        <span style="font-weight:800; color:var(--clr-info); display:flex; align-items:center; gap:3px;">
+            <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <?= number_format($s['teachers_male']) ?>M
+        </span>
+        <span style="font-weight:800; color:#ec4899; display:flex; align-items:center; gap:3px;">
+            <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+            <?= number_format($s['teachers_female']) ?>F
+        </span>
+      </div>
     </div>
   </div>
 

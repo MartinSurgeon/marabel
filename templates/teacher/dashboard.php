@@ -47,9 +47,24 @@ $userName = Session::get('user_name', 'Teacher');
         <div style="background: var(--clr-primary-50); color: var(--clr-primary); width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="28" height="28"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
         </div>
-        <div>
-            <div style="font-size: 1.75rem; font-weight: 900; color: var(--clr-text); line-height: 1;"><?= $dashboardStats['students'] ?></div>
-            <div style="font-size: 12px; font-weight: 700; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem;">Total Students</div>
+        <div style="flex: 1;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                   <div style="font-size: 1.75rem; font-weight: 900; color: var(--clr-text); line-height: 1;"><?= number_format($dashboardStats['students']) ?></div>
+                   <div style="font-size: 11px; font-weight: 700; color: var(--clr-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.35rem;">Total Students</div>
+                </div>
+                <!-- Gender Breakdown -->
+                <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <div style="font-size: 10px; font-weight: 800; color: var(--clr-info); display: flex; align-items: center; gap: 4px; background: rgba(14, 165, 233, 0.08); padding: 2px 6px; border-radius: 4px;">
+                        <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        <?= number_format($dashboardStats['students_male']) ?> M
+                    </div>
+                    <div style="font-size: 10px; font-weight: 800; color: #ec4899; display: flex; align-items: center; gap: 4px; background: rgba(236, 72, 153, 0.08); padding: 2px 6px; border-radius: 4px;">
+                        <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        <?= number_format($dashboardStats['students_female']) ?> F
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 

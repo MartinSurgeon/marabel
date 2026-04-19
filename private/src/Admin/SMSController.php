@@ -3,6 +3,10 @@
  * SMS Centre Controller
  * Handles broadcast messaging, recipient filtering, and communication logs.
  */
+require_once PRIVATE_PATH . '/src/Helpers/Config.php';
+require_once PRIVATE_PATH . '/src/Helpers/DB.php';
+require_once PRIVATE_PATH . '/src/Helpers/CSRF.php';
+require_once PRIVATE_PATH . '/src/Helpers/Session.php';
 
 class SMSController {
 
@@ -17,18 +21,66 @@ class SMSController {
             $action = $_POST['_action'] ?? '';
             match ($action) {
                 'send_broadcast' => $this->sendBroadcast(),
+                'update_settings' => $this->updateSettings(),
+                'delete_logs'     => $this->deleteLogs(),
                 default           => $this->redirect(),
             };
         }
 
         // Prepare data for view
-        global $smsLogs, $classes, $totalSent, $recentLogs;
+        global $smsLogs, $classes, $totalSent, $recentLogs, $smsBalance, $pagination;
 
-        $smsLogs = DB::query("SELECT * FROM sms_logs ORDER BY sent_at DESC LIMIT 100");
+        // Pagination setup
+        $limit = 20;
+        $page  = max(1, (int)($_GET['page'] ?? 1));
+        $offset= ($page - 1) * $limit;
+
+        $totalLogsCount = DB::queryValue("SELECT COUNT(*) FROM sms_logs") ?? 0;
+        $totalPages     = ceil($totalLogsCount / $limit);
+
+        $smsLogs = DB::query("SELECT * FROM sms_logs ORDER BY sent_at DESC LIMIT ? OFFSET ?", [$limit, $offset]);
         $classes = DB::query("SELECT id, class_name, section FROM classes ORDER BY class_name");
         
         $totalSent = DB::queryOne("SELECT COUNT(*) as c FROM sms_logs WHERE status = 'sent'")['c'] ?? 0;
         $recentLogs= array_slice($smsLogs, 0, 5);
+
+        // Fetch real-time balance
+        $smsBalance = SMS::getBalance();
+        
+        $pagination = [
+            'current' => $page,
+            'total'   => $totalPages,
+            'count'   => $totalLogsCount,
+            'limit'   => $limit
+        ];
+    }
+
+    private function deleteLogs(): void {
+        $ids = $_POST['ids'] ?? [];
+        if (!is_array($ids)) $ids = [$ids];
+        $ids = array_map('intval', array_filter($ids));
+
+        if (empty($ids)) {
+            Session::flash('error', 'No logs selected for deletion.');
+        } else {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            DB::execute("DELETE FROM sms_logs WHERE id IN ($placeholders)", $ids);
+            Session::flash('success', count($ids) . ' log(s) deleted successfully.');
+        }
+        $this->redirect();
+    }
+
+    private function updateSettings(): void {
+        $apiKey = $_POST['sms_api_key'] ?? '';
+        $sender = $_POST['sms_sender'] ?? 'Marabel';
+        $host   = $_POST['sms_host'] ?? 'api.smsonlinegh.com';
+
+        Config::set('sms_api_key', $apiKey, 'connectivity');
+        Config::set('sms_sender', $sender, 'connectivity');
+        Config::set('sms_host', $host, 'connectivity');
+
+        Session::flash('success', 'SMS connectivity settings updated.');
+        $this->redirect();
     }
 
     private function sendBroadcast(): void {

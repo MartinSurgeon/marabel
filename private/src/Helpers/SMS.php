@@ -9,48 +9,81 @@ require_once PRIVATE_PATH . '/lib/zenoph/Zenoph/Notify/AutoLoader.php';
 use Zenoph\Notify\Enums\AuthModel;
 use Zenoph\Notify\Enums\SMSType;
 use Zenoph\Notify\Request\SMSRequest;
+use Zenoph\Notify\Request\CreditBalanceRequest;
+use Zenoph\Notify\Response\CreditBalanceResponse;
 
 class SMS {
 
     /**
      * Send an SMS message.
-     * 
-     * @param string $phone The recipient's phone number (e.g. 0541234567)
-     * @param string $message The message content
-     * @param string $type The SMS type (for logging purposes: otp, report_card, broadcast, reminder)
-     * @return array ['success' => bool, 'message' => string, 'response' => mixed]
      */
     public static function send(string $phone, string $message, string $type = 'broadcast'): array {
-        if (!defined('SMS_API_KEY') || !SMS_API_KEY) {
+        $apiKey = Config::get('sms_api_key', defined('SMS_API_KEY') ? SMS_API_KEY : '');
+        $host   = Config::get('sms_host', defined('SMS_HOST') ? SMS_HOST : 'api.smsonlinegh.com');
+        $sender = Config::get('sms_sender', defined('SCHOOL_SMS_SENDER') ? SCHOOL_SMS_SENDER : 'Marabel');
+
+        if (empty($apiKey)) {
             return ['success' => false, 'message' => 'SMS API Key not configured.'];
         }
 
         try {
-            // Prepare the request
             $request = new SMSRequest();
-            $request->setHost(SMS_HOST);
+            $request->setHost($host);
             $request->setAuthModel(AuthModel::API_KEY);
-            $request->setAuthApiKey(SMS_API_KEY);
+            $request->setAuthApiKey($apiKey);
 
-            // Set message details
-            $request->setSender(SCHOOL_SMS_SENDER);
+            $request->setSender($sender);
             $request->setMessage($message);
             $request->setSMSType(SMSType::GSM_DEFAULT);
             
-            // Format phone number
             $formattedPhone = self::formatPhone($phone);
             $request->addDestination($formattedPhone);
 
-            // Submit for response
             $response = $request->submit();
 
-            // Log the attempt
             self::log($phone, $message, $type, 'sent', json_encode($response));
-
             return ['success' => true, 'message' => 'Message sent successfully', 'response' => $response];
 
         } catch (Exception $e) {
             self::log($phone, $message, $type, 'failed', $e->getMessage());
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get current SMS balance.
+     */
+    public static function getBalance(): array {
+        $apiKey = Config::get('sms_api_key', defined('SMS_API_KEY') ? SMS_API_KEY : '');
+        $host   = Config::get('sms_host', defined('SMS_HOST') ? SMS_HOST : 'api.smsonlinegh.com');
+
+        if (empty($apiKey)) return ['success' => false, 'message' => 'API Key missing'];
+
+        try {
+            $request = new CreditBalanceRequest();
+            $request->setHost($host);
+            $request->setAuthModel(AuthModel::API_KEY);
+            $request->setAuthApiKey($apiKey);
+
+            $response = $request->submit();
+            
+            if ($response instanceof CreditBalanceResponse) {
+                $balance  = (float)$response->getBalance();
+                $currency = $response->getCurrencyCode();
+                
+                if (!$currency || strtolower($currency) === 'null') {
+                    $currency = '₵'; 
+                }
+
+                return [
+                    'success'  => true,
+                    'balance'  => $balance,
+                    'currency' => $currency,
+                    'estimate' => floor($balance / 0.05)
+                ];
+            }
+            return ['success' => false, 'message' => 'Invalid response type'];
+        } catch (Exception $e) {
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

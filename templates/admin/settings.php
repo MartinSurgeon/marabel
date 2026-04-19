@@ -52,26 +52,25 @@ $stampPath = $getSettingImagePath('school_stamp');
                 
                 <div class="form-group">
                     <label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:0.05em; color:var(--clr-primary); font-weight:800;">Header Line 1 (Educational Body)</label>
-                    <input type="text" name="school_body" class="form-control" value="<?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?>" style="font-size:0.9rem;">
+                    <input type="text" id="input-school-body" name="school_body" class="form-control" value="<?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?>" style="font-size:0.9rem;">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:0.05em; color:var(--clr-primary); font-weight:800;">Header Line 2 (School Name)</label>
-                    <input type="text" name="school_name" class="form-control" value="<?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?>" required style="font-weight:600; font-size:1rem;">
+                    <input type="text" id="input-school-name" name="school_name" class="form-control" value="<?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?>" required style="font-weight:600; font-size:1rem;">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:0.05em; color:var(--clr-primary); font-weight:800;">System Tagline</label>
-                    <input type="text" name="school_tagline" class="form-control" value="<?= htmlspecialchars(Config::get('school_tagline', 'SBA System')) ?>" style="font-size:0.9rem;">
+                    <input type="text" id="input-school-tagline" name="school_tagline" class="form-control" value="<?= htmlspecialchars(Config::get('school_tagline', 'SBA System')) ?>" style="font-size:0.9rem;">
                 </div>
 
                 <div class="form-group" style="margin-bottom:2rem;">
                     <label class="form-label" style="text-transform:uppercase; font-size:11px; letter-spacing:0.05em; color:var(--clr-primary); font-weight:800;">Report Accent Color</label>
                     <div style="display:flex; gap:0.75rem; align-items:center;">
-                        <input type="color" name="brand_accent_color" value="<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>" style="width:42px; height:42px; padding:2px; border:1.5px solid var(--clr-border); border-radius:8px; cursor:pointer; background:#fff;">
-                        <span style="font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--clr-text-muted);"><?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?></span>
+                        <input type="color" id="input-accent-color" name="brand_accent_color" value="<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>" style="width:42px; height:42px; padding:2px; border:1.5px solid var(--clr-border); border-radius:8px; cursor:pointer; background:#fff;">
+                        <span id="color-hex-display" style="font-family:var(--font-mono); font-size:12px; font-weight:600; color:var(--clr-text-muted);"><?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?></span>
                     </div>
-                    <p class="form-text">Controls report card highlights and badge colors.</p>
                 </div>
 
                 <button type="submit" class="btn btn-primary shadow-purple px-8" onclick="Loader.show()">Update Identity</button>
@@ -128,9 +127,9 @@ $stampPath = $getSettingImagePath('school_stamp');
             <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1.5px solid #000; padding-bottom:15px; position:relative; z-index:1;">
                 <img src="<?= htmlspecialchars($logoPath) ?>" style="width:60px; height:60px; object-fit:contain;">
                 <div style="text-align:center; flex:1;">
-                    <div style="font-family:'Old Standard TT', serif; font-size:16px; font-weight:700; color:#111; line-height:1.1; text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></div>
-                    <div style="font-size:15px; font-weight:900; color:<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>; margin-top:4px; text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?></div>
-                    <div style="display:inline-block; margin-top:6px; background:<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>; color:#fff; padding:2px 14px; font-size:9px; font-weight:800; letter-spacing:0.5px;">PUPIL'S REPORT FORM</div>
+                    <div id="preview-school-body" style="font-family:'Old Standard TT', serif; font-size:16px; font-weight:700; color:#111; line-height:1.1; text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></div>
+                    <div id="preview-school-name" style="font-size:15px; font-weight:900; color:<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>; margin-top:4px; text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?></div>
+                    <div id="preview-badge" style="display:inline-block; margin-top:6px; background:<?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>; color:#fff; padding:2px 14px; font-size:9px; font-weight:800; letter-spacing:0.5px;">PUPIL'S REPORT FORM</div>
                 </div>
                 <div style="width:60px; height:70px; border:1px solid #000; background:#f9f8f9; display:flex; align-items:center; justify-content:center; color:#ddd;">
                     <svg fill="currentColor" viewBox="0 0 24 24" width="24" height="24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
@@ -268,4 +267,54 @@ function confirmDelete(type, targetText) {
     document.getElementById('modal-target-text').textContent = targetText;
     openModal('modal-delete');
 }
+
+function togglePass(btn) {
+    const input = btn.previousElementSibling;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.style.color = 'var(--clr-primary)';
+    } else {
+        input.type = 'password';
+        btn.style.color = 'var(--clr-text-muted)';
+    }
+}
+
+/**
+ * Dynamic Branding Preview Controller
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    const inputs = {
+        body: document.getElementById('input-school-body'),
+        name: document.getElementById('input-school-name'),
+        color: document.getElementById('input-accent-color')
+    };
+
+    const previews = {
+        body: document.getElementById('preview-school-body'),
+        name: document.getElementById('preview-school-name'),
+        badge: document.getElementById('preview-badge'),
+        hex: document.getElementById('color-hex-display')
+    };
+
+    if (inputs.body) {
+        inputs.body.addEventListener('input', (e) => {
+            previews.body.textContent = e.target.value.toUpperCase() || 'OFFICIAL STUDENT RECORD';
+        });
+    }
+
+    if (inputs.name) {
+        inputs.name.addEventListener('input', (e) => {
+            previews.name.textContent = e.target.value.toUpperCase() || 'INSTITUTION NAME';
+        });
+    }
+
+    if (inputs.color) {
+        inputs.color.addEventListener('input', (e) => {
+            const val = e.target.value;
+            previews.name.style.color = val;
+            previews.badge.style.backgroundColor = val;
+            previews.hex.textContent = val.toUpperCase();
+        });
+    }
+});
 </script>

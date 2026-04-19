@@ -135,7 +135,14 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                                 <?= substr($t['full_name'], 0, 1) ?>
                             </div>
                             <div>
-                                <div style="font-weight:700; color:var(--clr-text); font-size:14px;"><?= htmlspecialchars($t['full_name']) ?></div>
+                                <div style="font-weight:700; color:var(--clr-text); font-size:14px; display:flex; align-items:center; gap:6px;">
+                                    <?= htmlspecialchars($t['full_name']) ?>
+                                    <?php if ($t['gender'] === 'Male'): ?>
+                                        <svg fill="var(--clr-info)" viewBox="0 0 24 24" width="10" height="10" title="Male"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                                    <?php elseif ($t['gender'] === 'Female'): ?>
+                                        <svg fill="#ec4899" viewBox="0 0 24 24" width="10" height="10" title="Female"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                                    <?php endif; ?>
+                                </div>
                                 <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.02em;"><?= htmlspecialchars($t['email']) ?></div>
                             </div>
                         </div>
@@ -203,7 +210,18 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
               <?= substr($t['full_name'], 0, 1) ?>
            </div>
            <div>
-              <div style="font-weight:800; color:var(--clr-text); font-size:1.125rem; line-height:1.2;"><?= htmlspecialchars($t['full_name']) ?></div>
+              <div style="font-weight:800; color:var(--clr-text); font-size:1.125rem; line-height:1.2; display:flex; align-items:center; gap:8px;">
+                <?= htmlspecialchars($t['full_name']) ?>
+                <?php if ($t['gender'] === 'Male'): ?>
+                    <div style="width:14px; height:14px; background:rgba(14, 165, 233, 0.1); color:var(--clr-info); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg fill="currentColor" viewBox="0 0 24 24" width="8" height="8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                <?php elseif ($t['gender'] === 'Female'): ?>
+                    <div style="width:14px; height:14px; background:rgba(236, 72, 153, 0.1); color:#ec4899; border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg fill="currentColor" viewBox="0 0 24 24" width="8" height="8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                <?php endif; ?>
+              </div>
               <div style="font-size:11px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.02em;"><?= htmlspecialchars($t['email']) ?></div>
            </div>
         </div>
@@ -315,6 +333,15 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
             <div class="form-group">
               <label class="form-label">Phone</label>
               <input type="tel" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20" autocomplete="tel">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gender <span class="required">*</span></label>
+              <select name="gender" id="teacher-gender" class="form-control" required>
+                <option value="">— Select —</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
             <div class="form-group md:col-span-2">
               <label class="form-label">Class teacher for</label>
@@ -586,6 +613,7 @@ function populateTeacherData(t) {
   document.getElementById('teacher-name').value = t.full_name;
   document.getElementById('teacher-email').value = t.email;
   document.getElementById('teacher-phone').value = t.phone || '';
+  document.getElementById('teacher-gender').value = t.gender || '';
   
   const grid = document.getElementById('teacher-classrooms-grid');
   if (grid) {

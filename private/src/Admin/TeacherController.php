@@ -104,14 +104,15 @@ class TeacherController {
             'full_name' => trim($_POST['full_name']),
             'email'     => $email,
             'phone'     => trim($_POST['phone'] ?? ''),
+            'gender'    => $_POST['gender'] ?? null,
             'role'      => 'teacher',
         ];
 
         $id = $_POST['teacher_id'] ?? null;
         if ($id) {
             DB::execute(
-                "UPDATE users SET full_name=?, email=?, phone=? WHERE id=? AND role='teacher'",
-                [$data['full_name'], $data['email'], $data['phone'], (int)$id]
+                "UPDATE users SET full_name=?, email=?, phone=?, gender=? WHERE id=? AND role='teacher'",
+                [$data['full_name'], $data['email'], $data['phone'], $data['gender'], (int)$id]
             );
             $this->syncTeacherClassrooms((int)$id, $_POST['class_ids'] ?? []);
             Session::flash('success', "Teacher record updated.");
@@ -125,7 +126,7 @@ class TeacherController {
             
             $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
             $newId = DB::insert(
-                "INSERT INTO users (full_name, email, phone, role, password_hash) VALUES (?,?,?,?,?)",
+                "INSERT INTO users (full_name, email, phone, gender, role, password_hash) VALUES (?,?,?,?,?,?)",
                 array_values($data)
             );
             $this->syncTeacherClassrooms((int)$newId, $_POST['class_ids'] ?? []);

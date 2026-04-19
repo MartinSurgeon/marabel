@@ -7,6 +7,8 @@
  */
 
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
+require_once PRIVATE_PATH . '/src/Helpers/Config.php';
+require_once PRIVATE_PATH . '/src/Helpers/DB.php';
 
 class SettingsController {
 
@@ -46,6 +48,11 @@ class SettingsController {
         $schoolBody        = $_POST['school_body'] ?? '';
         $schoolTagline     = $_POST['school_tagline'] ?? '';
         $brandAccentColor  = $_POST['brand_accent_color'] ?? '#c00000';
+        
+        // SMS Connectivity
+        $smsApiKey = $_POST['sms_api_key'] ?? '';
+        $smsHost   = $_POST['sms_host'] ?? 'api.smsonlinegh.com';
+        $smsSender = $_POST['sms_sender'] ?? 'Marabel';
 
         if (empty($schoolName)) {
             Session::flash('error', 'School name cannot be empty.');
@@ -54,7 +61,13 @@ class SettingsController {
             Config::set('school_body', $schoolBody, 'branding');
             Config::set('school_tagline', $schoolTagline, 'branding');
             Config::set('brand_accent_color', $brandAccentColor, 'branding');
-            Session::flash('success', 'Branding settings updated successfully.');
+            
+            // Save SMS settings
+            Config::set('sms_api_key', $smsApiKey, 'connectivity');
+            Config::set('sms_host', $smsHost, 'connectivity');
+            Config::set('sms_sender', $smsSender, 'connectivity');
+
+            Session::flash('success', 'Settings updated successfully.');
         }
 
         header('Location: ' . APP_BASE . '/admin/settings');

@@ -11,9 +11,15 @@ class DashboardController {
         
         // 1. Basic Stats
         $stats = [
-            'students' => DB::queryOne("SELECT COUNT(*) as c FROM students WHERE status = 'active'")['c'] ?? 0,
-            'teachers' => DB::queryOne("SELECT COUNT(*) as c FROM users WHERE role = 'teacher' AND is_active = 1")['c'] ?? 0,
-            'classes'  => DB::queryOne("SELECT COUNT(*) as c FROM classes WHERE academic_year_id = (SELECT id FROM academic_years WHERE is_active = 1 LIMIT 1)")['c'] ?? 0,
+            'students'         => DB::queryOne("SELECT COUNT(*) as c FROM students WHERE status = 'active'")['c'] ?? 0,
+            'students_male'    => DB::queryOne("SELECT COUNT(*) as c FROM students WHERE status = 'active' AND gender = 'Male'")['c'] ?? 0,
+            'students_female'  => DB::queryOne("SELECT COUNT(*) as c FROM students WHERE status = 'active' AND gender = 'Female'")['c'] ?? 0,
+            
+            'teachers'         => DB::queryOne("SELECT COUNT(*) as c FROM users WHERE role = 'teacher' AND is_active = 1")['c'] ?? 0,
+            'teachers_male'    => DB::queryOne("SELECT COUNT(*) as c FROM users WHERE role = 'teacher' AND is_active = 1 AND gender = 'Male'")['c'] ?? 0,
+            'teachers_female'  => DB::queryOne("SELECT COUNT(*) as c FROM users WHERE role = 'teacher' AND is_active = 1 AND gender = 'Female'")['c'] ?? 0,
+            
+            'classes'          => DB::queryOne("SELECT COUNT(*) as c FROM classes WHERE academic_year_id = (SELECT id FROM academic_years WHERE is_active = 1 LIMIT 1)")['c'] ?? 0,
         ];
 
         // 2. Active Term Analytics

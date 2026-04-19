@@ -44,7 +44,9 @@ class ClassController {
                          WHERE ct.class_id = c.id) as teacher_name,
                         (SELECT GROUP_CONCAT(ct.teacher_id SEPARATOR ',')
                          FROM class_teachers ct WHERE ct.class_id = c.id) as class_teacher_ids,
-                        (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active') as student_count
+                        (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active') as student_count,
+                        (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active' AND s.gender = 'Male') as male_count,
+                        (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active' AND s.gender = 'Female') as female_count
                  FROM classes c
                  JOIN school_levels sl ON sl.id = c.level_id
                  WHERE c.academic_year_id = ?
