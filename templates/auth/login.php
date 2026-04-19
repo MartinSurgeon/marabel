@@ -1,19 +1,41 @@
 <?php
 /**
  * Login Page — 3-tab design (Admin/Teacher | Parent | Student)
- * Uaddara Basic School — SBA Management System
+ * Dynamic Branding — Pulls from System Settings
  */
 $base = defined('APP_BASE') ? APP_BASE : '';
+
+// ── Fetch Branding Settings ─────────────────────────────────────
+$schoolName   = Config::get('school_name',    'Uaddara Basic School');
+$schoolBody   = Config::get('school_body',    'Armed Forces Education Unit');
+$schoolTag    = Config::get('school_tagline', 'SBA Management System');
+$schoolLogo   = Config::get('school_logo',    '/assets/img/school-logo.png');
+$accentColor  = Config::get('brand_accent_color', '#9633cc'); // default rebecca purple
+
+// Ensure logo path is correct and add cache buster
+if (!str_starts_with($schoolLogo, 'http') && !str_starts_with($schoolLogo, $base)) {
+    $schoolLogo = $base . '/' . ltrim($schoolLogo, '/');
+}
+$logoVersion = $schoolLogo . '?v=' . time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login — Uaddara Basic School SBA</title>
-  <meta name="description" content="School-Based Assessment Management System for Uaddara Basic School">
+  <title>Login — <?= htmlspecialchars($schoolName) ?> SBA</title>
+  <meta name="description" content="<?= htmlspecialchars($schoolTag) ?>">
       <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css">
-  <link rel="icon" type="image/png" href="<?= $base ?>/assets/img/school-logo.png">
+  <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoVersion) ?>">
+  
+  <style>
+    :root {
+      --clr-primary: <?= $accentColor ?>;
+      --clr-primary-600: <?= $accentColor ?>;
+    }
+    /* Simple overlay to help text readability if primary color is very light */
+    .auth-left { background-color: var(--clr-primary, #9633cc); }
+  </style>
 </head>
 <body>
 
@@ -22,9 +44,9 @@ $base = defined('APP_BASE') ? APP_BASE : '';
   <!-- ── Left Panel ─────────────────────────────────────────────── -->
   <div class="auth-left">
     <div class="auth-brand">
-    <img src="<?= $base ?>/assets/img/school-logo.png" alt="Uaddara Basic School Logo" class="auth-brand-logo">
-      <h1>Uaddara<br>Basic School</h1>
-      <p>Armed Forces Education Unit, Kumasi<br>School-Based Assessment System</p>
+    <img src="<?= htmlspecialchars($logoVersion) ?>" alt="<?= htmlspecialchars($schoolName) ?>" class="auth-brand-logo">
+      <h1><?= nl2br(htmlspecialchars($schoolName)) ?></h1>
+      <p><?= htmlspecialchars($schoolBody) ?><br><?= htmlspecialchars($schoolTag) ?></p>
 
       <div class="auth-features">
         <div class="auth-feature">
@@ -221,7 +243,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
       </div>
 
       <p style="text-align:center;font-size:var(--text-xs);color:var(--clr-text-muted);margin-top:2rem;">
-        © <?= date('Y') ?> Uaddara Basic School &mdash; Armed Forces Education Unit
+        © <?= date('Y') ?> <?= htmlspecialchars($schoolName) ?> &mdash; <?= htmlspecialchars($schoolBody) ?>
       </p>
     </div>
   </div>

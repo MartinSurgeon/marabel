@@ -50,10 +50,10 @@ class ScoreController {
 
         // Get Students in this class
         $students = DB::query(
-            "SELECT id, student_id_number, full_name, surname 
+            "SELECT id, student_id_number, full_name, surname, gender 
              FROM students 
              WHERE current_class_id = ? AND status = 'active'
-             ORDER BY surname ASC, full_name ASC",
+             ORDER BY gender ASC, surname ASC, full_name ASC",
             [$cs['class_id']]
         );
 

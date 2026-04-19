@@ -320,7 +320,7 @@ class PromotionController {
         }
 
         $students = DB::query(
-            "SELECT s.id, s.full_name, s.student_id_number,
+            "SELECT s.id, s.full_name, s.student_id_number, s.gender,
                     COALESCE(sa.aggregate_score, 0) as aggregate_score,
                     COALESCE(sa.number_of_subjects, 0) as subject_count,
                     sp.promotion_status
@@ -328,7 +328,7 @@ class PromotionController {
              LEFT JOIN student_aggregates sa ON sa.student_id = s.id AND sa.class_id = ?
              LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ?
              WHERE s.current_class_id = ? AND s.status = 'active' AND s.academic_year_id = ?
-             ORDER BY s.full_name ASC",
+             ORDER BY s.gender ASC, s.full_name ASC",
             [$classId, $yearId, $classId, $yearId]
         );
 

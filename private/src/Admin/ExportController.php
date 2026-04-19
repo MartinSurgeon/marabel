@@ -99,7 +99,7 @@ class ExportController {
             FROM students s
             LEFT JOIN classes c ON c.id = s.current_class_id
             WHERE {$whereClause}
-            ORDER BY c.class_name ASC, s.full_name ASC
+            ORDER BY c.class_name ASC, s.gender ASC, s.full_name ASC
         ";
 
         $data = DB::query($query, $params);
@@ -274,7 +274,7 @@ class ExportController {
             JOIN students s ON s.id = a.student_id
             JOIN classes c ON c.id = s.current_class_id
             WHERE {$whereClause}
-            ORDER BY c.class_name ASC, s.full_name ASC
+            ORDER BY c.class_name ASC, s.gender ASC, s.full_name ASC
         ";
 
         $data = DB::query($query, $params);

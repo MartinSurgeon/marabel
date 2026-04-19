@@ -77,7 +77,7 @@ class StudentController {
              FROM students s
              LEFT JOIN classes c ON c.id = s.current_class_id
              $where
-             ORDER BY s.full_name",
+             ORDER BY s.gender ASC, s.full_name ASC",
             $params
         );
     }

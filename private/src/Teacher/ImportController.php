@@ -53,10 +53,10 @@ class ImportController {
 
         // Fetch active students ordered by surname
         $students = DB::query(
-            "SELECT student_id_number, full_name, surname
+            "SELECT student_id_number, full_name, surname, gender
              FROM students
              WHERE current_class_id = ? AND status = 'active'
-             ORDER BY surname ASC, full_name ASC",
+             ORDER BY gender ASC, surname ASC, full_name ASC",
             [$cs['class_id']]
         );
 

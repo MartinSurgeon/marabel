@@ -29,7 +29,7 @@ class ReportSelectionController {
         // 2. Get all students that this teacher is either a Class Teacher or Subject Teacher for
         $students = DB::query(
             "SELECT DISTINCT 
-                s.id, s.student_id_number, s.full_name, s.surname,
+                s.id, s.student_id_number, s.full_name, s.surname, s.gender,
                 c.class_name, c.section, c.id as class_id
              FROM students s
              JOIN classes c ON s.current_class_id = c.id
@@ -38,7 +38,7 @@ class ReportSelectionController {
              WHERE (cs.teacher_id = ? AND cs.term_id = ?) 
                 OR ct.teacher_id = ?
                 OR 'admin' = ?
-             ORDER BY c.class_name ASC, s.full_name ASC",
+             ORDER BY c.class_name ASC, s.gender ASC, s.full_name ASC",
             [$teacherId, $term['id'], $teacherId, Session::role()]
         );
 

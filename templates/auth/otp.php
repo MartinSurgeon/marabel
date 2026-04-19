@@ -1,20 +1,39 @@
 <?php
 /**
  * OTP Entry Page — Parent Login (Phone + OTP)
- * Uaddara Basic School — SBA Management System
+ * Dynamic Branding — Pulls from System Settings
  */
 $base = defined('APP_BASE') ? APP_BASE : '';
+
+// ── Fetch Branding Settings ─────────────────────────────────────
+$schoolName   = Config::get('school_name',    'Uaddara Basic School');
+$schoolBody   = Config::get('school_body',    'Armed Forces Education Unit');
+$schoolTag    = Config::get('school_tagline', 'SBA Management System');
+$schoolLogo   = Config::get('school_logo',    '/assets/img/school-logo.png');
+$accentColor  = Config::get('brand_accent_color', '#9633cc'); // default rebecca purple
+
+// Ensure logo path is correct and add cache buster
+if (!str_starts_with($schoolLogo, 'http') && !str_starts_with($schoolLogo, $base)) {
+    $schoolLogo = $base . '/' . ltrim($schoolLogo, '/');
+}
+$logoVersion = $schoolLogo . '?v=' . time();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OTP Verification — Uaddara Basic School</title>
-  <meta name="description" content="Verify your identity with a one-time code to access the Parent Portal">
+  <title>OTP Verification — <?= htmlspecialchars($schoolName) ?></title>
+  <meta name="description" content="<?= htmlspecialchars($schoolTag) ?>">
   <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css">
-  <link rel="icon" type="image/png" href="<?= $base ?>/assets/img/school-logo.png">
+  <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoVersion) ?>">
   <style>
+    :root {
+      --clr-primary: <?= $accentColor ?>;
+      --clr-primary-600: <?= $accentColor ?>;
+    }
+    .auth-left { background-color: var(--clr-primary, #9633cc); }
+    
     .otp-inputs { display:flex; gap:0.75rem; justify-content:center; margin:1.5rem 0; }
     .otp-input {
       width:56px; height:64px; text-align:center; font-size:1.75rem; font-weight:800;
@@ -37,9 +56,9 @@ $base = defined('APP_BASE') ? APP_BASE : '';
   <!-- Left Panel -->
   <div class="auth-left">
     <div class="auth-brand">
-      <img src="<?= $base ?>/assets/img/school-logo.png" alt="Uaddara Basic School Logo" class="auth-brand-logo">
-      <h1>Uaddara<br>Basic School</h1>
-      <p>Armed Forces Education Unit, Kumasi<br>School-Based Assessment System</p>
+      <img src="<?= htmlspecialchars($logoVersion) ?>" alt="<?= htmlspecialchars($schoolName) ?>" class="auth-brand-logo">
+      <h1><?= nl2br(htmlspecialchars($schoolName)) ?></h1>
+      <p><?= htmlspecialchars($schoolBody) ?><br><?= htmlspecialchars($schoolTag) ?></p>
       <div class="auth-features">
         <div class="auth-feature">
           <div class="auth-feature-icon">
