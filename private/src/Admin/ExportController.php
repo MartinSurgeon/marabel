@@ -117,9 +117,9 @@ class ExportController {
         ];
 
         if ($format === 'excel') {
-            $this->outputExcel("students_export", $data, $columns, $colMap);
+            $this->outputExcel("Students Export", $data, $columns, $colMap);
         } else {
-            $this->outputCSV("students_export", $data, $columns, $colMap);
+            $this->outputCSV("Students Export", $data, $columns, $colMap);
         }
     }
 
@@ -146,10 +146,12 @@ class ExportController {
                 sa.aggregate_score,
                 sa.class_position,
                 sa.student_id,
-                sa.class_id
+                sa.class_id,
+                t.name as term_name
             FROM student_aggregates sa
             JOIN students s ON s.id = sa.student_id
             JOIN classes c ON c.id = sa.class_id
+            JOIN terms t ON t.id = sa.term_id
             WHERE {$whereClause}
             ORDER BY c.class_name ASC, sa.class_position ASC
         ";
@@ -194,10 +196,12 @@ class ExportController {
             if(!isset($colMap[$c])) $colMap[$c] = $c;
         }
 
+        $termSuffix = isset($data[0]['term_name']) ? $data[0]['term_name'] : $termId;
+
         if ($format === 'excel') {
-            $this->outputExcel("results_export_" . $termId, $data, $columns, $colMap);
+            $this->outputExcel("Results Export " . $termSuffix, $data, $columns, $colMap);
         } else {
-            $this->outputCSV("results_export_" . $termId, $data, $columns, $colMap);
+            $this->outputCSV("Results Export " . $termSuffix, $data, $columns, $colMap);
         }
     }
 
@@ -239,9 +243,9 @@ class ExportController {
         ];
 
         if ($format === 'excel') {
-            $this->outputExcel("staff_export", $data, $columns, $colMap);
+            $this->outputExcel("Staff Export", $data, $columns, $colMap);
         } else {
-            $this->outputCSV("staff_export", $data, $columns, $colMap);
+            $this->outputCSV("Staff Export", $data, $columns, $colMap);
         }
     }
 
@@ -269,10 +273,12 @@ class ExportController {
                 s.student_id_number,
                 s.full_name,
                 c.class_name,
-                a.days_present
+                a.days_present,
+                t.name as term_name
             FROM attendance a
             JOIN students s ON s.id = a.student_id
             JOIN classes c ON c.id = s.current_class_id
+            JOIN terms t ON t.id = a.term_id
             WHERE {$whereClause}
             ORDER BY c.class_name ASC, s.gender ASC, s.full_name ASC
         ";
@@ -294,10 +300,12 @@ class ExportController {
             'days_absent' => 'Days Absent'
         ];
 
+        $termSuffix = isset($data[0]['term_name']) ? $data[0]['term_name'] : $termId;
+
         if ($format === 'excel') {
-            $this->outputExcel("attendance_export", $data, $columns, $colMap);
+            $this->outputExcel("Attendance Export " . $termSuffix, $data, $columns, $colMap);
         } else {
-            $this->outputCSV("attendance_export", $data, $columns, $colMap);
+            $this->outputCSV("Attendance Export " . $termSuffix, $data, $columns, $colMap);
         }
     }
 
@@ -324,15 +332,15 @@ class ExportController {
         ];
 
         if ($format === 'excel') {
-            $this->outputExcel('sms_history_export', $data, $columns, $colMap);
+            $this->outputExcel('SMS History Export', $data, $columns, $colMap);
         } else {
-            $this->outputCSV('sms_history_export', $data, $columns, $colMap);
+            $this->outputCSV('SMS History Export', $data, $columns, $colMap);
         }
     }
 
     private function outputExcel(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
-        $date = date('Ymd_His');
-        $filename = "{$filenamePrefix}_{$date}.xls";
+        $date = date('Ymd');
+        $filename = "{$filenamePrefix} {$date}.xls";
 
 
         header('Content-Type: application/vnd.ms-excel; charset=utf-8');
@@ -401,8 +409,8 @@ class ExportController {
     }
 
     private function outputCSV(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
-        $date = date('Ymd_His');
-        $filename = "{$filenamePrefix}_{$date}.csv";
+        $date = date('Ymd');
+        $filename = "{$filenamePrefix} {$date}.csv";
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');

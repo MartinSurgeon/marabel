@@ -21,7 +21,7 @@
       <div id="confirm-message" class="text-muted" style="font-size:var(--text-sm); line-height:1.6; margin-bottom:2rem;">This action cannot be undone and may affect associated data.</div>
       
       <div class="flex gap-3">
-         <button class="btn btn-ghost" style="flex:1; justify-content:center;" onclick="closeModal('modal-confirm')">Cancel</button>
+         <button id="confirm-cancel-btn" class="btn btn-ghost" style="flex:1; justify-content:center;">Cancel</button>
          <button id="confirm-submit-btn" class="btn btn-danger" style="flex:1; justify-content:center;">Yes, Delete</button>
       </div>
     </div>

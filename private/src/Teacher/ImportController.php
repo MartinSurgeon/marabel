@@ -67,12 +67,16 @@ class ImportController {
 
         // Send CSV headers
         $filename = sprintf(
-            'scores_%s_%s_%s_term%d.csv',
-            preg_replace('/[^a-z0-9]+/', '_', strtolower($cs['class_name'] . $cs['section'])),
-            preg_replace('/[^a-z0-9]+/', '_', strtolower($cs['subject_name'])),
+            '%s %s %s %s Term%d.csv',
+            $cs['class_name'],
+            $cs['subject_name'],
+            $cs['section'] ? $cs['section'] : '',
             date('Ymd'),
-            $cs['term_id']
+            $cs['term_number']
         );
+        // Clean up potential double spaces and illegal characters
+        $filename = preg_replace('/\s+/', ' ', trim($filename));
+        $filename = preg_replace('/[\\/:*?"<>|]/', '', $filename);
 
         header('Content-Type: text/csv');
         header("Content-Disposition: attachment; filename=\"{$filename}\"");
@@ -273,10 +277,12 @@ class ImportController {
 
     private function getClassSubjectOrAbort(int $csId): array {
         $cs = DB::queryOne(
-            "SELECT cs.id, cs.class_id, cs.term_id, c.class_name, c.section, s.subject_name, cs.teacher_id
+            "SELECT cs.id, cs.class_id, cs.term_id, c.class_name, c.section, s.subject_name, cs.teacher_id,
+                    t.term_number
              FROM class_subjects cs
              JOIN classes c ON c.id = cs.class_id
              JOIN subjects s ON s.id = cs.subject_id
+             JOIN terms t ON t.id = cs.term_id
              WHERE cs.id = ?",
             [$csId]
         );

@@ -210,28 +210,31 @@ document.addEventListener('keydown', e => {
 });
 
 // ── Confirm Dialog (Premium Modal) ───────────────────────────────
-function confirmAction(options, callback) {
+function confirmAction(options, callback, cancelCallback) {
   // Support legacy string-only calls: confirmAction('Message', cb)
   const config = typeof options === 'string' 
     ? { message: options, title: 'Are you sure?', confirmText: 'Confirm', type: 'danger' }
-    : { title: 'Are you sure?', confirmText: 'Confirm', type: 'danger', ...options };
+    : { title: 'Are you sure?', confirmText: 'Confirm', cancelText: 'Cancel', type: 'danger', ...options };
 
-  const modal   = document.getElementById('modal-confirm');
-  const title   = document.getElementById('confirm-title');
-  const msg     = document.getElementById('confirm-message');
-  const btn     = document.getElementById('confirm-submit-btn');
-  const iconBox = document.getElementById('confirm-icon');
+  const modal     = document.getElementById('modal-confirm');
+  const title     = document.getElementById('confirm-title');
+  const msg       = document.getElementById('confirm-message');
+  const btn       = document.getElementById('confirm-submit-btn');
+  const cancelBtn = document.getElementById('confirm-cancel-btn');
+  const iconBox   = document.getElementById('confirm-icon');
 
-  if (!modal || !btn) {
+  if (!modal || !btn || !cancelBtn) {
     // Fallback if modal HTML is missing
     if (window.confirm(config.message)) callback();
+    else if (cancelCallback) cancelCallback();
     return;
   }
 
   // Set Content
-  title.textContent = config.title;
-  msg.innerHTML     = config.message;
-  btn.textContent   = config.confirmText;
+  title.textContent   = config.title;
+  msg.innerHTML       = config.message;
+  btn.textContent     = config.confirmText;
+  cancelBtn.textContent = config.cancelText || 'Cancel';
   
   // Set Type/Styling
   btn.className = `btn btn-${config.type || 'danger'}`;
@@ -246,17 +249,33 @@ function confirmAction(options, callback) {
     iconBox.style.background = 'rgba(239, 68, 68, 0.1)';
   }
 
-  // Handle Click (One-time)
+  // Handle Confirmed Click
   const handleConfirm = () => {
     closeModal('modal-confirm');
-    btn.removeEventListener('click', handleConfirm);
+    cleanup();
     callback();
   };
 
-  // Cleanup potential previous listeners
+  // Handle Canceled Click (Only triggers callback if provided)
+  const handleCancel = () => {
+    closeModal('modal-confirm');
+    cleanup();
+    if (cancelCallback) cancelCallback();
+  };
+
+  const cleanup = () => {
+    newBtn.removeEventListener('click', handleConfirm);
+    newCancelBtn.removeEventListener('click', handleCancel);
+  };
+
+  // Replace buttons to clear previous listeners efficiently
   const newBtn = btn.cloneNode(true);
   btn.parentNode.replaceChild(newBtn, btn);
   newBtn.addEventListener('click', handleConfirm);
+
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  newCancelBtn.addEventListener('click', handleCancel);
 
   openModal('modal-confirm');
 }

@@ -141,10 +141,10 @@ class StudentController {
     }
 
     private function studentDelete(): void {
-        $id = (int)($_POST['student_id'] ?? 0);
+        $id          = (int)($_POST['student_id'] ?? 0);
+        $forceDelete = (bool)($_POST['force_delete'] ?? false);
         
-        // Safety check: Don't delete if they have any recorded academic/attendance data
-        // Check multiple tables where student data might exist
+        // Check if student has records in multiple tables
         $hasRecords = DB::queryOne("
             SELECT id FROM sba_component_scores WHERE student_id = ?
             UNION ALL
@@ -162,14 +162,38 @@ class StudentController {
             LIMIT 1
         ", [$id, $id, $id, $id, $id, $id, $id]);
 
-        if ($hasRecords) {
-            Session::flash('error', "Cannot delete student with recorded scores. Please set status to 'inactive' instead.");
-        } else {
-            // Also clean up parent links if deleting (though ON DELETE CASCADE should handle it, we're explicit here)
-            DB::execute("DELETE FROM student_parents WHERE student_id = ?", [$id]);
-            DB::execute("DELETE FROM students WHERE id = ?", [$id]);
-            Session::flash('success', "Student record removed.");
+        if ($hasRecords && !$forceDelete) {
+            Session::flash('error', "Cannot delete student with recorded scores. Please set status to 'inactive' instead or use deep delete.");
+            $this->redirect();
         }
+
+        try {
+            DB::beginTransaction();
+
+            if ($forceDelete) {
+                // Cascading delete across all dependent tables
+                DB::execute("DELETE FROM attendance WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM computed_scores WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM exam_scores WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM sba_component_scores WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM student_aggregates WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM student_promotions WHERE student_id = ?", [$id]);
+                DB::execute("DELETE FROM student_remarks WHERE student_id = ?", [$id]);
+            }
+
+            // Always clean up parent links
+            DB::execute("DELETE FROM student_parents WHERE student_id = ?", [$id]);
+            
+            // Delete the student profile
+            DB::execute("DELETE FROM students WHERE id = ?", [$id]);
+
+            DB::commit();
+            Session::flash('success', "Student record " . ($forceDelete ? "and all linked history " : "") . "removed successfully.");
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Session::flash('error', "Failed to delete student: " . $e->getMessage());
+        }
+
         $this->redirect();
     }
 

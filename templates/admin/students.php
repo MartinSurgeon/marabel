@@ -190,7 +190,12 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
     </div>
 </div>
 
-<form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-student-delete" style="display:none"><?= CSRF::field() ?><input type="hidden" name="_action" value="student_delete"><input type="hidden" name="student_id" id="del-student-id"></form>
+<form method="POST" action="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>" id="form-student-delete" style="display:none">
+    <?= CSRF::field() ?>
+    <input type="hidden" name="_action" value="student_delete">
+    <input type="hidden" name="student_id" id="del-student-id">
+    <input type="hidden" name="force_delete" id="del-force-delete" value="0">
+</form>
 
 <!-- Parent Modal -->
 <div id="modal-parent" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
@@ -337,14 +342,17 @@ $(document).ready(function() {
         });
     };
 
-    window.confirmDeleteStudent = function(id, name) {
+    window.confirmDeleteStudent = function(id, name, isDeep = false) {
         confirmAction({
-            title: 'Permanently Delete Profile?',
-            message: `Are you sure you want to completely remove "${name}" and all their profile data? This action is permanent and cannot be undone.`,
-            confirmText: 'Yes, Delete Profile',
+            title: isDeep ? 'Wipe All Data & Delete?' : 'Permanently Delete Profile?',
+            message: isDeep 
+                ? `BE CAREFUL: "${name}" has academic records (marks/attendance). If you proceed, ALL their scores and history will be deleted forever and cannot be recovered. Are you absolutely sure?`
+                : `Are you sure you want to completely remove the profile for "${name}"? This action is permanent and cannot be undone.`,
+            confirmText: isDeep ? 'Yes, Wipe & Delete Everything' : 'Yes, Delete Profile',
             type: 'danger'
         }, () => {
             $('#del-student-id').val(id);
+            $('#del-force-delete').val(isDeep ? '1' : '0');
             $('#form-student-delete').submit();
         });
     };
@@ -366,11 +374,13 @@ $(document).ready(function() {
 
         if (hasRecords) {
             confirmAction({
-                title: 'Cannot Delete Profile',
-                message: `We cannot delete "${name}" because they have existing academic records (scores or attendance). To keep these records safe while removing the student from the active list, please change their status to "Inactive" or "Transferred" instead.`,
-                confirmText: 'Change to Inactive',
+                title: 'Student Has Academic Records',
+                message: `The student "${name}" has recorded scores and attendance in the system. To keep these records safe, we recommend changing their status to "Inactive" instead of deleting.`,
+                confirmText: 'Make Inactive (Recommended)',
+                cancelText: 'Delete Anyway',
                 type: 'warning'
             }, () => {
+                // Primary Action: Change to Inactive
                 const actionUrl = '<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= urlencode((string)$filterClass) ?>';
                 const form = $('<form method="POST" action="' + actionUrl + '">')
                     .append($('<input type="hidden" name="_action" value="student_status">'))
@@ -380,9 +390,12 @@ $(document).ready(function() {
                 $('body').append(form);
                 Loader.show();
                 form.submit();
+            }, () => {
+                // Secondary Action (Cancel Clicked -> Proceed to Deep Delete)
+                window.confirmDeleteStudent(id, name, true);
             });
         } else {
-            window.confirmDeleteStudent(id, name);
+            window.confirmDeleteStudent(id, name, false);
         }
     });
 
