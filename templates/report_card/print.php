@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Report Card — Individual Term Report
  * Uaddara Basic School — SBA Management System
@@ -7,7 +8,7 @@
  */
 
 global $rc_student, $rc_term, $rc_scores, $rc_aggregate,
-       $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
+  $rc_classSize, $rc_remarks, $rc_attendance, $rc_classTeacher, $rc_isPublished;
 
 
 $student      = $rc_student      ?? [];
@@ -25,10 +26,11 @@ $gradeLabel = ($gradingSystem === 'waec') ? 'Grade' : 'Proficiency';
 
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-function ordinal(int $n): string {
-    $s = ['th','st','nd','rd'];
-    $v = $n % 100;
-    return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+function ordinal(int $n): string
+{
+  $s = ['th', 'st', 'nd', 'rd'];
+  $v = $n % 100;
+  return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
 }
 
 $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltrim($student['photo_path'], '/')))
@@ -40,12 +42,13 @@ $sigPath = null;
 $stampPath = null;
 $sigDir = ROOT_PATH . '/assets/uploads/signatures';
 foreach (['png', 'jpg', 'jpeg'] as $ext) {
-    if (!$sigPath && file_exists("$sigDir/headmaster_signature.$ext")) $sigPath = "$base/assets/uploads/signatures/headmaster_signature.$ext";
-    if (!$stampPath && file_exists("$sigDir/school_stamp.$ext")) $stampPath = "$base/assets/uploads/signatures/school_stamp.$ext";
+  if (!$sigPath && file_exists("$sigDir/headmaster_signature.$ext")) $sigPath = "$base/assets/uploads/signatures/headmaster_signature.$ext";
+  if (!$stampPath && file_exists("$sigDir/school_stamp.$ext")) $stampPath = "$base/assets/uploads/signatures/school_stamp.$ext";
 }
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <title>Report: <?= htmlspecialchars($student['full_name'] ?? 'Student') ?></title>
@@ -54,48 +57,67 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Old+Standard+TT:wght@400;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --primary: #7e2bb3;
-      --charcoal: #1a1a1b;
-      --border: #222;
-      --bg-soft: #fcfcfc;
+      --primary: #000;
+      --charcoal: #111;
+      --border: #000;
+      --bg-soft: #fff;
     }
+
+    * {
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+    }
+
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      font-size: 13px;
-      line-height: 1.4;
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 12px;
+      line-height: 1.3;
       color: var(--charcoal);
       margin: 0;
-      padding: 30px;
-      background: #f0f0f2;
+      padding: 0;
+      background: #525659;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+
     @page {
       size: A4 portrait;
-      margin: 12mm;
+      margin: 0;
     }
+
     @media print {
-      body { padding: 0 !important; background: #fff !important; margin: 0 !important; }
-      .no-print, .toolbar { display: none !important; }
-      .container { 
-        border: none !important; 
-        box-shadow: none !important; 
-        margin: 0 !important; 
-        padding: 0 !important; 
-        width: 100% !important; 
-        max-width: none !important; 
-        overflow: visible !important;
+      body {
+        background: none !important;
+        padding: 0 !important;
       }
-      .container::before { opacity: 0.03 !important; }
+
+      .no-print,
+      .toolbar {
+        display: none !important;
+      }
+
+      .container {
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: 210mm !important;
+        height: 297mm !important;
+      }
     }
-    
+
     .container {
       background: #fff;
-      max-width: 820px;
-      margin: 0 auto;
-      padding: 40px;
-      border: 1px solid #ddd;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      width: 210mm;
+      height: 297mm;
+      margin: 20px auto;
+      padding: 12mm 15mm;
       position: relative;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #d1d1d1;
+      box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
     }
 
     /* Watermark Effect */
@@ -104,294 +126,476 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 400px;
-      height: 400px;
+      width: 450px;
+      height: 450px;
       background: url('<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>') center/contain no-repeat;
       transform: translate(-50%, -50%) rotate(-15deg);
-      opacity: 0.04;
+      opacity: 0.03;
       pointer-events: none;
       z-index: 0;
     }
 
-    /* Draft Watermark 
-    .draft-watermark {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%) rotate(-45deg);
-      font-size: 150px;
-      font-weight: 900;
-      color: rgba(200, 0, 0, 0.1);
-      text-transform: uppercase;
-      letter-spacing: 20px;
-      pointer-events: none;
-      z-index: 99;
-      white-space: nowrap;
-    }*/
-
-
     /* Toolbar */
     .toolbar {
-      max-width: 820px;
-      margin: 0 auto 20px auto;
+      width: 210mm;
+      margin: 15px auto 0 auto;
       display: flex;
       justify-content: space-between;
+      padding: 0 5px;
     }
-    .toolbar button, .toolbar a {
+
+    .toolbar .btn {
       text-decoration: none;
       padding: 10px 20px;
-      background: var(--primary);
+      background: #1a73e8;
       color: #fff;
-      font-weight: 700;
+      font-weight: 600;
       border: none;
       cursor: pointer;
-      border-radius: 8px;
+      border-radius: 4px;
       font-size: 13px;
-      transition: opacity 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
     }
-    .toolbar button:hover, .toolbar a:hover { opacity: 0.9; }
 
-    /* Header Components */
-    .school-header {
+    /* Header Section */
+    .header-section {
       display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 25px;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 20px;
       position: relative;
       z-index: 1;
     }
-    .school-logo { width: 110px; }
-    .school-logo img { width: 100%; height: auto; display: block; }
-    
-    .school-text { text-align: center; flex: 1; padding: 0 15px; }
-    .school-text h1 {
+
+    .school-logo {
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .school-logo img {
+      width: 100%;
+      height: auto;
+    }
+
+    .school-info {
+      flex-grow: 1;
+      text-align: center;
+    }
+
+    .school-info h1 {
       margin: 0;
       font-family: 'Old Standard TT', serif;
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 700;
-      color: #111;
-      letter-spacing: 0.5px;
+      color: #000;
+      line-height: 1.2;
     }
-    .school-text h2 {
-      margin: 8px 0 0 0;
+
+    .school-info h2 {
+      margin: 5px 0;
       font-size: 20px;
       font-weight: 800;
-      color: #000;
-      letter-spacing: -0.2px;
+      text-transform: uppercase;
     }
-    .pupil-badge {
+
+    .report-title-badge {
       display: inline-block;
-      margin-top: 15px;
-      background: <?= htmlspecialchars(Config::get('brand_accent_color', '#c00000')) ?>;
-      color: #fff;
-      padding: 5px 25px;
-      font-size: 14px;
+      border: 1.5px solid #000;
+      padding: 4px 20px;
       font-weight: 800;
+      font-size: 13px;
+      margin-top: 10px;
       letter-spacing: 1px;
-      border: 1px solid #000;
-      box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
     }
-    
+
     .student-photo {
-      width: 110px;
-      height: 120px;
-      background: #f8f8f8;
+      width: 100px;
+      height: 110px;
       border: 1px solid #000;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      background: #fdfdfd;
     }
-    .student-photo img { width: 100%; height: 100%; object-fit: cover; }
 
-    /* Layout Tables */
-    table { width: 100%; border-collapse: collapse; position: relative; z-index: 1; }
-    
-    .meta-table td { padding: 6px 10px; }
-    .meta-table td.label { width: 15%; font-weight: 700; color: #555; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-    .meta-table td.value { border: 1.5px solid #000; width: 35%; font-weight: 700; font-size: 14px; }
-    .meta-table td.label-small { width: 15%; font-weight: 700; color: #555; text-align: right; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px; }
-    .meta-table td.value-small { border: 1.5px solid #000; width: 20%; font-weight: 700; font-size: 14px; text-align: center; background: #fafafa; }
+    .student-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
 
-    .scores-table { margin-top: 25px; border: 2px solid #000; }
-    .scores-table th, .scores-table td { border: 1.2px solid #000; padding: 6px 8px; }
-    .scores-table th { background: #fdfdfd; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; height: 35px; }
-    .scores-table td.center { text-align: center; }
-    .scores-table tr:nth-child(even) td { background-color: #fbfbfb; }
-    .subject-name { font-weight: 600; padding-left: 12px !important; }
+    /* Meta Info Grid */
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 15px;
+      position: relative;
+      z-index: 1;
+    }
 
-    .total-row td { background: #f3f3f3 !important; font-weight: 800; font-size: 15px; }
-    .remarks-cell { font-size: 12px; font-weight: 600; color: #222; }
+    .meta-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
 
-    /* Footer Tables */
-    .prof-table { width: 70%; margin: 20px auto 0; border: 1.5px solid #000; font-size: 11px; }
-    .prof-table th, .prof-table td { border: 1px solid #000; padding: 5px 12px; }
-    .prof-table th { background: #eee; font-weight: 800; text-align: left; }
-    .prof-table td { font-weight: 700; }
+    .meta-table td {
+      padding: 5px 0;
+      vertical-align: middle;
+    }
 
-    .sh-label { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #444; margin-bottom: 3px; display: block; }
+    .meta-table .label {
+      width: 120px;
+      font-weight: 700;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #444;
+    }
 
-    /* Signature Line */
-    .sig-area { height: 45px; border-bottom: 1.5px solid #000; margin-bottom: 5px; }
+    .meta-table .value {
+      border-bottom: 1px solid #000;
+      font-weight: 800;
+      font-size: 13px;
+      padding-left: 5px;
+    }
+
+    /* Scores Table */
+    .scores-section {
+      flex-grow: 1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .scores-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid #000;
+    }
+
+    .scores-table th {
+      border: 1px solid #000;
+      background: #f2f2f2;
+      padding: 8px 5px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      text-align: center;
+    }
+
+    .scores-table td {
+      border: 1px solid #000;
+      padding: 6px 8px;
+    }
+
+    .scores-table .subject-name {
+      font-weight: 700;
+      font-size: 12px;
+      background: #fff;
+    }
+
+    .center {
+      text-align: center;
+    }
+
+    .bold {
+      font-weight: 800;
+    }
+
+    /* Footer Details */
+    .footer-section {
+      margin-top: 15px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 20px;
+    }
+
+    .remarks-box {
+      border: 1.5px solid #000;
+      padding: 8px;
+      margin-bottom: 10px;
+    }
+
+    .remarks-title {
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .remarks-content {
+      font-style: italic;
+      min-height: 20px;
+      display: block;
+    }
+
+    .grading-scale {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid #000;
+      font-size: 10px;
+    }
+
+    .grading-scale th {
+      background: #f2f2f2;
+      border: 1px solid #000;
+      padding: 4px;
+      font-weight: 800;
+      text-align: left;
+    }
+
+    .grading-scale td {
+      border: 1px solid #000;
+      padding: 3px 6px;
+      font-weight: 600;
+    }
+
+    .signature-area {
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-end;
+      gap: 40px;
+      margin-top: 10px;
+    }
+
+    .sig-block {
+      text-align: center;
+      width: 200px;
+      position: relative;
+    }
+
+    .sig-line {
+      border-top: 1.5px solid #000;
+      margin-top: 40px;
+      padding-top: 5px;
+      font-weight: 800;
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+
+    .stamp-img {
+      position: absolute;
+      bottom: 25px;
+      right: 50px;
+      max-height: 80px;
+      opacity: 0.8;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+    }
+
+    .sig-img {
+      position: absolute;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%);
+      max-height: 50px;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+    }
+
+    .copyright {
+      text-align: center;
+      font-size: 9px;
+      color: #777;
+      margin-top: 15px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
   </style>
 </head>
+
 <body>
 
-<div class="toolbar no-print">
-  <a href="javascript:history.back()">← Return to Dashboard</a>
-  <button onclick="window.print()">Print Official Report</button>
-</div>
-
-<div class="container">
-  <?php if (!$rc_isPublished): ?>
-    <div class="draft-watermark">DRAFT PREVIEW</div>
-  <?php endif; ?>
-  
-  <div class="school-header">
-
-    <div class="school-logo">
-      <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="School Badge" onerror="this.style.visibility='hidden'">
-    </div>
-    
-    <div class="school-text">
-      <h1 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></h1>
-      <h2 style="text-transform:uppercase;"><?= htmlspecialchars(Config::get('school_name', 'MARABEL SBA')) ?></h2>
-      <div class="pupil-badge">PUPIL'S REPORT FORM</div>
-    </div>
-
-    <div class="student-photo">
-      <?php if ($photoSrc): ?>
-        <img src="<?= htmlspecialchars($photoSrc) ?>" alt="Student">
-      <?php else: ?>
-        <svg fill="#ddd" viewBox="0 0 24 24" width="64" height="64"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-      <?php endif; ?>
-    </div>
+  <div class="toolbar no-print">
+    <a href="javascript:history.back()" class="btn">← Back to Dashboard</a>
+    <button onclick="window.print()" class="btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+      </svg>
+      Print Official Report
+    </button>
   </div>
 
-  <table class="meta-table">
-    <tr>
-      <td class="label">Name:</td>
-      <td class="value" colspan="3"><?= mb_strtoupper(htmlspecialchars($student['full_name'] ?? '')) ?></td>
-      <td class="label-small"><?= ($gradingSystem === 'waec') ? 'Aggregate:' : 'Position:' ?></td>
-      <td class="value-small">
-        <?php if ($gradingSystem === 'waec'): ?>
-           <?= $aggregate['aggregate_grade'] ?? '—' ?>
+  <div class="container">
+    <div class="header-section">
+      <div class="school-logo">
+        <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="Badge" onerror="this.style.visibility='hidden'">
+      </div>
+      <div class="school-info">
+        <h1><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></h1>
+        <h2><?= htmlspecialchars(Config::get('school_name', 'UADDARA BASIC SCHOOL')) ?></h2>
+        <div class="report-title-badge">PUPIL'S REPORT FORM</div>
+      </div>
+      <div class="student-photo">
+        <?php if ($photoSrc): ?>
+          <img src="<?= htmlspecialchars($photoSrc) ?>" alt="Student">
         <?php else: ?>
-           <?= $aggregate ? ordinal((int)$aggregate['class_position']) : '—' ?>
+          <svg fill="#eee" viewBox="0 0 24 24" width="60" height="60">
+            <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+          </svg>
         <?php endif; ?>
-      </td>
-    </tr>
-    <tr>
-      <td class="label">Class:</td>
-      <td class="value" colspan="3"><?= mb_strtoupper(htmlspecialchars(($student['class_name'] ?? '') . ' ' . ($student['section'] ?? ''))) ?></td>
-      <td class="label-small">No on Roll:</td>
-      <td class="value-small"><?= $classSize ?></td>
-    </tr>
-    <tr>
-      <td class="label">Year:</td>
-      <td class="value" colspan="3"><?= htmlspecialchars($term['year_name'] ?? '') ?></td>
-      <td class="label-small">Term:</td>
-      <td class="value-small"><?= strtoupper(htmlspecialchars($term['name'] ?? '')) ?></td>
-    </tr>
-    <tr>
-      <td class="label">Next Term Begins:</td>
-      <td class="value" colspan="3"><?= !empty($term['next_term_begins']) ? strtoupper(date('jS F, Y', strtotime($term['next_term_begins']))) : '—' ?></td>
-      <td class="label-small">Date:</td>
-      <td class="value-small"><?= date('d/m/Y') ?></td>
-    </tr>
-  </table>
+      </div>
+    </div>
 
-  <table class="scores-table">
-    <thead>
-      <tr>
-        <th style="text-align:left; padding-left:12px;">Subject</th>
-        <th style="width:70px;">Class<br>Score (50)</th>
-        <th style="width:70px;">Exams<br>Score (50)</th>
-        <th style="width:70px;">Total<br>Score (100)</th>
-        <th style="width:60px;"><?= $gradingSystem === 'waec' ? 'Grade' : 'Grade (1-5)' ?></th>
-        <th style="width:60px;">Position</th>
-        <th style="width:180px;"><?= $gradingSystem === 'waec' ? 'Remarks' : 'Level of Proficiency' ?></th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($scores as $s): ?>
-      <tr>
-        <td class="subject-name"><?= htmlspecialchars($s['subject_name']) ?></td>
-        <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 0) : '–' ?></td>
-        <td class="center"><?= $s['exam_score'] !== null ? number_format((float)$s['exam_score'], 0) : '–' ?></td>
-        <td class="center" style="font-weight:800; background:#f9f9f9;"><?= $s['overall_total'] !== null ? number_format((float)$s['overall_total'], 0) : '0' ?></td>
-        <td class="center"><?= $s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5') ?></td>
-        <td class="center"><?= $s['subject_position'] ? ordinal((int)$s['subject_position']) : '—' ?></td>
-        <td class="center remarks-cell"><?= htmlspecialchars($scale[$s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5')]['label'] ?? '—') ?></td>
-      </tr>
-      <?php endforeach; ?>
+    <div class="meta-grid">
+      <table class="meta-table">
+        <tr>
+          <td class="label">Name of Pupil:</td>
+          <td class="value"><?= mb_strtoupper(htmlspecialchars($student['full_name'] ?? '')) ?></td>
+        </tr>
+        <tr>
+          <td class="label">Class:</td>
+          <td class="value"><?= mb_strtoupper(htmlspecialchars(($student['class_name'] ?? '') . ' ' . ($student['section'] ?? ''))) ?></td>
+        </tr>
+        <tr>
+          <td class="label">Academic Year:</td>
+          <td class="value"><?= htmlspecialchars($term['year_name'] ?? '') ?></td>
+        </tr>
+        <tr>
+          <td class="label">Term:</td>
+          <td class="value"><?= strtoupper(htmlspecialchars($term['name'] ?? '')) ?></td>
+        </tr>
+      </table>
+      <table class="meta-table">
+        <tr>
+          <td class="label"><?= ($gradingSystem === 'waec') ? 'Aggregate:' : 'Pos. in Class:' ?></td>
+          <td class="value">
+            <?php if ($gradingSystem === 'waec'): ?>
+              <?= $aggregate['aggregate_grade'] ?? '—' ?>
+            <?php else: ?>
+              <?= $aggregate ? ordinal((int)$aggregate['class_position']) : '—' ?>
+            <?php endif; ?>
+          </td>
+        </tr>
+        <tr>
+          <td class="label">No. on Roll:</td>
+          <td class="value"><?= $classSize ?></td>
+        </tr>
+        <tr>
+          <td class="label">Next Term Starts:</td>
+          <td class="value"><?= !empty($term['next_term_begins']) ? strtoupper(date('jS M, Y', strtotime($term['next_term_begins']))) : '—' ?></td>
+        </tr>
+        <tr>
+          <td class="label">Date:</td>
+          <td class="value"><?= date('d/m/Y') ?></td>
+        </tr>
+      </table>
+    </div>
 
-      <?php 
-      $rowsToFill = max(0, 5 - count($scores));
-      for($i=0; $i<$rowsToFill; $i++): ?>
-      <tr style="height:26px;">
-        <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
-      </tr>
-      <?php endfor; ?>
+    <div class="scores-section">
+      <table class="scores-table">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding-left:12px;">Subject</th>
+            <th style="width:75px;">Class Score<br>(50%)</th>
+            <th style="width:75px;">Exam Score<br>(50%)</th>
+            <th style="width:75px;">Total Score<br>(100%)</th>
+            <th style="width:65px;"><?= $gradingSystem === 'waec' ? 'Grade' : 'Grade (1-5)' ?></th>
+            <th style="width:65px;">Pos.</th>
+            <th style="width:180px;"><?= $gradingSystem === 'waec' ? 'Remarks' : 'Proficiency Level' ?></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($scores as $s): ?>
+            <tr>
+              <td class="subject-name"><?= htmlspecialchars($s['subject_name']) ?></td>
+              <td class="center"><?= $s['class_score'] !== null ? number_format((float)$s['class_score'], 0) : '–' ?></td>
+              <td class="center"><?= $s['exam_score'] !== null ? number_format((float)$s['exam_score'], 0) : '–' ?></td>
+              <td class="center bold" style="background:#f9f9f9;"><?= $s['overall_total'] !== null ? number_format((float)$s['overall_total'], 0) : '0' ?></td>
+              <td class="center"><?= $s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5') ?></td>
+              <td class="center"><?= $s['subject_position'] ? ordinal((int)$s['subject_position']) : '—' ?></td>
+              <td class="center" style="font-size:11px; font-weight:600;"><?= htmlspecialchars($scale[$s['proficiency_level'] ?? ($gradingSystem === 'waec' ? '9' : '5')]['label'] ?? '—') ?></td>
+            </tr>
+          <?php endforeach; ?>
 
-      <tr class="total-row">
-        <td colspan="3" style="text-align:right; padding-right:15px; text-transform:uppercase; letter-spacing:1px; font-size:11px;">Overall Total:</td>
-        <td class="center"><?= $aggregate ? number_format((float)$aggregate['aggregate_score'], 0) : '0' ?></td>
-        <td colspan="3"></td>
-      </tr>
+          <?php
+          $rowsToFill = max(0, 10 - count($scores));
+          for ($i = 0; $i < $rowsToFill; $i++): ?>
+            <tr style="height:28px;">
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          <?php endfor; ?>
+        </tbody>
+        <tfoot>
+          <tr style="background:#f2f2f2; font-weight:800;">
+            <td colspan="3" style="text-align:right; padding-right:15px; text-transform:uppercase; font-size:11px;">Overall Performance Total:</td>
+            <td class="center"><?= $aggregate ? number_format((float)$aggregate['aggregate_score'], 0) : '0' ?></td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
 
-      <tr>
-        <td style="font-weight:700;">Attendance:</td>
-        <td class="center"><?= $attendance['days_present'] ?? '0' ?></td>
-        <td style="text-align:right; font-weight:700;">Out of:</td>
-        <td class="center"><?= $term['total_school_days'] ?? '60' ?></td>
-        <td style="font-weight:700;">Promoted to:</td>
-        <td colspan="2"></td>
-      </tr>
-
-
-      <tr>
-        <td colspan="2" style="font-weight:700;">Class Teacher's Remarks:</td>
-        <td colspan="5" style="font-style:italic;"><?= htmlspecialchars($remarks['teacher_remark'] ?? '–') ?></td>
-      </tr>
-      <tr>
-        <td colspan="2" style="font-weight:700; height:60px; vertical-align:top; border-bottom:2px solid #000;">Headteacher's Remarks:</td>
-        <td colspan="5" style="border-bottom:2px solid #000; vertical-align:top; padding-top:5px;">
-          <div style="min-height:30px;"><?= htmlspecialchars($remarks['headmaster_remark'] ?? '') ?></div>
-          <div style="margin-top:20px; text-align:right; font-size:10px; font-weight:700; opacity:0.6; position:relative; min-height:40px;">
-              <?php if ($stampPath): ?>
-                <img src="<?= $stampPath ?>" alt="Stamp" style="position:absolute; right:150px; bottom:-10px; max-height:85px; opacity:0.85; mix-blend-mode:multiply; pointer-events:none;">
-              <?php endif; ?>
-              <?php if ($sigPath): ?>
-                <img src="<?= $sigPath ?>" alt="Signature" style="position:absolute; right:30px; bottom:20px; max-height:55px; mix-blend-mode:multiply; pointer-events:none;">
-              <?php endif; ?>
-              <span style="position:absolute; right:0; bottom:0;">SIGNATURE & STAMP</span>
+    <div class="footer-section">
+      <div class="summary-grid">
+        <div class="remarks-area">
+          <div class="remarks-box">
+            <span class="remarks-title">Attendance & Conduct:</span>
+            <div style="display:flex; gap:20px; font-weight:700; margin-bottom:5px;">
+              <span>Present: <?= $attendance['days_present'] ?? '0' ?> Days</span>
+              <span>Out of: <?= $term['total_school_days'] ?? '60' ?> Days</span>
+            </div>
+            <span class="remarks-title" style="margin-top:10px;">Class Teacher's Remarks:</span>
+            <span class="remarks-content"><?= htmlspecialchars($remarks['teacher_remark'] ?? '–') ?></span>
           </div>
-        </td>
-      </tr>
-    </tbody>
-  </table>
 
-  <table class="prof-table">
-    <thead>
-      <tr>
-        <th><?= $gradingSystem === 'waec' ? 'WAEC GRADE DEFINITION' : 'LEVEL OF PROFICIENCY' ?></th>
-        <th>BENCHMARK</th>
-      </tr>
-    </thead>
-    <tbody>
-      <?php foreach ($scale as $grade => $meta): ?>
-      <tr>
-        <td><?= $grade ?>: <?= $meta['label'] ?> (<?= $meta['abbr'] ?>)</td>
-        <td><?= $meta['range'] ?></td>
-      </tr>
-      <?php endforeach; ?>
-    </tbody>
-  </table>
+          <div class="remarks-box" style="margin-bottom:0;">
+            <span class="remarks-title">Headteacher's Comments / Recommendations:</span>
+            <span class="remarks-content" style="min-height:40px;"><?= htmlspecialchars($remarks['headmaster_remark'] ?? 'Recommended for promotion.') ?></span>
+          </div>
+        </div>
 
-  <div style="margin-top:30px; text-align:center; font-size:10px; color:#999; text-transform:uppercase; letter-spacing:1px; z-index:1; position:relative;">
-    © <?= date('Y') ?> <?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?> — Official Student Record
+        <div class="grading-area">
+          <table class="grading-scale">
+            <thead>
+              <tr>
+                <th colspan="2"><?= $gradingSystem === 'waec' ? 'WAEC GRADE SYSTEM' : 'PROFICIENCY SCALE' ?></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($scale as $grade => $meta): ?>
+                <tr>
+                  <td><?= $grade ?>: <?= $meta['label'] ?></td>
+                  <td style="text-align:center;"><?= $meta['range'] ?>%</td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="signature-area">
+        <div class="sig-block">
+          <?php if ($stampPath): ?>
+            <img src="<?= $stampPath ?>" alt="Stamp" class="stamp-img">
+          <?php endif; ?>
+          <?php if ($sigPath): ?>
+            <img src="<?= $sigPath ?>" alt="Signature" class="sig-img">
+          <?php endif; ?>
+          <div class="sig-line">Headteacher's Signature & Stamp</div>
+        </div>
+      </div>
+
+      <div class="copyright">
+        © <?= date('Y') ?> <?= htmlspecialchars(Config::get('school_name', 'Marabel SBA')) ?> — Official Student Record & Academic Performance Report
+      </div>
+    </div>
   </div>
-
-</div>
 </body>
+</body>
+
 </html>

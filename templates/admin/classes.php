@@ -149,7 +149,7 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         </div>
       </div>
       <div style="margin-top:auto; padding:0.875rem 1.5rem; background:rgba(249,250,251,0.5); border-top:1px solid rgba(0,0,0,0.04); display:flex; justify-content:flex-end;">
-         <a href="<?= $base ?>/admin/students?class_id=<?= $cls['id'] ?>" class="btn btn-ghost btn-xs font-bold" style="font-size:10px; letter-spacing:0.04em; color:var(--clr-primary);">ROSTER & SCORES →</a>
+         <a href="<?= $base ?>/admin/students?year_id=<?= urlencode((string)$filterYear) ?>&class_id=<?= $cls['id'] ?>" class="btn btn-ghost btn-xs font-bold" style="font-size:10px; letter-spacing:0.04em; color:var(--clr-primary);">ROSTER &amp; SCORES →</a>
       </div>
     </div>
     <?php endforeach; ?>

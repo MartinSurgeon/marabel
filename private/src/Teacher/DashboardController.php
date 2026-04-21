@@ -37,7 +37,7 @@ class DashboardController {
                  FROM class_subjects cs
                  JOIN classes c ON cs.class_id = c.id
                  JOIN subjects s ON cs.subject_id = s.id
-                 JOIN school_levels sl ON s.level_id = sl.id
+                 JOIN school_levels sl ON c.level_id = sl.id
                  WHERE cs.teacher_id = ? AND cs.term_id = ?
                  ORDER BY c.class_name ASC, s.sort_order ASC",
                 [$teacherId, $term['id']]

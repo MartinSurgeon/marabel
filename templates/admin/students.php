@@ -75,8 +75,20 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
        <span style="font-size:11px; font-weight:800; color:var(--clr-text-muted); text-transform:uppercase;">Class</span>
        <select name="class_id" class="form-control filter-select" style="width:auto; min-width:160px; height:38px;">
           <option value="">— All Classes —</option>
-          <?php foreach ($classes as $c): ?>
-            <option value="<?= $c['id'] ?>" <?= $filterClass == $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['class_name']) ?><?= $c['section'] ? " ({$c['section']})" : '' ?></option>
+          <?php
+          $byLevel = [];
+          foreach ($classes as $c) {
+              $byLevel[$c['level_name']][] = $c;
+          }
+          foreach ($byLevel as $levelName => $levelClasses):
+          ?>
+          <optgroup label="<?= htmlspecialchars($levelName) ?>">
+            <?php foreach ($levelClasses as $c): ?>
+            <option value="<?= $c['id'] ?>" <?= $filterClass == $c['id'] ? 'selected' : '' ?>>
+              <?= htmlspecialchars($c['class_name']) ?><?= $c['section'] ? " ({$c['section']})" : '' ?>
+            </option>
+            <?php endforeach; ?>
+          </optgroup>
           <?php endforeach; ?>
        </select>
     </div>
@@ -169,7 +181,22 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
                     <div class="form-group"><label class="form-label">Surname</label><input type="text" name="surname" id="stu-surname" class="form-control" placeholder="Optional"></div>
                     <div class="form-group">
                         <label class="form-label">Class <span class="required">*</span></label>
-                        <select name="current_class_id" id="stu-class" class="form-control" required><option value="">— Select —</option><?php foreach ($classes as $c): ?><option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'].' '.$c['section']) ?></option><?php endforeach; ?></select>
+                        <select name="current_class_id" id="stu-class" class="form-control" required>
+                          <option value="">— Select —</option>
+                          <?php
+                          if (!isset($byLevel)) {
+                              $byLevel = [];
+                              foreach ($classes as $c) { $byLevel[$c['level_name']][] = $c; }
+                          }
+                          foreach ($byLevel as $lvlName => $lvlClasses):
+                          ?>
+                          <optgroup label="<?= htmlspecialchars($lvlName) ?>">
+                            <?php foreach ($lvlClasses as $c): ?>
+                            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'] . ($c['section'] ? ' ' . $c['section'] : '')) ?></option>
+                            <?php endforeach; ?>
+                          </optgroup>
+                          <?php endforeach; ?>
+                        </select>
                     </div>
                 </div>
                 <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">

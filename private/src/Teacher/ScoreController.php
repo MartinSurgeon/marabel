@@ -245,7 +245,11 @@ class ScoreController {
         if (!$term) {
             $assigned = [];
         } else {
-            // 2. Get Assigned classes/subjects with detailed progress (moved from Dashboard)
+            // 2. Get subjects: Admins see all for the term, Teachers see only their assigned ones
+            $isAdmin    = (Session::role() === 'admin');
+            $whereSql   = $isAdmin ? "cs.term_id = ?" : "cs.teacher_id = ? AND cs.term_id = ?";
+            $queryParams = $isAdmin ? [$term['id'], $term['id'], $term['id']] : [$term['id'], $term['id'], $teacherId, $term['id']];
+
             $assigned = DB::query(
                 "SELECT 
                     cs.id as class_subject_id,
@@ -254,6 +258,7 @@ class ScoreController {
                     c.section,
                     s.subject_name,
                     sl.name as level_name,
+                    u.full_name as teacher_name,
                     (SELECT COUNT(*) FROM students st WHERE st.current_class_id = c.id AND st.status = 'active') as student_count,
                     (SELECT COUNT(*) FROM sba_component_scores scs
                      JOIN students st2 ON scs.student_id = st2.id AND st2.current_class_id = c.id AND st2.status = 'active'
@@ -265,9 +270,10 @@ class ScoreController {
                  JOIN classes c ON cs.class_id = c.id
                  JOIN subjects s ON cs.subject_id = s.id
                  JOIN school_levels sl ON s.level_id = sl.id
-                 WHERE cs.teacher_id = ? AND cs.term_id = ?
+                 LEFT JOIN users u ON cs.teacher_id = u.id
+                 WHERE {$whereSql}
                  ORDER BY c.class_name ASC, s.sort_order ASC",
-                [$term['id'], $term['id'], $teacherId, $term['id']]
+                $queryParams
             );
         }
 

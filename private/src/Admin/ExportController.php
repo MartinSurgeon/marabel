@@ -20,7 +20,7 @@ class ExportController {
 
         // GET Request Variables for the UI
         global $classes, $terms;
-        $classes = DB::query("SELECT id, class_name, section FROM classes ORDER BY class_name ASC, section ASC");
+        $classes = DB::query("SELECT c.id, c.class_name, c.section, sl.name as level_name FROM classes c JOIN school_levels sl ON sl.id = c.level_id ORDER BY sl.sort_order, c.class_name ASC, c.section ASC");
         $terms = DB::query("SELECT t.id, t.name, ay.year_name, t.is_active 
                             FROM terms t 
                             JOIN academic_years ay ON ay.id = t.academic_year_id 

@@ -136,8 +136,18 @@ $base = defined('APP_BASE') ? APP_BASE : '';
                         <label class="form-label block mb-2" style="font-size:11px; font-weight:800; text-transform:uppercase; color:var(--clr-text-muted);">Classroom</label>
                         <select name="class_id" class="form-control h-12">
                             <option value="all">All Classrooms</option>
-                            <?php foreach ($classes as $c): ?>
-                            <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'] . ($c['section'] ? ' ' . $c['section'] : '')) ?></option>
+                            <?php
+                            $exportByLevel = [];
+                            foreach ($classes as $c) {
+                                $exportByLevel[$c['level_name']][] = $c;
+                            }
+                            foreach ($exportByLevel as $lvl => $lvlClasses):
+                            ?>
+                            <optgroup label="<?= htmlspecialchars($lvl) ?>">
+                              <?php foreach ($lvlClasses as $c): ?>
+                              <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['class_name'] . ($c['section'] ? ' ' . $c['section'] : '')) ?></option>
+                              <?php endforeach; ?>
+                            </optgroup>
                             <?php endforeach; ?>
                         </select>
                     </div>

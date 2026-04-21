@@ -77,13 +77,14 @@ class TeacherController {
         );
 
         $assignmentsList = DB::query(
-            "SELECT cs.id, cs.teacher_id, c.class_name, c.section, s.subject_name 
+            "SELECT DISTINCT cs.id, cs.teacher_id, c.class_name, c.section, s.subject_name, sl.name as level_name
              FROM class_subjects cs
              JOIN classes c ON c.id = cs.class_id
              JOIN subjects s ON s.id = cs.subject_id
+             JOIN school_levels sl ON sl.id = c.level_id
              JOIN academic_years ay ON ay.id = c.academic_year_id
              WHERE ay.is_active = 1
-             ORDER BY c.class_name, s.subject_name"
+             ORDER BY sl.sort_order, c.class_name, s.subject_name"
         );
     }
 
@@ -218,25 +219,25 @@ class TeacherController {
 
             foreach ($classIds as $cid) {
                 foreach ($subjectIds as $sid) {
-                    try {
+                    // Check if this class/subject/term combination already exists
+                    $existing = DB::queryOne(
+                        "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
+                        [$cid, $sid, $termId]
+                    );
+
+                    if ($existing) {
+                        // Only update the teacher assignment — never insert a duplicate row
+                        DB::execute(
+                            "UPDATE class_subjects SET teacher_id = ? WHERE id = ?",
+                            [$teacherId, $existing['id']]
+                        );
+                    } else {
                         DB::insert(
-                            "INSERT INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
+                            "INSERT IGNORE INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
                             [$cid, $sid, $teacherId, $termId]
                         );
-                        $successCount++;
-                    } catch (\PDOException $e) {
-                        if ($e->getCode() === '23000') {
-                            // Update teacher if already exists for this class/subject/term
-                            DB::execute(
-                                "UPDATE class_subjects SET teacher_id = ? WHERE class_id = ? AND subject_id = ? AND term_id = ?",
-                                [$teacherId, $cid, $sid, $termId]
-                            );
-                            $successCount++;
-                        } else {
-                            Session::flash('error', "Database error occurred during assignment.");
-                            $this->redirect();
-                        }
                     }
+                    $successCount++;
                 }
             }
             

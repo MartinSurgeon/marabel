@@ -85,6 +85,7 @@ $routes = [
     // ── Teacher ──────────────────────────────────────────────
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],
     '/teacher/scores'           => ['teacher/score_entry', ['admin','teacher'], 'Teacher\\ScoreController'],
+    '/teacher/export-scores'    => [null,                  ['admin','teacher'], 'Teacher\\ScoreExportController'],
     '/teacher/import'           => ['teacher/import',      ['admin','teacher'], 'Teacher\\ImportController'],
     '/teacher/class'            => ['teacher/manage_class', ['admin','teacher'], 'Teacher\\ClassManagementController'],
     '/teacher/reports'          => ['teacher/reports',      ['admin','teacher'], 'Teacher\\ReportSelectionController'],

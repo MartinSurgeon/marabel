@@ -32,6 +32,57 @@ $base = defined('APP_BASE') ? APP_BASE : '';
     <div id="save-indicator" class="flex items-center gap-2 px-4 py-2 rounded-full border border-transparent transition-all" style="font-size:12px; font-weight:700;">
        <!-- Dynamically filled by JS -->
     </div>
+
+    <!-- ── Export Dropdown ── -->
+    <div class="dropdown relative" id="export-dropdown-wrap">
+      <button id="export-btn" class="btn btn-primary" style="border-radius:var(--radius-full); gap:0.5rem;" title="Export score list">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="16" height="16">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Export
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="13" height="13">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </button>
+      <div id="export-dd" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-fade-in">
+        <!-- PDF — primary -->
+        <a href="<?= $base ?>/teacher/export-scores?id=<?= (int)$classSub['id'] ?>&format=pdf"
+           target="_blank"
+           id="export-pdf-link"
+           style="display:flex; align-items:center; gap:10px; padding:11px 16px; font-size:12px; font-weight:700; color:#6d28d9; background:#f5f3ff; border-bottom:1px solid #ede9fe; text-decoration:none;"
+           onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+          </svg>
+          <span>
+            Print / Save PDF
+            <span style="display:block; font-size:10px; font-weight:500; color:#7c3aed; margin-top:1px;">Opens print dialog</span>
+          </span>
+        </a>
+        <!-- CSV -->
+        <a href="<?= $base ?>/teacher/export-scores?id=<?= (int)$classSub['id'] ?>&format=csv"
+           id="export-csv-link"
+           style="display:flex; align-items:center; gap:10px; padding:11px 16px; font-size:12px; font-weight:700; color:var(--clr-text); border-bottom:1px solid #f3f4f6; text-decoration:none;"
+           onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16" style="color:#16a34a;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Download CSV
+        </a>
+        <!-- Excel -->
+        <a href="<?= $base ?>/teacher/export-scores?id=<?= (int)$classSub['id'] ?>&format=excel"
+           id="export-excel-link"
+           style="display:flex; align-items:center; gap:10px; padding:11px 16px; font-size:12px; font-weight:700; color:var(--clr-text); text-decoration:none;"
+           onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='transparent'">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16" style="color:#15803d;">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+          </svg>
+          Download Excel (.xls)
+        </a>
+      </div>
+    </div>
+
+    <!-- ── Preview Reports Dropdown ── -->
     <div class="dropdown relative">
       <button id="preview-btn" class="btn btn-outline" style="border-radius:var(--radius-full); gap:0.5rem;">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
@@ -428,6 +479,25 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
       if (!previewDropdown.classList.contains('hidden') && !previewDropdown.contains(e.target) && e.target !== previewBtn) {
         previewDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  // Export Dropdown (same click-outside pattern)
+  const exportBtn = document.getElementById('export-btn');
+  const exportDd  = document.getElementById('export-dd');
+
+  if (exportBtn && exportDd) {
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      exportDd.classList.toggle('hidden');
+      // Close the preview dropdown if open
+      previewDropdown?.classList.add('hidden');
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!exportDd.classList.contains('hidden') && !exportDd.contains(e.target) && e.target !== exportBtn) {
+        exportDd.classList.add('hidden');
       }
     });
   }

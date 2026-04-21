@@ -366,39 +366,81 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
             <?= CSRF::field() ?>
             <input type="hidden" name="_action" value="assign_subject">
             <input type="hidden" name="teacher_id" id="assign-teacher-id-inner" value="">
-            
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- ── Classes: grouped by level with per-level Select All ── -->
               <div class="form-group">
                 <label class="form-label">Classes <span class="required">*</span></label>
-                <div class="form-control p-0 overflow-y-auto" style="height:min(150px, 42vh); min-height:120px; background:var(--clr-surface-2);">
-                  <?php foreach ($classes as $c): ?>
-                    <label class="assign-pick-row flex items-center gap-2 p-2 cursor-pointer text-xs font-semibold m-0 transition-colors" style="border-bottom:1px solid var(--clr-border);">
-                      <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>">
-                      <span><?= htmlspecialchars($c['class_name'] . ' ' . $c['section']) ?></span>
+                <div class="form-control p-0 overflow-y-auto" style="height:min(200px,46vh); min-height:140px; background:var(--clr-surface-2);">
+                  <?php
+                  $classByLevel = [];
+                  foreach ($classes as $c) { $classByLevel[$c['level_name']][] = $c; }
+                  $levelMeta = ['Lower Primary' => ['code'=>'LP','color'=>'success'], 'Upper Primary' => ['code'=>'UP','color'=>'warning'], 'JHS' => ['code'=>'JHS','color'=>'purple']];
+                  foreach ($classByLevel as $lvlName => $lvlClasses):
+                    $meta  = $levelMeta[$lvlName] ?? ['code'=>'', 'color'=>'gray'];
+                    $lvlId = 'lvl-' . preg_replace('/\W+/', '_', strtolower($lvlName));
+                  ?>
+                  <!-- Level header row with Select-All toggle -->
+                  <div class="flex items-center justify-between px-3 py-1 sticky top-0"
+                       style="background:var(--clr-surface); border-bottom:1px solid var(--clr-border); z-index:1;">
+                    <label class="flex items-center gap-2 cursor-pointer m-0">
+                      <input type="checkbox" class="level-all-chk w-4 h-4 accent-purple-600"
+                             data-level="<?= htmlspecialchars($lvlName) ?>"
+                             onchange="toggleLevelClasses(this)"
+                             title="Select all <?= htmlspecialchars($lvlName) ?> classes">
+                      <span class="text-[10px] font-black uppercase tracking-wider" style="color:var(--clr-text-muted);">
+                        <?= htmlspecialchars($lvlName) ?>
+                      </span>
                     </label>
+                    <span class="badge badge-<?= $meta['color'] ?>" style="font-size:9px; padding:2px 6px;">
+                      <?= count($lvlClasses) ?> class<?= count($lvlClasses) != 1 ? 'es' : '' ?>
+                    </span>
+                  </div>
+                  <!-- Individual class checkboxes -->
+                  <?php foreach ($lvlClasses as $c): ?>
+                  <label class="assign-pick-row flex items-center gap-2 pl-6 pr-3 py-2 cursor-pointer text-xs font-semibold m-0 transition-colors"
+                         style="border-bottom:1px solid var(--clr-border);">
+                    <input type="checkbox" name="class_ids[]" value="<?= $c['id'] ?>"
+                           class="class-level-chk w-4 h-4 accent-purple-600"
+                           data-level="<?= htmlspecialchars($lvlName, ENT_QUOTES) ?>"
+                           onchange="syncLevelHeader('<?= htmlspecialchars($lvlName, ENT_QUOTES) ?>')">
+                    <span><?= htmlspecialchars($c['class_name'] . ($c['section'] ? ' ' . $c['section'] : '')) ?></span>
+                  </label>
+                  <?php endforeach; ?>
                   <?php endforeach; ?>
                 </div>
               </div>
+
+              <!-- ── Subjects: unchanged layout ── -->
               <div class="form-group">
                 <label class="form-label">Subjects <span class="required">*</span></label>
-                <div class="form-control p-0 overflow-y-auto" style="height:min(150px, 42vh); min-height:120px; background:var(--clr-surface-2);">
+                <div class="form-control p-0 overflow-y-auto" style="height:min(200px,46vh); min-height:140px; background:var(--clr-surface-2);">
                   <?php foreach ($subjects as $s): ?>
-                    <label class="assign-pick-row flex items-center justify-between p-2 cursor-pointer text-xs font-semibold m-0 transition-colors" style="border-bottom:1px solid var(--clr-border);">
+                    <label class="assign-pick-row flex items-center justify-between p-2 cursor-pointer text-xs font-semibold m-0 transition-colors"
+                           style="border-bottom:1px solid var(--clr-border);">
                       <div class="flex items-center gap-2">
                         <input type="checkbox" name="subject_ids[]" value="<?= $s['id'] ?>">
                         <span><?= htmlspecialchars($s['subject_name']) ?></span>
                       </div>
-                      <?php 
+                      <?php
                         $lvlBadgeColor = 'gray';
-                        if ($s['level_name'] == 'LP') $lvlBadgeColor = 'success';
-                        elseif ($s['level_name'] == 'UP') $lvlBadgeColor = 'warning';
+                        if ($s['level_name'] == 'Lower Primary') $lvlBadgeColor = 'success';
+                        elseif ($s['level_name'] == 'Upper Primary') $lvlBadgeColor = 'warning';
                         elseif ($s['level_name'] == 'JHS') $lvlBadgeColor = 'purple';
                       ?>
-                      <span class="badge badge-<?= $lvlBadgeColor ?>" style="font-size:9px; padding:2px 5px;"><?= htmlspecialchars($s['level_name']) ?></span>
+                      <span class="badge badge-<?= $lvlBadgeColor ?>" style="font-size:9px; padding:2px 5px;">
+                        <?= htmlspecialchars($s['level_name']) ?>
+                      </span>
                     </label>
                   <?php endforeach; ?>
                 </div>
               </div>
+            </div>
+
+            <div style="background:var(--clr-info-bg); border:1px solid rgba(0,0,0,0.05); border-radius:var(--radius-md); padding:0.625rem 1rem; margin-top:0.75rem; font-size:11px; color:var(--clr-text-muted);">
+              <strong style="color:var(--clr-text);">Tip:</strong>
+              Use the level header checkboxes (e.g. <em>Lower Primary</em>) to instantly select <strong>all classes in that section</strong>.
+              A teacher teaching the same subject across LP, UP, and JHS can be set up in a single submission.
             </div>
             <button type="submit" class="btn btn-primary w-full mt-4">Assign Selected Subjects</button>
           </form>
@@ -654,23 +696,59 @@ function renderAssignmentsList(teacherId) {
     container.innerHTML = `<div class="p-10 text-center text-muted text-xs font-bold italic opacity-60">No active subject assignments.</div>`;
     return;
   }
-  
-  let html = '';
+
+  // Group by level for cleaner display
+  const levelOrder = ['Lower Primary', 'Upper Primary', 'JHS'];
+  const levelColors = {'Lower Primary': '#16a34a', 'Upper Primary': '#d97706', 'JHS': '#7c3aed'};
+  const grouped = {};
   teacherAssignments.forEach(a => {
-    html += `
-      <label class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-purple-50 transition-colors cursor-pointer m-0">
-        <input type="checkbox" class="assignment-checkbox w-4 h-4 accent-purple-600" value="${a.id}" onchange="updateBulkRemoveBtn()">
-        <div class="flex-1">
-          <div class="text-xs font-bold text-gray-800">${escapeHtml(a.subject_name)}</div>
-          <div class="text-[10px] text-muted uppercase font-bold tracking-tight">${escapeHtml(a.class_name)} ${escapeHtml(a.section)}</div>
-        </div>
-        <button type="button" class="p-2 text-danger hover:bg-red-100 rounded-full transition-colors" onclick="event.preventDefault(); removeAssignment(${a.id})" title="Remove Assignment">
-          <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-        </button>
-      </label>
-    `;
+    const lvl = a.level_name || 'Other';
+    if (!grouped[lvl]) grouped[lvl] = [];
+    grouped[lvl].push(a);
+  });
+
+  let html = '';
+  // Render in LP → UP → JHS order, then any others
+  const orderedKeys = [...levelOrder.filter(l => grouped[l]), ...Object.keys(grouped).filter(l => !levelOrder.includes(l))];
+
+  orderedKeys.forEach(lvl => {
+    const color = levelColors[lvl] || '#64748b';
+    html += `<div style="padding:4px 12px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+      <span style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:0.08em; color:${color};">${escapeHtml(lvl)}</span>
+    </div>`;
+    grouped[lvl].forEach(a => {
+      html += `
+        <label class="flex items-center gap-3 p-3 border-b border-gray-100 last:border-0 hover:bg-purple-50 transition-colors cursor-pointer m-0">
+          <input type="checkbox" class="assignment-checkbox w-4 h-4 accent-purple-600" value="${a.id}" onchange="updateBulkRemoveBtn()">
+          <div class="flex-1">
+            <div class="text-xs font-bold text-gray-800">${escapeHtml(a.subject_name)}</div>
+            <div class="text-[10px] text-muted uppercase font-bold tracking-tight">${escapeHtml(a.class_name)}${a.section ? ' ' + escapeHtml(a.section) : ''}</div>
+          </div>
+          <button type="button" class="p-2 text-danger hover:bg-red-100 rounded-full transition-colors" onclick="event.preventDefault(); removeAssignment(${a.id})" title="Remove Assignment">
+            <svg style="width:14px; height:14px;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </label>
+      `;
+    });
   });
   container.innerHTML = html;
+}
+
+function toggleLevelClasses(masterChk) {
+  const lvl = masterChk.dataset.level;
+  document.querySelectorAll(`#form-assign-inner .class-level-chk[data-level="${lvl}"]`)
+    .forEach(cb => { cb.checked = masterChk.checked; });
+}
+
+function syncLevelHeader(levelName) {
+  const all = document.querySelectorAll(`#form-assign-inner .class-level-chk[data-level="${levelName}"]`);
+  const allChecked = Array.from(all).every(cb => cb.checked);
+  const anyChecked = Array.from(all).some(cb => cb.checked);
+  const hdr = document.querySelector(`#form-assign-inner .level-all-chk[data-level="${levelName}"]`);
+  if (hdr) {
+    hdr.checked       = allChecked;
+    hdr.indeterminate = !allChecked && anyChecked;
+  }
 }
 
 function toggleSelectAllAssignments(master) {
