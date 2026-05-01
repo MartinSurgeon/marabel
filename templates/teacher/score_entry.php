@@ -376,8 +376,8 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 <!-- ── Grid Logic (JS) ────────────────────────────────────────── -->
 <script>
 const CONFIG = {
-  classSubjectId: <?= (int)$classSub['id'] ?>,
-  termId: <?= (int)$classSub['term_id'] ?>,
+  classSubjectId: <?= isset($classSub['id']) ? (int)$classSub['id'] : 0 ?>,
+  termId: <?= isset($classSub['term_id']) ? (int)$classSub['term_id'] : 0 ?>,
   base: '<?= $base ?>',
   csrf: '<?= CSRF::token() ?>'
 };
@@ -617,7 +617,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Keyboard Navigation
     input.addEventListener('keydown', (e) => {
       const idx = Array.from(inputs).indexOf(input);
-      const rowCount = <?= count($studentList) ?>;
+      const rowCount = <?= isset($studentList) ? count($studentList) : 0 ?>;
       const colCount = 5; // fields: class_test, group_work, project, indiv_test, raw_score
 
       if (e.key === 'Enter' || e.key === 'ArrowDown') {

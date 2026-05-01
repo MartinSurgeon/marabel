@@ -92,7 +92,7 @@ const SaveIndicator = {
 };
 
 // ── Sidebar Toggle (Mobile Off-Canvas) ───────────────────────────
-const Sidebar = {
+window.Sidebar = {
   _sidebar: null,
   _backdrop: null,
   _toggle: null,
@@ -115,10 +115,7 @@ const Sidebar = {
     // Backdrop click → close
     this._backdrop.addEventListener('click', () => this.close());
 
-    // Toggle button
-    if (this._toggle) {
-      this._toggle.addEventListener('click', () => this.toggle());
-    }
+    // Toggle button uses inline onclick in header.php for robustness
 
     // Nav items on mobile → close sidebar after navigation
     this._sidebar.querySelectorAll('.nav-item').forEach(item => {
@@ -312,7 +309,7 @@ function proficiencyBadge(level) {
 }
 
 // ── Init on DOM ready ─────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+const initApp = () => {
   // Init sidebar (mobile off-canvas)
   Sidebar.init();
 
@@ -333,4 +330,10 @@ document.addEventListener('DOMContentLoaded', () => {
       item.classList.add('active');
     }
   });
-});
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}

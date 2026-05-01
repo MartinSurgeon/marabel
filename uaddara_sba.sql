@@ -1686,7 +1686,7 @@ CREATE TABLE `users` (
 
 INSERT INTO `users` (`id`, `full_name`, `email`, `phone`, `password_hash`, `role`, `is_active`, `last_login_at`, `created_by`, `created_at`) VALUES
 (1, 'Martin Kwame Agbenyenunse', 'agbenyenusemartin@gmail.com', '0557869989', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'teacher', 1, '2026-03-22 10:12:04', NULL, '2026-03-20 15:57:20'),
-(2, 'System Administrator', 'admin@uaddara.edu.gh', '0240000000', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'admin', 1, '2026-04-04 22:40:54', NULL, '2026-03-20 16:10:00'),
+(2, 'System Administrator', 'admin@uaddara.edu.gh', '0557869989', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'admin', 1, '2026-04-04 22:40:54', NULL, '2026-03-20 16:10:00'),
 (3, 'Samuel Obeng', 'samuel@gmail.com', '0557869989', '$2y$12$F4NS64aGrgwfuvFkuZKgv.n.0hgUid/pZC1kKyrRZ6Qkv5N89RGrK', 'teacher', 1, '2026-03-23 16:06:40', NULL, '2026-03-20 22:30:15'),
 (4, 'agbenyenuse samuel', NULL, '0557869989', NULL, 'parent', 1, NULL, NULL, '2026-03-21 00:15:18'),
 (5, 'Sarkodie ADDO', 'sarkodie@gmail.com', '0502536351', '$2y$10$C06og2XbTLbDyTt.10Hl9.rvA5q4kYlgHGqQazPUxo4iWfxve2NMq', 'teacher', 1, '2026-03-31 12:20:26', NULL, '2026-03-21 08:23:41'),

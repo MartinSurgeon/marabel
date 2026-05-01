@@ -269,7 +269,7 @@ class ScoreController {
                  FROM class_subjects cs
                  JOIN classes c ON cs.class_id = c.id
                  JOIN subjects s ON cs.subject_id = s.id
-                 JOIN school_levels sl ON s.level_id = sl.id
+                 JOIN school_levels sl ON c.level_id = sl.id
                  LEFT JOIN users u ON cs.teacher_id = u.id
                  WHERE {$whereSql}
                  ORDER BY c.class_name ASC, s.sort_order ASC",

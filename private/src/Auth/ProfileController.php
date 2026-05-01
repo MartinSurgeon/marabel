@@ -7,6 +7,7 @@
 require_once PRIVATE_PATH . '/src/Helpers/DB.php';
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
 require_once PRIVATE_PATH . '/src/Helpers/Validator.php';
+require_once PRIVATE_PATH . '/src/Helpers/Notification.php';
 
 class ProfileController {
 
@@ -50,6 +51,16 @@ class ProfileController {
         // 3. Update password
         $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
         DB::execute("UPDATE users SET password_hash = ? WHERE id = ?", [$newHash, $userId]);
+
+        // 4. Security notification
+        $userName = Session::get('user_name', 'your account');
+        Notification::send(
+            $userId,
+            'Password Changed',
+            "Password for {$userName} was successfully updated on " . date('d M Y \a\t H:i') . ". If this wasn't you, contact the administrator immediately.",
+            'warning',
+            '/profile/password'
+        );
 
         Session::flash('success', 'Your password has been changed successfully.');
         

@@ -206,10 +206,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         list.innerHTML = templates.map(rem => `
             <div class="remark-item" onclick="selectRemark('${studentId}', '${field}', \`${rem.replace(/`/g, '\\`')}\`)" 
-                 style="padding:1rem 1.5rem; border-bottom:1px solid var(--clr-border); cursor:pointer; font-size:13px; font-weight:600; color:var(--clr-text);">
+                 style="padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--clr-border); cursor: pointer; font-size: 16px; font-weight: 600; color: var(--clr-text); line-height: 1.4;">
                 ${rem}
             </div>
-        `).join('') || '<div style="padding:2rem; text-align:center; color:var(--clr-text-muted);">No templates saved for this category yet.</div>';
+        `).join('') || '<div style="padding: 3rem 2rem; text-align: center; color: var(--clr-text-muted); font-size: 15px;">No templates saved for this category yet.</div>';
 
         openModal(modalId);
     };
@@ -302,6 +302,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <style>
 .remark-item:hover { background: var(--clr-surface-2); color: var(--clr-primary) !important; }
+
+/* Mobile Optimizations for Remark Picker */
+@media (max-width: 640px) {
+    .remark-item {
+        padding: 1.5rem 1.25rem !important; /* Larger touch area */
+        font-size: 17px !important; /* Even larger for readability */
+    }
+    #modal-remark-picker .modal-title {
+        font-size: 1.4rem;
+    }
+    #modal-remark-picker .modal-close {
+        width: 42px;
+        height: 42px;
+        font-size: 1.5rem;
+    }
+}
 </style>
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>

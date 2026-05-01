@@ -54,11 +54,14 @@ $method   = $_SERVER['REQUEST_METHOD'];
 // Route definitions: [pattern, template, roles_allowed, controller]
 $routes = [
     // ── Public ──────────────────────────────────────────────
-    '/'                         => ['auth/login',          [], 'Auth\\AuthController'],
-    '/login'                    => ['auth/login',          [], 'Auth\\AuthController'],
-    '/logout'                   => ['auth/logout',         [], 'Auth\\AuthController'],
-    '/otp'                      => ['auth/otp',            [], 'Auth\\AuthController'],
-    '/debug'                    => ['debug',               [], null],
+    '/'                              => ['auth/login',                    [], 'Auth\\AuthController'],
+    '/login'                         => ['auth/login',                    [], 'Auth\\AuthController'],
+    '/logout'                        => ['auth/logout',                   [], 'Auth\\AuthController'],
+    '/otp'                           => ['auth/otp',                      [], 'Auth\\AuthController'],
+    '/forgot-password'               => ['auth/forgot_password',          [], 'Auth\\ForgotPasswordController'],
+    '/forgot-password/verify'        => ['auth/forgot_password_verify',   [], 'Auth\\ForgotPasswordController'],
+    '/forgot-password/reset'         => ['auth/forgot_password_reset',    [], 'Auth\\ForgotPasswordController'],
+    '/debug'                         => ['debug',                         [], null],
 
     // ── Admin ────────────────────────────────────────────────
     '/admin'                    => ['admin/dashboard',     ['admin'], 'Admin\\DashboardController'],
