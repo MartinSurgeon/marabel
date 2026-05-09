@@ -66,6 +66,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
     * {
       box-sizing: border-box;
       -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     body {
@@ -427,7 +428,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   <div class="container">
     <div class="header-section">
       <div class="school-logo">
-        <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="Badge" onerror="this.style.visibility='hidden'">
+        <img src="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>" alt="Badge" decoding="async" fetchpriority="high" onerror="this.style.visibility='hidden'">
       </div>
       <div class="school-info">
         <h1><?= htmlspecialchars(Config::get('school_body', 'ARMED FORCES EDUCATION UNIT')) ?></h1>
@@ -436,7 +437,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
       </div>
       <div class="student-photo">
         <?php if ($photoSrc): ?>
-          <img src="<?= htmlspecialchars($photoSrc) ?>" alt="Student">
+          <img src="<?= htmlspecialchars($photoSrc) ?>" alt="Student" decoding="async" fetchpriority="high">
         <?php else: ?>
           <svg fill="#eee" viewBox="0 0 24 24" width="60" height="60">
             <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
@@ -498,7 +499,7 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
             <th style="width:75px;">Class Score<br>(50%)</th>
             <th style="width:75px;">Exam Score<br>(50%)</th>
             <th style="width:75px;">Total Score<br>(100%)</th>
-            <th style="width:65px;"><?= $gradingSystem === 'waec' ? 'Grade' : 'Grade (1-5)' ?></th>
+            <th style="width:65px;"><?= $gradingSystem === 'waec' ? 'Grade' : 'Grade<br>(1-5)' ?></th>
             <th style="width:65px;">Pos.</th>
             <th style="width:180px;"><?= $gradingSystem === 'waec' ? 'Remarks' : 'Proficiency Level' ?></th>
           </tr>

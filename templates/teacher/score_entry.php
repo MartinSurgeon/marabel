@@ -323,6 +323,11 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 .score-row.error {
   background: rgba(var(--clr-danger-rgb), 0.05);
 }
+/* Active Row Highlight (HCI) */
+.score-row.active-row td {
+  background-color: #f5f3ff !important; /* Subtle purple tint */
+  transition: background-color 0.15s ease;
+}
 .alert-float {
   position: fixed;
   bottom: 2rem;
@@ -612,6 +617,16 @@ document.addEventListener('DOMContentLoaded', () => {
         row.classList.add('error');
         updateIndicator('error', err.message || 'Connection lost');
       }
+    });
+
+    // Highlight Active Row (HCI)
+    input.addEventListener('focus', (e) => {
+      const row = e.target.closest('.score-row');
+      if (row) row.classList.add('active-row');
+    });
+    input.addEventListener('blur', (e) => {
+      const row = e.target.closest('.score-row');
+      if (row) row.classList.remove('active-row');
     });
 
     // Keyboard Navigation

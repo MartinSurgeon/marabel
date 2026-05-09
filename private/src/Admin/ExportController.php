@@ -1,8 +1,10 @@
 <?php
 
-class ExportController {
+class ExportController
+{
 
-    public function handle(): void {
+    public function handle(): void
+    {
         Session::requireRole('admin');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -27,7 +29,8 @@ class ExportController {
                             ORDER BY ay.year_name DESC, t.term_number DESC");
     }
 
-    private function generateExport(): void {
+    private function generateExport(): void
+    {
         $type    = $_POST['export_type'] ?? 'students';
         $classId = $_POST['class_id']    ?? 'all';
         $termId  = $_POST['term_id']     ?? 0;
@@ -65,7 +68,8 @@ class ExportController {
         }
     }
 
-    private function exportStudents($classId, $status, array $columns, string $format): void {
+    private function exportStudents(string $classId, string $status, array $columns, string $format): void
+    {
         $params = [];
         $where = ["1=1"];
 
@@ -123,7 +127,8 @@ class ExportController {
         }
     }
 
-    private function exportResults($classId, int $termId, $status, array $columns, string $format): void {
+    private function exportResults(string $classId, int $termId, string $status, array $columns, string $format): void
+    {
         $params = [$termId];
         $where = ["sa.term_id = ?"];
 
@@ -162,7 +167,7 @@ class ExportController {
         if ($includeDetails) {
             // Remove 'subject_breakdown' from physical columns requested mapping
             $columns = array_diff($columns, ['subject_breakdown']);
-            
+
             // Build subjects dynamically
             foreach ($data as &$row) {
                 $subjects = DB::query("
@@ -190,10 +195,10 @@ class ExportController {
             'aggregate_score' => 'Aggregate Score',
             'class_position' => 'Class Position'
         ];
-        
+
         // Pass map and append dynamic ones
-        foreach($columns as $c) {
-            if(!isset($colMap[$c])) $colMap[$c] = $c;
+        foreach ($columns as $c) {
+            if (!isset($colMap[$c])) $colMap[$c] = $c;
         }
 
         $termSuffix = isset($data[0]['term_name']) ? $data[0]['term_name'] : $termId;
@@ -205,7 +210,8 @@ class ExportController {
         }
     }
 
-    private function exportStaff($status, array $columns, string $format): void {
+    private function exportStaff(string $status, array $columns, string $format): void
+    {
         $params = ['teacher'];
         $where = ["u.role = ?"];
 
@@ -249,7 +255,8 @@ class ExportController {
         }
     }
 
-    private function exportAttendance($classId, int $termId, $status, array $columns, string $format): void {
+    private function exportAttendance(string $classId, int $termId, string $status, array $columns, string $format): void
+    {
         $params = [$termId];
         $where = ["a.term_id = ?"];
 
@@ -309,7 +316,8 @@ class ExportController {
         }
     }
 
-    private function exportSmsLogs(array $columns, string $format): void {
+    private function exportSmsLogs(array $columns, string $format): void
+    {
         $query = "
             SELECT
                 DATE_FORMAT(sl.sent_at, '%d-%b-%Y %H:%i') AS sent_at,
@@ -338,7 +346,8 @@ class ExportController {
         }
     }
 
-    private function outputExcel(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
+    private function outputExcel(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void
+    {
         $date = date('Ymd');
         $filename = "{$filenamePrefix} {$date}.xls";
 
@@ -388,27 +397,29 @@ class ExportController {
         echo '</Table></Worksheet></Workbook>' . "\n";
     }
 
-    private function calculateColumnWidths(array $data, array $columns, array $mapping): array {
+    private function calculateColumnWidths(array $data, array $columns, array $mapping): array
+    {
         $widths = [];
         foreach ($columns as $idx => $col) {
             // Header length
             $header = $mapping[$col] ?? $col;
             $maxLen = strlen($header);
-            
+
             // Sample first 100 rows for performance
             $sample = array_slice($data, 0, 100);
             foreach ($sample as $row) {
                 $val = (string)($row[$col] ?? '');
                 if (strlen($val) > $maxLen) $maxLen = strlen($val);
             }
-            
+
             // Constrain width (8.5 multiplier is safer for Excel default fonts)
-            $widths[$idx] = min(60, max(12, ($maxLen * 8.5) / 7)); 
+            $widths[$idx] = min(60, max(12, ($maxLen * 8.5) / 7));
         }
         return $widths;
     }
 
-    private function outputCSV(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void {
+    private function outputCSV(string $filenamePrefix, array $data, array $selectedColumns, array $columnMapping): void
+    {
         $date = date('Ymd');
         $filename = "{$filenamePrefix} {$date}.csv";
 
@@ -418,9 +429,9 @@ class ExportController {
         header('Expires: 0');
 
         $out = fopen('php://output', 'w');
-        
+
         // UTF-8 BOM for Excel compatibility
-        fprintf($out, chr(0xEF).chr(0xBB).chr(0xBF));
+        fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
         // 1. Write Headers based on selected columns
         $headers = [];
@@ -444,7 +455,8 @@ class ExportController {
         fclose($out);
     }
 
-    private function redirect(): void {
+    private function redirect(): void
+    {
         $base = defined('APP_BASE') ? APP_BASE : '';
         header("Location: {$base}/admin/export");
         exit;

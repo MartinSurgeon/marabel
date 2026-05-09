@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Teacher Score Entry Controller
  */
@@ -6,9 +7,11 @@
 require_once PRIVATE_PATH . '/src/Helpers/DB.php';
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
 
-class ScoreController {
+class ScoreController
+{
 
-    public function handle(): void {
+    public function handle(): void
+    {
         Session::requireRole('teacher', 'admin');
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -19,7 +22,8 @@ class ScoreController {
         $this->displayGrid();
     }
 
-    private function displayGrid(): void {
+    private function displayGrid(): void
+    {
         $csId = (int)($_GET['id'] ?? 0);
         if (!$csId) {
             $this->displaySelection();
@@ -84,7 +88,8 @@ class ScoreController {
         $examData    = $examMap;
     }
 
-    private function saveScore(): void {
+    private function saveScore(): void
+    {
         // Start output buffering so any stray PHP warnings/notices
         // don't corrupt the JSON response.
         ob_start();
@@ -154,7 +159,8 @@ class ScoreController {
         }
     }
 
-    private function updateSbaScore($studentId, $csId, $termId, $field, $value): void {
+    private function updateSbaScore($studentId, $csId, $termId, $field, $value): void
+    {
         $exists = DB::queryOne(
             "SELECT id FROM sba_component_scores WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
             [$studentId, $csId, $termId]
@@ -179,19 +185,19 @@ class ScoreController {
              FROM sba_component_scores WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
             [$studentId, $csId, $termId]
         );
-        
-        $subTotal = (float)($scores['individual_test'] ?? 0) + 
-                    (float)($scores['group_work'] ?? 0) + 
-                    (float)($scores['class_test'] ?? 0) + 
-                    (float)($scores['project'] ?? 0);
+
+        $subTotal = (float)($scores['individual_test'] ?? 0) +
+            (float)($scores['group_work'] ?? 0) +
+            (float)($scores['class_test'] ?? 0) +
+            (float)($scores['project'] ?? 0);
 
         // If every component is now null/zero AND the incoming value was null
         // (meaning the teacher cleared the field), delete the row entirely
         // instead of leaving a 0.00 ghost record.
         $allEmpty = ($scores['individual_test'] === null || (float)$scores['individual_test'] === 0.0)
-                 && ($scores['group_work']       === null || (float)$scores['group_work']       === 0.0)
-                 && ($scores['class_test']       === null || (float)$scores['class_test']       === 0.0)
-                 && ($scores['project']          === null || (float)$scores['project']          === 0.0);
+            && ($scores['group_work']       === null || (float)$scores['group_work']       === 0.0)
+            && ($scores['class_test']       === null || (float)$scores['class_test']       === 0.0)
+            && ($scores['project']          === null || (float)$scores['project']          === 0.0);
 
         if ($allEmpty && $value === null) {
             DB::execute(
@@ -210,7 +216,8 @@ class ScoreController {
         );
     }
 
-    private function updateExamScore($studentId, $csId, $termId, $value): void {
+    private function updateExamScore($studentId, $csId, $termId, $value): void
+    {
         $exists = DB::queryOne(
             "SELECT id FROM exam_scores WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
             [$studentId, $csId, $termId]
@@ -232,9 +239,10 @@ class ScoreController {
         }
     }
 
-    private function displaySelection(): void {
+    private function displaySelection(): void
+    {
         $teacherId = Session::userId();
-        
+
         // 1. Get Active Term
         $term = DB::queryOne(
             "SELECT t.*, ay.year_name FROM terms t
