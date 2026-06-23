@@ -33,6 +33,18 @@ $base = defined('APP_BASE') ? APP_BASE : '';
        <!-- Dynamically filled by JS -->
     </div>
 
+    <!-- ── Check Missing Scores ── -->
+    <button id="check-scores-btn" onclick="runMissingCheck()"
+      style="display:inline-flex; align-items:center; gap:6px; padding:8px 14px; font-size:12px; font-weight:700; border-radius:var(--radius-full); border:1.5px solid #f59e0b; background:#fffbeb; color:#b45309; cursor:pointer; transition:background 0.15s; position:relative;"
+      onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='#fffbeb'"
+      title="Highlight students with unfilled score fields">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="14" height="14">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+      Check Scores
+      <span id="missing-badge" style="display:none; position:absolute; top:-7px; right:-7px; background:#ef4444; color:white; font-size:9px; font-weight:900; border-radius:99px; padding:2px 6px; min-width:18px; text-align:center; line-height:1.4;"></span>
+    </button>
+
     <!-- ── Export Dropdown ── -->
     <div class="dropdown relative" id="export-dropdown-wrap">
       <button id="export-btn" class="btn btn-primary" style="border-radius:var(--radius-full); gap:0.5rem;" title="Export score list">
@@ -428,6 +440,76 @@ $base = defined('APP_BASE') ? APP_BASE : '';
   from { opacity: 0; transform: translateY(0); }
   to { opacity: 1; transform: translateY(-8px); }
 }
+
+/* ── Missing Score Highlight ── */
+.table-sba input.score-input.input-missing {
+  outline: 2px solid #f59e0b !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  animation: pulse-amber 1.8s ease infinite;
+}
+@keyframes pulse-amber {
+  0%, 100% { outline-color: #f59e0b; box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
+  50%       { outline-color: #d97706; box-shadow: 0 0 0 4px rgba(245,158,11,0.1); }
+}
+
+/* ── Missing Check Side Panel ── */
+#check-panel {
+  position: fixed;
+  top: 0; right: -400px;
+  width: 380px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 24px rgba(0,0,0,0.12);
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+  font-family: inherit;
+}
+#check-panel.open { right: 0; }
+#check-panel-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background: #fffbeb;
+}
+#check-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+}
+.check-panel-row {
+  padding: 10px 18px;
+  border-bottom: 1px solid #f9fafb;
+  cursor: pointer;
+  transition: background 0.12s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.check-panel-row:hover { background: #fffbeb; }
+.check-panel-row .cp-name { font-size: 13px; font-weight: 700; color: #1e293b; }
+.check-panel-row .cp-id   { font-size: 10px; font-weight: 600; color: #94a3b8; }
+.check-panel-row .cp-missing { font-size: 11px; font-weight: 700; color: #b45309; display:flex; gap:5px; flex-wrap:wrap; margin-top:2px; }
+.cp-tag { background:#fef3c7; border:1px solid #fcd34d; border-radius:4px; padding:1px 6px; font-size:10px; font-weight:800; color:#92400e; }
+#check-panel-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f3f4f6;
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+}
+#check-panel-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.2);
+  z-index: 9998;
+  backdrop-filter: blur(1px);
+}
 </style>
 
 <!-- ── Grid Logic (JS) ────────────────────────────────────────── -->
@@ -708,6 +790,181 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCalculations(row) {
     calculateRow(row);
   }
+
+  // ── Missing Score Checker ────────────────────────────────────────
+  const FIELD_LABELS = {
+    class_test:      'Class Test',
+    group_work:      'Group Work',
+    project:         'Project',
+    individual_test: 'Indiv. Test',
+    raw_score:       'Exam'
+  };
+  const ALL_FIELDS = Object.keys(FIELD_LABELS);
+
+  window.runMissingCheck = function () {
+    // 1. Clear previous highlights
+    document.querySelectorAll('.score-input.input-missing').forEach(el => el.classList.remove('input-missing'));
+
+    const rows   = document.querySelectorAll('.score-row');
+    const issues = [];
+
+    rows.forEach(row => {
+      const missingFields = [];
+      const firstEls      = {};
+
+      ALL_FIELDS.forEach(field => {
+        const inp = row.querySelector(`[data-field="${field}"]`);
+        if (inp && inp.value.trim() === '') {
+          inp.classList.add('input-missing');
+          missingFields.push(field);
+          if (!firstEls.el) firstEls.el = inp;
+        }
+      });
+
+      if (missingFields.length) {
+        const nameEl = row.querySelector('.student-name');
+        const idEl   = row.querySelector('[style*="font-size:10px"]');
+        issues.push({
+          name:    nameEl ? nameEl.textContent.trim() : '—',
+          studentId: idEl ? idEl.textContent.trim() : '',
+          missing: missingFields,
+          firstEl: firstEls.el
+        });
+      }
+    });
+
+    // 2. Update badge
+    const badge = document.getElementById('missing-badge');
+    if (issues.length) {
+      badge.textContent = issues.length;
+      badge.style.display = 'block';
+    } else {
+      badge.style.display = 'none';
+    }
+
+    // 3. Build/show panel
+    renderCheckPanel(issues);
+  };
+
+  function renderCheckPanel(issues) {
+    // Create panel if not exists
+    let panel = document.getElementById('check-panel');
+    let overlay = document.getElementById('check-panel-overlay');
+
+    if (!panel) {
+      overlay = document.createElement('div');
+      overlay.id = 'check-panel-overlay';
+      overlay.addEventListener('click', closeCheckPanel);
+      document.body.appendChild(overlay);
+
+      panel = document.createElement('div');
+      panel.id = 'check-panel';
+      document.body.appendChild(panel);
+    }
+
+    const allCount = document.querySelectorAll('.score-row').length;
+
+    panel.innerHTML = `
+      <div id="check-panel-header">
+        <div>
+          <div style="font-size:13px; font-weight:900; color:#92400e; display:flex; align-items:center; gap:6px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>
+            Score Completion Check
+          </div>
+          <div style="font-size:11px; color:#b45309; margin-top:3px;">
+            ${ issues.length === 0
+              ? `<span style="color:#16a34a; font-weight:800;">✓ All ${allCount} students have complete scores!</span>`
+              : `<strong>${issues.length}</strong> of ${allCount} students have missing entries`
+            }
+          </div>
+        </div>
+        <button onclick="closeCheckPanel()" style="border:none; background:transparent; cursor:pointer; color:#b45309; padding:4px; border-radius:6px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="check-panel-body">
+        ${ issues.length === 0 ? `
+          <div style="padding:3rem 2rem; text-align:center; color:#16a34a;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="48" height="48" style="margin:0 auto 1rem; display:block; opacity:0.7;"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <div style="font-weight:800; font-size:14px;">All scores filled in!</div>
+            <div style="font-size:12px; opacity:0.8; margin-top:4px;">Every student has entries in all score fields.</div>
+          </div>
+        ` : issues.map((issue, idx) => `
+          <div class="check-panel-row" onclick="jumpToStudent(${idx})" data-issue-idx="${idx}">
+            <div class="cp-name">${escHtml(issue.name)}</div>
+            <div class="cp-id">${escHtml(issue.studentId)}</div>
+            <div class="cp-missing">
+              ${issue.missing.map(f => `<span class="cp-tag">${FIELD_LABELS[f]}</span>`).join('')}
+            </div>
+          </div>
+        `).join('')
+        }
+      </div>
+      <div id="check-panel-footer">
+        ${ issues.length > 0 ? `
+          <button onclick="clearMissingHighlights()" style="flex:1; padding:8px; font-size:12px; font-weight:700; border:1.5px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; color:var(--clr-text-muted);">
+            Clear Highlights
+          </button>
+        ` : '' }
+        <button onclick="closeCheckPanel()" style="flex:1; padding:8px; font-size:12px; font-weight:700; border:none; background:#f59e0b; color:white; border-radius:8px; cursor:pointer;">
+          ${ issues.length === 0 ? 'Close' : 'Dismiss' }
+        </button>
+      </div>
+    `;
+
+    // Store issues on panel for jump reference
+    panel._issues = issues;
+
+    overlay.style.display = 'block';
+    requestAnimationFrame(() => panel.classList.add('open'));
+  }
+
+  window.jumpToStudent = function(idx) {
+    const panel  = document.getElementById('check-panel');
+    const issues = panel._issues;
+    if (!issues || !issues[idx]) return;
+
+    const issue = issues[idx];
+    closeCheckPanel();
+
+    // Scroll the table container to show the row, then focus the first empty input
+    setTimeout(() => {
+      if (issue.firstEl) {
+        issue.firstEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        issue.firstEl.focus();
+        // Brief flash to draw attention
+        issue.firstEl.style.transition = 'transform 0.15s';
+        issue.firstEl.style.transform = 'scale(1.15)';
+        setTimeout(() => { issue.firstEl.style.transform = ''; }, 300);
+      }
+    }, 350);
+  };
+
+  window.clearMissingHighlights = function() {
+    document.querySelectorAll('.score-input.input-missing').forEach(el => el.classList.remove('input-missing'));
+    const badge = document.getElementById('missing-badge');
+    if (badge) badge.style.display = 'none';
+    closeCheckPanel();
+  };
+
+  window.closeCheckPanel = function() {
+    const panel   = document.getElementById('check-panel');
+    const overlay = document.getElementById('check-panel-overlay');
+    if (panel)   panel.classList.remove('open');
+    if (overlay) overlay.style.display = 'none';
+  };
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // Auto-remove missing highlight once a value is typed into that cell
+  document.querySelectorAll('.score-input').forEach(inp => {
+    inp.addEventListener('input', () => {
+      if (inp.value.trim() !== '') inp.classList.remove('input-missing');
+    });
+  });
+
 });
 </script>
 
