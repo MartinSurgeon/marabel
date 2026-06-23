@@ -143,19 +143,46 @@ $userName = Session::get('user_name', 'Teacher');
             <p class="text-muted" style="font-size: 14px; line-height: 1.5; margin-bottom: 1.5rem;">
                 You are assigned to teach <strong><?= count($mySubjects) ?></strong> subject-class combination<?= count($mySubjects) > 1 ? 's' : '' ?>.
             </p>
-            <div style="max-height: 120px; overflow-y: auto; padding-right: 0.5rem; margin-bottom: 2rem;">
+            <div style="max-height: 180px; overflow-y: auto; padding-right: 0.5rem; margin-bottom: 1.5rem;">
                 <?php foreach ($mySubjects as $s): ?>
-                <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--clr-border); font-size: 13px;">
-                    <span style="font-weight: 700; color: var(--clr-text);"><?= htmlspecialchars($s['subject_name']) ?></span>
-                    <span class="text-muted"><?= htmlspecialchars($s['class_name'] . ($s['section'] ? " ({$s['section']})" : '')) ?></span>
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--clr-border); font-size: 13px;">
+                    <div style="display:flex; flex-direction:column;">
+                        <span style="font-weight: 700; color: var(--clr-text);"><?= htmlspecialchars($s['subject_name']) ?></span>
+                        <span class="text-muted" style="font-size:11px;"><?= htmlspecialchars($s['class_name'] . ($s['section'] ? " ({$s['section']})" : '')) ?></span>
+                    </div>
+                    <!-- Per-subject print button -->
+                    <a href="<?= $base ?>/teacher/export-scores?id=<?= $s['class_subject_id'] ?>&format=pdf"
+                       target="_blank"
+                       title="Print class list for <?= htmlspecialchars($s['subject_name']) ?>"
+                       style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:7px; background:#f5f3ff; border:1.5px solid #ede9fe; color:#6d28d9; flex-shrink:0; transition:background 0.15s;"
+                       onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="14" height="14">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+                      </svg>
+                    </a>
                 </div>
                 <?php endforeach; ?>
             </div>
         </div>
-        <a href="<?= $base ?>/teacher/scores" class="btn btn-primary" style="justify-content: center;">
-            Enter Scores & Track Progress
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16" class="ml-2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        </a>
+        <!-- CTA Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <?php if (count($mySubjects) > 1): ?>
+          <!-- Bulk Print All -->
+          <a href="<?= $base ?>/teacher/export-scores?id=all&format=pdf"
+             target="_blank"
+             style="display:flex; align-items:center; justify-content:center; gap:8px; padding:10px 16px; font-size:12px; font-weight:700; color:#6d28d9; background:#f5f3ff; border:1.5px solid #ede9fe; border-radius:var(--radius-lg); text-decoration:none; transition:background 0.15s;"
+             onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2" width="15" height="15">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+            </svg>
+            Print All Class Lists (<?= count($mySubjects) ?> Subjects)
+          </a>
+          <?php endif; ?>
+          <a href="<?= $base ?>/teacher/scores" class="btn btn-primary" style="justify-content: center;">
+              Enter Scores &amp; Track Progress
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16" class="ml-2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+          </a>
+        </div>
     </div>
     <?php endif; ?>
 
