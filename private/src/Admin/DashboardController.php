@@ -102,14 +102,14 @@ class DashboardController {
             SELECT 
                 (SELECT SUM(student_count * subject_count) FROM (
                     SELECT c.id, 
-                           (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.status = 'active') as student_count,
+                           (SELECT COUNT(*) FROM students s WHERE s.current_class_id = c.id AND s.academic_year_id = ? AND s.status = 'active') as student_count,
                            (SELECT COUNT(*) FROM class_subjects cs WHERE cs.class_id = c.id AND cs.term_id = ?) as subject_count
                     FROM classes c 
                     WHERE c.academic_year_id = ?
                 ) as expected) as expected_scores,
-                (SELECT COUNT(*) FROM sba_component_scores WHERE term_id = ?) as entered_sba,
-                (SELECT COUNT(*) FROM exam_scores WHERE term_id = ?) as entered_exam
-        ", [$activeTerm['id'], $activeYear['id'], $activeTerm['id'], $activeTerm['id']]);
+                (SELECT COUNT(*) FROM sba_component_scores WHERE term_id = ? AND (sub_total IS NOT NULL OR class_score IS NOT NULL)) as entered_sba,
+                (SELECT COUNT(*) FROM exam_scores WHERE term_id = ? AND (exam_score IS NOT NULL OR raw_score IS NOT NULL)) as entered_exam
+        ", [$activeYear['id'], $activeTerm['id'], $activeYear['id'], $activeTerm['id'], $activeTerm['id']]);
 
         $gradingProgress = [
             'expected_scores' => (int)($progressStats['expected_scores'] ?? 0),

@@ -1,4 +1,4 @@
-<?php
+ <?php
 /**
  * Promotion Controller
  * Handles student promotion between academic years.
@@ -28,7 +28,7 @@ class PromotionController {
         }
 
         // ── Prepare view data ─────────────────────────────────────────
-        global $pageYear, $yearsList, $classesSummary, $nextYearsList;
+        global $pageYear, $yearsList, $classesSummary, $nextYearsList, $targetYearClasses;
 
         $yearsList = DB::query("SELECT id, year_name FROM academic_years ORDER BY year_name DESC");
 
@@ -47,6 +47,18 @@ class PromotionController {
             "SELECT id, year_name FROM academic_years WHERE id != ? ORDER BY year_name DESC",
             [$filterYearId]
         );
+        // Build lookup of classes in each target year (for smart next-class dropdown)
+        $targetYearClasses = [];
+        foreach ($nextYearsList as $ny) {
+            $targetYearClasses[$ny['id']] = DB::query(
+                "SELECT c.id, c.class_name, c.section, sl.sort_order as level_sort
+                 FROM classes c
+                 JOIN school_levels sl ON sl.id = c.level_id
+                 WHERE c.academic_year_id = ?
+                 ORDER BY sl.sort_order, c.class_name, c.section",
+                [$ny['id']]
+            );
+        }
 
         // Summarise each class: total students, auto-promotable, needs manual review
         if ($filterYearId) {
@@ -63,22 +75,54 @@ class PromotionController {
             $classesSummary = DB::query(
                 "SELECT
                     c.id, c.class_name, c.section, sl.name as level_name, sl.code as level_code,
-                    (SELECT COUNT(*) FROM students s 
-                     WHERE (s.current_class_id = c.id AND s.academic_year_id = c.academic_year_id)
-                        OR s.id IN (SELECT student_id FROM student_promotions sp WHERE sp.academic_year_id = c.academic_year_id AND sp.student_id = s.id)
-                    ) as total_students,
-                    SUM(CASE WHEN sp.promotion_status = 'promoted' THEN 1 ELSE 0 END) as promoted_count,
-                    SUM(CASE WHEN sp.promotion_status = 'repeated' THEN 1 ELSE 0 END) as repeated_count,
-                    SUM(CASE WHEN (sp.promotion_status = 'pending' OR sp.promotion_status IS NULL) AND s.id IS NOT NULL THEN 1 ELSE 0 END) as pending_count
+                    CASE
+                        WHEN c.class_name = 'BASIC 1' THEN 'BASIC 2'
+                        WHEN c.class_name = 'BASIC 2' THEN 'BASIC 3'
+                        WHEN c.class_name = 'BASIC 3' THEN 'BASIC 4'
+                        WHEN c.class_name = 'BASIC 4' THEN 'BASIC 5'
+                        WHEN c.class_name = 'BASIC 5' THEN 'BASIC 6'
+                        WHEN c.class_name = 'BASIC 6' THEN 'BASIC 7'
+                        WHEN c.class_name = 'BASIC 7' THEN 'BASIC 8'
+                        WHEN c.class_name = 'BASIC 8' THEN 'BASIC 9'
+                        ELSE 'Graduated'
+                    END as expected_next_class
                  FROM classes c
                  JOIN school_levels sl ON sl.id = c.level_id
-                 LEFT JOIN students s ON s.current_class_id = c.id AND s.status = 'active' AND s.academic_year_id = c.academic_year_id
-                 LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = c.academic_year_id
                  $where
-                 GROUP BY c.id, c.class_name, c.section, sl.name, sl.code
                  ORDER BY sl.sort_order, c.class_name",
                 $params
             );
+
+            foreach ($classesSummary as &$csItem) {
+                $cid = (int)$csItem['id'];
+                $expNext = $csItem['expected_next_class'];
+                $cName = $csItem['class_name'];
+
+                $counts = DB::queryOne("
+                    SELECT 
+                        COUNT(DISTINCT s.id) as total_students,
+                        COUNT(DISTINCT CASE WHEN sp.promotion_status = 'promoted' THEN s.id END) as promoted_count,
+                        COUNT(DISTINCT CASE WHEN sp.promotion_status = 'repeated' THEN s.id END) as repeated_count
+                    FROM students s
+                    LEFT JOIN student_aggregates sa ON sa.student_id = s.id AND sa.class_id = ?
+                    LEFT JOIN class_subjects csb ON csb.class_id = ?
+                    LEFT JOIN computed_scores cs ON cs.student_id = s.id AND cs.class_subject_id = csb.id
+                    LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ?
+                    WHERE (s.current_class_id = ? AND s.academic_year_id = ?)
+                       OR sa.student_id IS NOT NULL
+                       OR cs.student_id IS NOT NULL
+                       OR (sp.academic_year_id = ? AND (sp.next_class_name = ? OR (sp.promotion_status = 'repeated' AND sp.next_class_name = ?)))
+                ", [$cid, $cid, $filterYearId, $cid, $filterYearId, $filterYearId, $expNext, $cName]);
+
+                $tot = (int)($counts['total_students'] ?? 0);
+                $pro = (int)($counts['promoted_count'] ?? 0);
+                $rep = (int)($counts['repeated_count'] ?? 0);
+
+                $csItem['total_students'] = $tot;
+                $csItem['promoted_count'] = $pro;
+                $csItem['repeated_count'] = $rep;
+                $csItem['pending_count']  = max(0, $tot - ($pro + $rep));
+            }
         } else {
             $classesSummary = [];
         }
@@ -118,66 +162,187 @@ class PromotionController {
 
         $students = DB::query(
             "SELECT s.id, s.full_name,
-                    COALESCE(sa.aggregate_score, 0) as aggregate_score,
-                    COALESCE(sa.number_of_subjects, 0) as subject_count
+                    COALESCE(SUM(sa.aggregate_score), 0) as aggregate_score,
+                    COALESCE(SUM(sa.number_of_subjects), 0) as subject_count
              FROM students s
              LEFT JOIN student_aggregates sa ON sa.student_id = s.id AND sa.class_id = ?
-             WHERE s.current_class_id = ? AND s.status = 'active' AND s.academic_year_id = ?",
-            [$classId, $classId, $yearId]
+             WHERE (s.current_class_id = ? AND s.academic_year_id = ? AND s.status = 'active')
+                OR (s.status = 'active' AND s.id IN (
+                    SELECT sa2.student_id FROM student_aggregates sa2
+                    JOIN terms t ON t.id = sa2.term_id
+                    WHERE sa2.class_id = ? AND t.academic_year_id = ?
+                ))
+                OR (s.status = 'active' AND s.id IN (
+                    SELECT cs.student_id FROM computed_scores cs
+                    JOIN class_subjects csb ON csb.id = cs.class_subject_id
+                    WHERE csb.class_id = ? AND csb.term_id IN (SELECT id FROM terms WHERE academic_year_id = ?)
+                ))
+             GROUP BY s.id, s.full_name",
+            [$classId, $classId, $yearId, $classId, $yearId, $classId, $yearId]
         );
 
-        $termId   = $term['id'] ?? null;
-        $promoted = 0;
-        $repeated = 0;
+        try {
+            DB::beginTransaction();
 
-        // Try to find the target class ID in the next year if a name was provided
-        $nextClassId = null;
-        if ($nextClass) {
-            $nc = DB::queryOne("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1", [$nextClass, $nextYearId]);
-            $nextClassId = $nc['id'] ?? null;
-        }
+            $termId   = $term['id'] ?? null;
+            $promoted = 0;
+            $repeated = 0;
 
-        foreach ($students as $student) {
-            $sid = $student['id'];
-
-            // Calculate average score if they have subjects
-            $avgScore = ($student['subject_count'] > 0)
-                ? ($student['aggregate_score'] / ($student['subject_count'] * 100)) * 100
-                : 0;
-
-            $status = ($avgScore >= $threshold) ? 'promoted' : 'repeated';
-
-            // Upsert promotion record
-            DB::execute(
-                "INSERT INTO student_promotions
-                    (student_id, academic_year_id, term_id, auto_promoted, promotion_status, next_class_name, set_by)
-                 VALUES (?, ?, ?, 1, ?, ?, ?)
-                 ON DUPLICATE KEY UPDATE
-                    auto_promoted = 1, promotion_status = ?, next_class_name = ?, set_by = ?",
-                [
-                    $sid, $yearId, $termId ?? 0, $status, $nextClass, Session::get('user_id'),
-                    $status, $nextClass, Session::get('user_id')
-                ]
-            );
-
-            if ($status === 'promoted') {
-                // Update student to new year AND target class if found
-                $sql = "UPDATE students SET academic_year_id = ?";
-                $p   = [$nextYearId];
-                if ($nextClassId) {
-                    $sql .= ", current_class_id = ?";
-                    $p[] = $nextClassId;
-                }
-                $sql .= " WHERE id = ?";
-                $p[] = $sid;
-                DB::execute($sql, $p);
-                $promoted++;
-            } else {
-                $repeated++;
+            // Try to find or auto-create the target class ID in the next year if a name was provided
+            $nextClassId = null;
+            if ($nextClass) {
+                $nextClassId = self::findOrCreateTargetClass($nextClass, $nextYearId, $classId);
             }
+
+            foreach ($students as $student) {
+                $sid = $student['id'];
+
+                // Calculate average score if they have subjects
+                $avgScore = ($student['subject_count'] > 0)
+                    ? ($student['aggregate_score'] / ($student['subject_count'] * 100)) * 100
+                    : 0;
+
+                $status = ($avgScore >= $threshold) ? 'promoted' : 'repeated';
+
+                // Upsert promotion record
+                DB::execute(
+                    "INSERT INTO student_promotions
+                        (student_id, academic_year_id, term_id, auto_promoted, promotion_status, next_class_name, set_by)
+                     VALUES (?, ?, ?, 1, ?, ?, ?)
+                     ON DUPLICATE KEY UPDATE
+                        auto_promoted = 1, promotion_status = ?, next_class_name = ?, set_by = ?",
+                    [
+                        $sid, $yearId, $termId ?? 0, $status, $nextClass, Session::get('user_id'),
+                        $status, $nextClass, Session::get('user_id')
+                    ]
+                );
+
+                if ($status === 'promoted') {
+                    // Update student to new year AND target class
+                    $sql = "UPDATE students SET academic_year_id = ?";
+                    $p   = [$nextYearId];
+                    if ($nextClassId) {
+                        $sql .= ", current_class_id = ?";
+                        $p[] = $nextClassId;
+                    }
+                    $sql .= " WHERE id = ?";
+                    $p[] = $sid;
+                    DB::execute($sql, $p);
+                    $promoted++;
+                } else {
+                    $repeated++;
+                }
+            }
+
+            // ── Teacher Rollover ─────────────────────────────────────
+            $rolloverTeachers = !empty($_POST['rollover_teachers']);
+            $rolloverMsg = '';
+
+            if ($rolloverTeachers && $nextYearId) {
+                // 1. Find the current class details (name + level_id) to match in target year
+                $currentClass = DB::queryOne(
+                    "SELECT class_name, section, level_id, grading_system FROM classes WHERE id = ?",
+                    [$classId]
+                );
+
+                if ($currentClass) {
+                    // 2. Find or auto-create the equivalent class in the target academic year
+                    $targetClass = DB::queryOne(
+                        "SELECT id FROM classes WHERE class_name = ? AND level_id = ? AND academic_year_id = ? LIMIT 1",
+                        [$currentClass['class_name'], $currentClass['level_id'], $nextYearId]
+                    );
+
+                    if (!$targetClass) {
+                        $targetClassId = (int)DB::insert(
+                            "INSERT INTO classes (level_id, class_name, section, academic_year_id, grading_system) VALUES (?, ?, ?, ?, ?)",
+                            [$currentClass['level_id'], $currentClass['class_name'], $currentClass['section'] ?? '', $nextYearId, $currentClass['grading_system'] ?? 'proficiency']
+                        );
+                    } else {
+                        $targetClassId = (int)$targetClass['id'];
+                    }
+
+                    if ($targetClassId) {
+                        // 3. Copy Form Masters (class_teachers)
+                        $formMasters = DB::query(
+                            "SELECT teacher_id FROM class_teachers WHERE class_id = ?",
+                            [$classId]
+                        );
+                        foreach ($formMasters as $fm) {
+                            DB::execute(
+                                "INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)",
+                                [$targetClassId, $fm['teacher_id']]
+                            );
+                        }
+
+                        // 4. Find or create Term 1 in the target academic year
+                        $targetTerm = DB::queryOne(
+                            "SELECT id FROM terms WHERE academic_year_id = ? ORDER BY term_number ASC LIMIT 1",
+                            [$nextYearId]
+                        );
+
+                        if (!$targetTerm) {
+                            // Auto-create Term 1 for the target year
+                            $newTermId = DB::insert(
+                                "INSERT INTO terms (academic_year_id, name, term_number, is_active) VALUES (?, 'Term 1', 1, 0)",
+                                [$nextYearId]
+                            );
+                            $targetTermId = $newTermId;
+                            $rolloverMsg .= ' (Term 1 auto-created)';
+                        } else {
+                            $targetTermId = $targetTerm['id'];
+                        }
+
+                        // 5. Copy subject assignments (class_subjects) from current class & term
+                        $currentTermId = $term['id'] ?? null;
+                        if ($currentTermId) {
+                            $subjectAssignments = DB::query(
+                                "SELECT subject_id, teacher_id FROM class_subjects WHERE class_id = ? AND term_id = ?",
+                                [$classId, $currentTermId]
+                            );
+
+                            $assignedCount = 0;
+                            foreach ($subjectAssignments as $sa) {
+                                // Check if this class/subject/term combo already exists in target
+                                $exists = DB::queryOne(
+                                    "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
+                                    [$targetClassId, $sa['subject_id'], $targetTermId]
+                                );
+
+                                if ($exists) {
+                                    // Update teacher assignment
+                                    DB::execute(
+                                        "UPDATE class_subjects SET teacher_id = ? WHERE id = ?",
+                                        [$sa['teacher_id'], $exists['id']]
+                                    );
+                                } else {
+                                    DB::insert(
+                                        "INSERT INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
+                                        [$targetClassId, $sa['subject_id'], $sa['teacher_id'], $targetTermId]
+                                    );
+                                }
+                                $assignedCount++;
+                            }
+                            if ($assignedCount > 0) {
+                                $rolloverMsg .= " — {$assignedCount} subject teacher(s) automatically assigned to the new session.";
+                            }
+                        }
+                    } else {
+                        $rolloverMsg = ' — Teacher assignments skipped: Target class not found.';
+                    }
+                }
+            }
+
+            DB::commit();
+            $msg = "Done! {$promoted} student(s) promoted, {$repeated} repeating.";
+            if ($rolloverMsg) {
+                $msg .= $rolloverMsg;
+            }
+            Session::flash('success', $msg);
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', 'Promotion failed: ' . $e->getMessage());
         }
 
-        Session::flash('success', "Auto-promotion complete: {$promoted} promoted, {$repeated} held back.");
         $this->redirect($yearId);
     }
 
@@ -215,40 +380,51 @@ class PromotionController {
             [$yearId]
         );
 
-        DB::execute(
-            "INSERT INTO student_promotions
-                (student_id, academic_year_id, term_id, auto_promoted, manual_override, promotion_status, next_class_name, set_by)
-             VALUES (?, ?, ?, 0, 1, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE
-                auto_promoted = 0, manual_override = 1, promotion_status = ?, next_class_name = ?, set_by = ?",
-            [
-                $studentId, $yearId, $term['id'] ?? 0, $status, $nextClass, Session::get('user_id'),
-                $status, $nextClass, Session::get('user_id')
-            ]
-        );
+        try {
+            DB::beginTransaction();
 
-        if ($status === 'promoted' && $nextYearId) {
-            // Try to find target class ID in next year
-            $nextClassId = null;
-            if ($nextClass) {
-                $nc = DB::queryOne("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1", [$nextClass, $nextYearId]);
-                $nextClassId = $nc['id'] ?? null;
+            DB::execute(
+                "INSERT INTO student_promotions
+                    (student_id, academic_year_id, term_id, auto_promoted, manual_override, promotion_status, next_class_name, set_by)
+                 VALUES (?, ?, ?, 0, 1, ?, ?, ?)
+                 ON DUPLICATE KEY UPDATE
+                    auto_promoted = 0, manual_override = 1, promotion_status = ?, next_class_name = ?, set_by = ?",
+                [
+                    $studentId, $yearId, $term['id'] ?? 0, $status, $nextClass, Session::get('user_id'),
+                    $status, $nextClass, Session::get('user_id')
+                ]
+            );
+
+            if ($status === 'promoted' && $nextYearId) {
+                // Try to find or auto-create target class in next year
+                $nextClassId = null;
+                if ($nextClass) {
+                    $currentStudent = DB::queryOne("SELECT current_class_id FROM students WHERE id = ?", [$studentId]);
+                    $srcClassId = (int)($currentStudent['current_class_id'] ?? 0);
+                    $nextClassId = self::findOrCreateTargetClass($nextClass, $nextYearId, $srcClassId);
+                }
+
+                $sql = "UPDATE students SET academic_year_id = ?";
+                $p   = [$nextYearId];
+                if ($nextClassId) {
+                    $sql .= ", current_class_id = ?";
+                    $p[] = $nextClassId;
+                }
+                $sql .= " WHERE id = ?";
+                $p[] = $studentId;
+                DB::execute($sql, $p);
             }
 
-            $sql = "UPDATE students SET academic_year_id = ?";
-            $p   = [$nextYearId];
-            if ($nextClassId) {
-                $sql .= ", current_class_id = ?";
-                $p[] = $nextClassId;
-            }
-            $sql .= " WHERE id = ?";
-            $p[] = $studentId;
-            DB::execute($sql, $p);
+            DB::commit();
+
+            $student = DB::queryOne("SELECT full_name FROM students WHERE id = ?", [$studentId]);
+            $label   = $status === 'promoted' ? 'passed to next class' : 'set to repeat class';
+            Session::flash('success', "Updated result for {$student['full_name']}: {$label}.");
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', 'Manual promotion failed: ' . $e->getMessage());
         }
 
-        $student = DB::queryOne("SELECT full_name FROM students WHERE id = ?", [$studentId]);
-        $label   = $status === 'promoted' ? 'promoted' : 'held back';
-        Session::flash('success', "{$student['full_name']} has been manually {$label}.");
         $this->redirect($yearId);
     }
 
@@ -273,26 +449,42 @@ class PromotionController {
             }
         }
 
-        // Find all students who have a promotion record for this class/year
-        $promoStudents = DB::query("SELECT student_id FROM student_promotions WHERE academic_year_id = ? AND student_id IN (SELECT id FROM students WHERE current_class_id = ? OR id IN (SELECT student_id FROM student_promotions WHERE academic_year_id = ?))", [$yearId, $classId, $yearId]);
-        
-        // Actually, we need to find students who ARE currently or WERE in this class
+        // Scope cleanly to students who belong or belonged to this specific class for this academic year
         $students = DB::query("
-            SELECT s.id FROM students s
+            SELECT DISTINCT s.id FROM students s
             LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ?
-            WHERE s.current_class_id = ? OR (sp.student_id IS NOT NULL AND sp.academic_year_id = ?)
-        ", [$yearId, $classId, $yearId]);
+            WHERE (s.current_class_id = ? AND s.academic_year_id = ?)
+               OR (sp.student_id IS NOT NULL AND s.id IN (
+                   SELECT sa.student_id FROM student_aggregates sa
+                   JOIN terms t ON t.id = sa.term_id
+                   WHERE sa.class_id = ? AND t.academic_year_id = ?
+               ))
+               OR (sp.student_id IS NOT NULL AND s.id IN (
+                   SELECT cs.student_id FROM computed_scores cs
+                   JOIN class_subjects csb ON csb.id = cs.class_subject_id
+                   WHERE csb.class_id = ? AND csb.term_id IN (SELECT id FROM terms WHERE academic_year_id = ?)
+               ))
+        ", [$yearId, $classId, $yearId, $classId, $yearId, $classId, $yearId]);
 
-        $count = 0;
-        foreach ($students as $s) {
-            // Revert year to the source year
-            DB::execute("UPDATE students SET academic_year_id = ?, current_class_id = ? WHERE id = ?", [$yearId, $classId, $s['id']]);
-            // Delete promotion record
-            DB::execute("DELETE FROM student_promotions WHERE student_id = ? AND academic_year_id = ?", [$s['id'], $yearId]);
-            $count++;
+        try {
+            DB::beginTransaction();
+
+            $count = 0;
+            foreach ($students as $s) {
+                // Revert year and class to the source year and class
+                DB::execute("UPDATE students SET academic_year_id = ?, current_class_id = ? WHERE id = ?", [$yearId, $classId, $s['id']]);
+                // Delete promotion record for this source year
+                DB::execute("DELETE FROM student_promotions WHERE student_id = ? AND academic_year_id = ?", [$s['id'], $yearId]);
+                $count++;
+            }
+
+            DB::commit();
+            Session::flash('success', "Promotion reset for {$count} student(s). They are now back in their original session.");
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', 'Failed to reset promotion: ' . $e->getMessage());
         }
 
-        Session::flash('success', "Promotion reset for {$count} students. They are now back in their original session.");
         $this->redirect($yearId);
     }
 
@@ -319,17 +511,42 @@ class PromotionController {
             }
         }
 
+        $cls = DB::queryOne("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+        $cName = $cls['class_name'] ?? '';
+        $expectedNext = match($cName) {
+            'BASIC 1' => 'BASIC 2',
+            'BASIC 2' => 'BASIC 3',
+            'BASIC 3' => 'BASIC 4',
+            'BASIC 4' => 'BASIC 5',
+            'BASIC 5' => 'BASIC 6',
+            'BASIC 6' => 'BASIC 7',
+            'BASIC 7' => 'BASIC 8',
+            'BASIC 8' => 'BASIC 9',
+            default   => 'Graduated',
+        };
+
         $students = DB::query(
-            "SELECT s.id, s.full_name, s.student_id_number, s.gender,
+            "SELECT DISTINCT s.id, s.full_name, s.student_id_number, s.gender,
                     COALESCE(sa.aggregate_score, 0) as aggregate_score,
                     COALESCE(sa.number_of_subjects, 0) as subject_count,
                     sp.promotion_status
              FROM students s
              LEFT JOIN student_aggregates sa ON sa.student_id = s.id AND sa.class_id = ?
              LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ?
-             WHERE s.current_class_id = ? AND s.status = 'active' AND s.academic_year_id = ?
+             WHERE (s.current_class_id = ? AND s.academic_year_id = ? AND s.status = 'active')
+                OR (s.status = 'active' AND s.id IN (
+                    SELECT sa2.student_id FROM student_aggregates sa2
+                    JOIN terms t ON t.id = sa2.term_id
+                    WHERE sa2.class_id = ? AND t.academic_year_id = ?
+                ))
+                OR (s.status = 'active' AND s.id IN (
+                    SELECT cs.student_id FROM computed_scores cs
+                    JOIN class_subjects csb ON csb.id = cs.class_subject_id
+                    WHERE csb.class_id = ? AND csb.term_id IN (SELECT id FROM terms WHERE academic_year_id = ?)
+                ))
+                OR (s.status = 'active' AND sp.academic_year_id = ? AND (sp.next_class_name = ? OR (sp.promotion_status = 'repeated' AND sp.next_class_name = ?)))
              ORDER BY s.gender ASC, s.full_name ASC",
-            [$classId, $yearId, $classId, $yearId]
+            [$classId, $yearId, $classId, $yearId, $classId, $yearId, $classId, $yearId, $yearId, $expectedNext, $cName]
         );
 
         // Calculate percentage average per student
@@ -342,6 +559,41 @@ class PromotionController {
         header('Content-Type: application/json');
         echo json_encode(['students' => $students]);
         exit;
+    }
+
+    /**
+     * Find existing class in target academic year, or auto-create it if missing.
+     */
+    public static function findOrCreateTargetClass(string $className, int $targetYearId, int $sourceClassId): int {
+        $className = strtoupper(trim($className));
+        if (!$className || !$targetYearId) return 0;
+
+        $existing = DB::queryOne(
+            "SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1",
+            [$className, $targetYearId]
+        );
+        if ($existing) {
+            return (int)$existing['id'];
+        }
+
+        // Determine level_id and grading_system from source class or infer from name
+        $currClass = $sourceClassId ? DB::queryOne("SELECT level_id, section, grading_system FROM classes WHERE id = ?", [$sourceClassId]) : null;
+        $levelId   = $currClass['level_id'] ?? 1;
+        $grading   = $currClass['grading_system'] ?? 'proficiency';
+        $section   = $currClass['section'] ?? '';
+
+        // Infer level from class name if it follows standard Basic school structure (B1-B3 = LP, B4-B6 = UP, B7-B9 = JHS)
+        if (preg_match('/(?:BASIC|B)\s*([1-9])/i', $className, $m)) {
+            $num = (int)$m[1];
+            if ($num <= 3) $levelId = 1;
+            elseif ($num <= 6) $levelId = 2;
+            else $levelId = 3;
+        }
+
+        return (int)DB::insert(
+            "INSERT INTO classes (level_id, class_name, section, academic_year_id, grading_system) VALUES (?, ?, ?, ?, ?)",
+            [$levelId, $className, $section, $targetYearId, $grading]
+        );
     }
 
     private function redirect(int $yearId = 0): never {

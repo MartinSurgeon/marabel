@@ -112,47 +112,57 @@ class StudentImportController {
         $skipped   = 0;
         $rowErrors = [];
         $lineNum   = 1;
+        $defaultPinHash = password_hash('1234', PASSWORD_BCRYPT);
 
-        while (($row = fgetcsv($handle)) !== false) {
-            $lineNum++;
-            $fullName = strtoupper(trim($row[$nameIdx] ?? ''));
-            if ($fullName === '') {
-                $skipped++;
-                continue; // blank row
+        try {
+            DB::beginTransaction();
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $lineNum++;
+                $fullName = strtoupper(trim($row[$nameIdx] ?? ''));
+                if ($fullName === '') {
+                    $skipped++;
+                    continue; // blank row
+                }
+
+                $className   = strtoupper(trim($row[$classIdx] ?? ''));
+                $sectionName = $sectionIdx !== false ? strtoupper(trim($row[$sectionIdx] ?? '')) : '';
+                $genderRaw   = $genderIdx !== false ? trim($row[$genderIdx] ?? '') : '';
+                $gender      = ucfirst(strtolower($genderRaw));
+                if (!in_array($gender, ['Male', 'Female', 'Other'])) $gender = null;
+
+                $classKey = $className . '|' . $sectionName;
+                if (!isset($classMap[$classKey])) {
+                    $rowErrors[] = "Row {$lineNum}: Class «{$className}" . ($sectionName ? " ({$sectionName})" : '') . "» not found in the system.";
+                    $skipped++;
+                    continue;
+                }
+                $classId = $classMap[$classKey];
+
+                // Duplicate check
+                $exists = DB::queryOne(
+                    "SELECT id FROM students WHERE UPPER(full_name) = ? AND current_class_id = ?",
+                    [$fullName, $classId]
+                );
+                if ($exists) {
+                    $skipped++;
+                    continue;
+                }
+
+                $studentIdNum = str_pad((string)$nextId, 4, '0', STR_PAD_LEFT);
+                DB::execute(
+                    "INSERT INTO students (student_id_number, full_name, gender, current_class_id, academic_year_id, status, pin_hash) VALUES (?,?,?,?,?,'active',?)",
+                    [$studentIdNum, $fullName, $gender ?: null, $classId, $academicYearId, $defaultPinHash]
+                );
+                $nextId++;
+                $inserted++;
             }
-
-            $className   = strtoupper(trim($row[$classIdx] ?? ''));
-            $sectionName = $sectionIdx !== false ? strtoupper(trim($row[$sectionIdx] ?? '')) : '';
-            $genderRaw   = $genderIdx !== false ? trim($row[$genderIdx] ?? '') : '';
-            $gender      = ucfirst(strtolower($genderRaw));
-            if (!in_array($gender, ['Male', 'Female', 'Other'])) $gender = null;
-
-            $classKey = $className . '|' . $sectionName;
-            if (!isset($classMap[$classKey])) {
-                $rowErrors[] = "Row {$lineNum}: Class «{$className}" . ($sectionName ? " ({$sectionName})" : '') . "» not found in the system.";
-                $skipped++;
-                continue;
-            }
-            $classId = $classMap[$classKey];
-
-            // Duplicate check
-            $exists = DB::queryOne(
-                "SELECT id FROM students WHERE UPPER(full_name) = ? AND current_class_id = ?",
-                [$fullName, $classId]
-            );
-            if ($exists) {
-                $skipped++;
-                continue;
-            }
-
-            $studentIdNum = str_pad((string)$nextId, 4, '0', STR_PAD_LEFT);
-            DB::execute(
-                "INSERT INTO students (student_id_number, full_name, gender, current_class_id, academic_year_id, status) VALUES (?,?,?,?,?,'active')",
-                [$studentIdNum, $fullName, $gender ?: null, $classId, $academicYearId]
-            );
-            $nextId++;
-            $inserted++;
+            DB::commit();
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            $rowErrors[] = "Database transaction error: " . $e->getMessage();
         }
+
         fclose($handle);
 
         Session::set('bulk_import_result', [

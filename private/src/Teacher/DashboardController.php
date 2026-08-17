@@ -43,31 +43,28 @@ class DashboardController {
                 [$teacherId, $term['id']]
             );
 
-            // 3. Get Classes where this teacher is the "Class Teacher"
+            // 3. Get Classes where this teacher is the "Class Teacher" in the active academic session
             $classTeacherFor = DB::query(
                 "SELECT c.id, c.class_name, c.section 
                  FROM classes c
                  JOIN class_teachers ct ON ct.class_id = c.id
-                 WHERE ct.teacher_id = ?",
-                [$teacherId]
+                 WHERE ct.teacher_id = ? AND c.academic_year_id = ?",
+                [$teacherId, $term['academic_year_id']]
             );
 
-            // 4. Calculate Stats for Summary Cards
-            $managedClassIds = array_column($classTeacherFor, 'id');
-            $subjectClassIds = array_column($assigned, 'class_id'); // Not in current select, need to add it or use union
-            
-            $allClassIds = array_unique(array_merge($managedClassIds, $subjectClassIds));
-            
+            // 4. Calculate Stats for Summary Cards in the active academic session
             $queryBase = "FROM students st WHERE st.current_class_id IN (
-                            SELECT class_id FROM class_subjects WHERE teacher_id = ? AND term_id = ?
+                            SELECT cs.class_id FROM class_subjects cs WHERE cs.teacher_id = ? AND cs.term_id = ?
                             UNION
-                            SELECT class_id FROM class_teachers WHERE teacher_id = ?
-                         ) AND st.status = 'active'";
+                            SELECT c.id FROM class_teachers ct JOIN classes c ON c.id = ct.class_id WHERE ct.teacher_id = ? AND c.academic_year_id = ?
+                         ) AND st.academic_year_id = ? AND st.status = 'active'";
+
+            $queryParams = [$teacherId, $term['id'], $teacherId, $term['academic_year_id'], $term['academic_year_id']];
 
             $stats = [
-                'students'        => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase", [$teacherId, $term['id'], $teacherId]),
-                'students_male'   => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Male'", [$teacherId, $term['id'], $teacherId]),
-                'students_female' => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Female'", [$teacherId, $term['id'], $teacherId]),
+                'students'        => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase", $queryParams),
+                'students_male'   => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Male'", $queryParams),
+                'students_female' => (int)DB::queryValue("SELECT COUNT(DISTINCT st.id) $queryBase AND st.gender = 'Female'", $queryParams),
                 
                 'subjects' => (int)DB::queryValue(
                     "SELECT COUNT(DISTINCT subject_id) FROM class_subjects WHERE teacher_id = ? AND term_id = ?",

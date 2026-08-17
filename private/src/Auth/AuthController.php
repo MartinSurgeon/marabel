@@ -88,13 +88,23 @@ class AuthController {
         }
 
         $student = DB::queryOne(
-            "SELECT s.*, u.id as user_id FROM students s
-             JOIN users u ON u.role = 'student' AND u.id = s.id
+            "SELECT s.* FROM students s
              WHERE s.student_id_number = ? AND s.status = 'active'",
             [$studentId]
         );
 
-        if (!$student || !password_verify($pin, $student['pin_hash'])) {
+        $pinValid = false;
+        if ($student) {
+            if (!empty($student['pin_hash']) && password_verify($pin, $student['pin_hash'])) {
+                $pinValid = true;
+            } elseif (empty($student['pin_hash']) && $pin === '1234') {
+                // Auto-upgrade uninitialized default PIN
+                $pinValid = true;
+                DB::execute("UPDATE students SET pin_hash = ? WHERE id = ?", [password_hash('1234', PASSWORD_BCRYPT), $student['id']]);
+            }
+        }
+
+        if (!$student || !$pinValid) {
             $this->recordFailedAttempt($studentId);
             Session::flash('login_error', 'Invalid Student ID or PIN.');
             $this->redirect('/login');
@@ -102,11 +112,11 @@ class AuthController {
 
         $this->clearAttempts($studentId);
 
-        // Create a pseudo-user session for the student
+        // Create session for the student
         Session::regenerate();
-        Session::set('user_id',   $student['id']);
-        Session::set('user_name', $student['full_name']);
-        Session::set('user_role', ROLE_STUDENT);
+        Session::set('user_id',    $student['id']);
+        Session::set('user_name',  $student['full_name']);
+        Session::set('user_role',  'student');
         Session::set('student_id', $student['id']);
 
         $this->redirect('/student');

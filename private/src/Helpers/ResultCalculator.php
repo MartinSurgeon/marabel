@@ -77,7 +77,22 @@ class ResultCalculator {
                 $comp = $compMap[$sid][$csId] ?? null;
                 $exam = $examMap[$sid][$csId] ?? null;
 
-                if (!$comp && !$exam) continue; // No data entered
+                $hasSba = ($comp && (
+                    ($comp['individual_test'] !== null && $comp['individual_test'] !== '') ||
+                    ($comp['group_work']      !== null && $comp['group_work']      !== '') ||
+                    ($comp['class_test']      !== null && $comp['class_test']      !== '') ||
+                    ($comp['project']         !== null && $comp['project']         !== '')
+                ));
+                $hasExam = ($exam && $exam['raw_score'] !== null && $exam['raw_score'] !== '');
+
+                if (!$hasSba && !$hasExam) {
+                    // Score inputs are empty or cleared — remove any stale computed row
+                    DB::execute(
+                        "DELETE FROM computed_scores WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
+                        [$sid, $csId, $termId]
+                    );
+                    continue;
+                }
 
                 $result = GradingEngine::computeFull(
                     (float)($comp['individual_test'] ?? 0),
@@ -119,24 +134,21 @@ class ResultCalculator {
                     $sGrades = $studentGrades[$sid] ?? [];
 
                     $coreGrades = [];
-                    $electiveGrades = [];
-
-                    foreach ($sGrades as $name => $g) {
-                        if (in_array($name, $cores)) {
-                            $coreGrades[] = $g;
+                    $elecGrades = [];
+                    foreach ($sGrades as $sName => $pLvl) {
+                        $numGrade = (int)$pLvl;
+                        if (in_array($sName, $cores)) {
+                            $coreGrades[] = $numGrade;
                         } else {
-                            $electiveGrades[] = $g;
+                            $elecGrades[] = $numGrade;
                         }
                     }
 
-                    // Best 6 = All 4 Cores + 2 Best Electives
-                    // Note: Grade 1 is best, so sort ASC
-                    sort($electiveGrades);
-                    $bestElectives = array_slice($electiveGrades, 0, 2);
-
-                    // If missing cores, BECE rules usually substitute or penalize, 
-                    // but for school system we count what's available up to 4+2.
-                    $aggGrade = array_sum($coreGrades) + array_sum($bestElectives);
+                    if (count($coreGrades) >= 4) {
+                        sort($elecGrades);
+                        $best2Elec = array_slice($elecGrades, 0, 2);
+                        $aggGrade  = array_sum($coreGrades) + array_sum($best2Elec);
+                    }
                 }
 
                 DB::execute(
@@ -149,6 +161,12 @@ class ResultCalculator {
                         $sid, $classId, $termId, $totalAggregate, $subjectCount, $aggGrade,
                         $totalAggregate, $subjectCount, $aggGrade,
                     ]
+                );
+            } else {
+                // If no valid subject scores exist for this student, remove stale aggregate
+                DB::execute(
+                    "DELETE FROM student_aggregates WHERE student_id = ? AND term_id = ?",
+                    [$sid, $termId]
                 );
             }
         }

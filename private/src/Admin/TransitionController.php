@@ -172,11 +172,11 @@ class TransitionController {
                 $oldClassName = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$oldCid]);
                 $newCid = DB::queryValue("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ?", [$oldClassName, $targetYearId]);
                 
-                DB::execute("UPDATE students SET academic_year_id = ?", [$targetYearId]);
                 if ($newCid) {
-                    DB::execute("UPDATE students SET current_class_id = ? WHERE id = ?", [$newCid, $r['student_id']]);
+                    DB::execute("UPDATE students SET current_class_id = ?, academic_year_id = ? WHERE id = ?", [$newCid, $targetYearId, $r['student_id']]);
+                } else {
+                    DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ?", [$targetYearId, $r['student_id']]);
                 }
-                DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ?", [$targetYearId, $r['student_id']]);
             }
 
             // 5. Clone Assignments to Target Term 1

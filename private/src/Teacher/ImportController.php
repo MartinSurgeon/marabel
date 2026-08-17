@@ -251,23 +251,23 @@ class ImportController {
         $saved  = 0;
         $failed = [];
 
-        foreach ($valid as $r) {
-            try {
+        try {
+            DB::beginTransaction();
+
+            foreach ($valid as $r) {
                 $this->upsertSba($r['student_id'], $csId, $termId, $r['indiv_test'], $r['group_work'], $r['class_test'], $r['project']);
                 if ($r['exam_raw'] !== null) {
                     $this->upsertExam($r['student_id'], $csId, $termId, $r['exam_raw']);
                 }
                 $saved++;
-            } catch (\Throwable $e) {
-                $failed[] = "Student DB ID {$r['student_id']}: " . $e->getMessage();
             }
-        }
 
-        if (!empty($failed)) {
-            Session::set('import_errors', $failed);
-            Session::flash('import_warn', "{$saved} rows saved. " . count($failed) . " row(s) failed to write (see below).");
-        } else {
+            DB::commit();
             Session::flash('import_success', "✓ Successfully imported scores for {$saved} student(s) into {$cs['subject_name']} ({$cs['class_name']}).");
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::set('import_errors', ["Import failed: " . $e->getMessage()]);
+            Session::flash('import_error', "Database error during score import. Transaction was rolled back: " . $e->getMessage());
         }
 
         $this->redirect('/teacher/import');

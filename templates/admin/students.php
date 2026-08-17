@@ -6,11 +6,12 @@
 $pageTitle = 'Student Management';
 include __DIR__ . '/../layout/header.php';
 
-global $studentsList, $classesList, $yearsList, $activeYearId;
-$base       = defined('APP_BASE') ? APP_BASE : '';
-$students   = $studentsList ?? [];
-$classes    = $classesList ?? [];
-$years      = $yearsList ?? [];
+global $studentsList, $classesList, $yearsList, $activeYearId, $nextStudentId;
+$base          = defined('APP_BASE') ? APP_BASE : '';
+$students      = $studentsList ?? [];
+$classes       = $classesList ?? [];
+$years         = $yearsList ?? [];
+$nextStudentId = $nextStudentId ?? '0001';
 
 $filterYear  = $_GET['year_id'] ?? $activeYearId;
 $filterClass = $_GET['class_id'] ?? null;
@@ -174,7 +175,13 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
             <input type="hidden" name="academic_year_id" value="<?= $filterYear ?>">
             <div class="modal-body">
                 <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
-                    <div class="form-group"><label class="form-label">Student ID <span class="required">*</span></label><input type="text" name="student_id_number" id="stu-id-num" class="form-control" required placeholder="e.g. 20240001"></div>
+                    <div class="form-group">
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="form-label m-0">Student ID <span class="required">*</span></label>
+                            <span class="badge badge-purple" style="font-size:10px; padding:2px 6px;">Auto-Generated</span>
+                        </div>
+                        <input type="text" name="student_id_number" id="stu-id-num" class="form-control font-mono font-bold" required readonly tabindex="-1" style="background:var(--clr-surface-2); cursor:not-allowed;" placeholder="e.g. <?= htmlspecialchars($nextStudentId) ?>" value="<?= htmlspecialchars($nextStudentId) ?>">
+                    </div>
                     <div class="form-group"><label class="form-label">Full Name <span class="required">*</span></label><input type="text" name="full_name" id="stu-name" class="form-control" required placeholder="e.g. Ama Serwaa"></div>
                 </div>
                 <div class="grid" style="grid-template-columns:1fr 1fr; gap:1.5rem;">
@@ -271,6 +278,7 @@ $(document).ready(function() {
     window.openStudentModal = function() {
         $('#form-student')[0].reset();
         $('#student-id-field').val('');
+        $('#stu-id-num').val('<?= htmlspecialchars($nextStudentId, ENT_QUOTES) ?>');
         $('#stu-status').val('active');
         $('#modal-student-title').text('New Student Registration');
         $('#student-submit-btn').text('Complete Registration');

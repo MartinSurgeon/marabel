@@ -75,36 +75,134 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
 .assign-pick-row:last-child { border-bottom: none !important; }
 </style>
 
-<div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
+<?php
+// Compute summary counts & maps for high-performance rendering
+$teacherAssignmentsMap = [];
+foreach ($assignments as $a) {
+    if (!empty($a['teacher_id'])) {
+        $tid = (int)$a['teacher_id'];
+        $className = trim($a['class_name'] . ($a['section'] ? ' ' . $a['section'] : ''));
+        $teacherAssignmentsMap[$tid][$className][] = $a['subject_name'];
+    }
+}
+
+$totalTeachers     = count($teachers);
+$activeTeachers    = count(array_filter($teachers, fn($t) => !empty($t['is_active'])));
+$maleTeachers      = count(array_filter($teachers, fn($t) => ($t['gender'] ?? '') === 'Male'));
+$femaleTeachers    = count(array_filter($teachers, fn($t) => ($t['gender'] ?? '') === 'Female'));
+$formMastersCount  = count(array_filter($teachers, fn($t) => !empty($t['lead_classes'])));
+$totalPairings     = count($assignments);
+?>
+
+<div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
-    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Teachers</h1>
+    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Teachers Management</h1>
     <div class="flex items-center gap-2 mt-1">
-      <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff and assignments.</p>
+      <p class="text-muted m-0" style="font-size:var(--text-sm);">Manage your teaching staff, form master roles, and subject allocations.</p>
     </div>
   </div>
   
   <div class="flex items-center gap-3">
     <!-- View Switcher (HCI: User Control & Preference) -->
     <div class="flex bg-gray-100 p-1 rounded-lg border border-gray-200" style="background:rgba(0,0,0,0.03);">
-       <button type="button" class="view-toggle-btn" id="btn-view-list" onclick="toggleView('list')" title="List View">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
-       </button>
-       <button type="button" class="view-toggle-btn" id="btn-view-grid" onclick="toggleView('grid')" title="Grid View" style="margin-left:2px;">
+       <button type="button" class="view-toggle-btn active" id="btn-view-grid" onclick="toggleView('grid')" title="Grid View">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+       </button>
+       <button type="button" class="view-toggle-btn" id="btn-view-list" onclick="toggleView('list')" title="List View" style="margin-left:2px;">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
        </button>
     </div>
 
-    <button class="btn btn-primary shadow-purple" onclick="openTeacherModal()" style="height:42px;">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+    <button class="btn btn-primary shadow-purple font-bold flex items-center gap-1.5" onclick="openTeacherModal()" style="height:40px; border-radius:10px;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       Add Teacher
     </button>
+  </div>
+</div>
+
+<!-- ══ Top KPI Metric Cards (Dashboard Synergy) ══════════════════ -->
+<div class="stat-grid mb-6" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+  <!-- Total Staff -->
+  <div class="stat-card" style="border-left: 4px solid var(--clr-primary);">
+    <div class="stat-icon" style="--stat-bg: var(--clr-primary-50); --stat-color: var(--clr-primary-600);">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+    </div>
+    <div>
+      <div class="stat-label">Total Staff</div>
+      <div class="stat-value"><?= number_format($totalTeachers) ?></div>
+      <div class="stat-sub flex items-center gap-3">
+        <span style="font-weight:800; color:var(--clr-info); display:flex; align-items:center; gap:3px;">
+          <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <?= number_format($maleTeachers) ?>M
+        </span>
+        <span style="font-weight:800; color:#ec4899; display:flex; align-items:center; gap:3px;">
+          <svg fill="currentColor" viewBox="0 0 24 24" width="10" height="10"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+          <?= number_format($femaleTeachers) ?>F
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Status -->
+  <div class="stat-card">
+    <div class="stat-icon" style="--stat-bg: var(--clr-success-bg); --stat-color: var(--clr-success);">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <div>
+      <div class="stat-label">Active Staff</div>
+      <div class="stat-value" style="color:var(--clr-success);"><?= number_format($activeTeachers) ?></div>
+      <div class="stat-sub"><?= $totalTeachers > 0 ? round(($activeTeachers / $totalTeachers) * 100) : 0 ?>% Active Rate</div>
+    </div>
+  </div>
+
+  <!-- Form Masters -->
+  <div class="stat-card">
+    <div class="stat-icon" style="--stat-bg: rgba(168,85,247,0.1); --stat-color: #a855f7;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+    </div>
+    <div>
+      <div class="stat-label">Form Masters</div>
+      <div class="stat-value"><?= number_format($formMastersCount) ?></div>
+      <div class="stat-sub">Class Leadership</div>
+    </div>
+  </div>
+
+  <!-- Subject Allocations -->
+  <div class="stat-card">
+    <div class="stat-icon" style="--stat-bg: var(--clr-info-bg); --stat-color: var(--clr-info);">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+    </div>
+    <div>
+      <div class="stat-label">Allocations</div>
+      <div class="stat-value"><?= number_format($totalPairings) ?></div>
+      <div class="stat-sub">Active Pairings</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Search & Filter Toolbar ═══════════════════════════════════ -->
+<div class="card p-3 mb-6 flex items-center justify-between gap-4 flex-wrap" style="border:1px solid var(--clr-border); background:var(--clr-surface); border-radius:14px;">
+  <!-- Live search input -->
+  <div class="flex items-center gap-2 flex-1" style="min-width:240px;">
+    <div style="position:relative; width:100%; max-width:380px;">
+      <svg style="position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--clr-text-muted);" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+      <input type="text" id="teacher-search-input" placeholder="Search teacher by name, email, or phone…" class="form-control" style="padding-left:36px; height:38px; font-size:13px; border-radius:8px;" oninput="filterTeacherCards()">
+    </div>
+  </div>
+
+  <!-- Filter Tabs -->
+  <div class="flex items-center gap-1 flex-wrap" id="status-filter-group">
+    <button type="button" class="btn btn-sm btn-primary filter-tab active" data-filter="all" onclick="setStatusFilter('all', this)" style="border-radius:9999px; padding:5px 14px; font-size:11px; font-weight:700;">All (<?= $totalTeachers ?>)</button>
+    <button type="button" class="btn btn-sm btn-ghost filter-tab" data-filter="active" onclick="setStatusFilter('active', this)" style="border-radius:9999px; padding:5px 14px; font-size:11px; font-weight:700; color:var(--clr-text-muted);">Active (<?= $activeTeachers ?>)</button>
+    <button type="button" class="btn btn-sm btn-ghost filter-tab" data-filter="form-master" onclick="setStatusFilter('form-master', this)" style="border-radius:9999px; padding:5px 14px; font-size:11px; font-weight:700; color:var(--clr-text-muted);">Form Masters (<?= $formMastersCount ?>)</button>
+    <button type="button" class="btn btn-sm btn-ghost filter-tab" data-filter="unassigned" onclick="setStatusFilter('unassigned', this)" style="border-radius:9999px; padding:5px 14px; font-size:11px; font-weight:700; color:var(--clr-text-muted);">Unassigned</button>
   </div>
 </div>
 
 <?php if (empty($teachers)): ?>
 <div class="card flex flex-col items-center justify-center shadow-sm" style="padding:6rem 2rem; text-align:center; border-style:dashed; background:rgba(255,255,255,0.5);">
   <div style="background:var(--clr-primary-50); padding:2rem; border-radius:var(--radius-full); margin-bottom:2rem;">
-     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
   </div>
   <h2 style="font-weight:800; color:var(--clr-text);">No teachers registered yet</h2>
   <p class="text-muted" style="max-width:320px; margin:0 auto 2.5rem;">Create profiles for your teaching staff to allow them to enter student scores.</p>
@@ -132,7 +230,7 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                     <td>
                         <div class="flex items-center gap-3">
                             <div style="width:34px; height:34px; <?= getAvatarStyle($t['id'], $t['full_name']) ?> border-radius:var(--radius-md); display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800;">
-                                <?= substr($t['full_name'], 0, 1) ?>
+                                <?= strtoupper(substr(trim($t['full_name']), 0, 1)) ?>
                             </div>
                             <div>
                                 <div style="font-weight:700; color:var(--clr-text); font-size:14px; display:flex; align-items:center; gap:6px;">
@@ -161,7 +259,7 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
                     </td>
                     <td>
                         <div style="font-size:12px; font-weight:700; color:var(--clr-text);">
-                            <?= $t['current_year_subjects'] ?> Cls · <?= $t['current_year_subjects'] ?> Subj
+                            <?= $t['current_year_subjects'] ?> Subj · <?= $t['class_count'] ?> Cls
                             <?php if ($t['subject_count'] > $t['current_year_subjects']): ?>
                                <span class="text-warning" title="Teacher has <?= ($t['subject_count'] - $t['current_year_subjects']) ?> assignments in other sessions" style="cursor:help;">
                                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="display:inline; vertical-align:text-bottom; margin-left:2px;"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
@@ -199,101 +297,182 @@ table.dataTable tbody td { vertical-align: middle !important; padding: 0.875rem 
     </div>
 </div>
 
-<!-- ══ Grid View Container ══════════════════════════════════════ -->
-<div id="view-grid" class="grid" style="grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem; display:none;">
-  <?php foreach ($teachers as $t): ?>
-  <div class="mgmt-card hover-lift <?= !$t['is_active'] ? 'grayscale opacity-60' : '' ?>">
+<!-- ══ Grid View Container (Redesigned Compact Modern Cards) ══ -->
+<div id="view-grid" class="grid" style="grid-template-columns:repeat(auto-fill, minmax(330px, 1fr)); gap:1.5rem;">
+  <?php foreach ($teachers as $t): 
+    $tid = (int)$t['id'];
+    $classesAssigned = $teacherAssignmentsMap[$tid] ?? [];
+    $totalSubjectsInSession = (int)($t['current_year_subjects'] ?? 0);
+    $isFormMaster = !empty($t['lead_classes']);
+    $genderColor = ($t['gender'] === 'Male') ? 'var(--clr-info)' : (($t['gender'] === 'Female') ? '#ec4899' : 'var(--clr-text-muted)');
+  ?>
+  <div class="teacher-grid-card mgmt-card hover-lift flex flex-col justify-between <?= !$t['is_active'] ? 'opacity-75' : '' ?>"
+       data-name="<?= strtolower(htmlspecialchars($t['full_name'])) ?>" 
+       data-email="<?= strtolower(htmlspecialchars($t['email'])) ?>" 
+       data-phone="<?= strtolower(htmlspecialchars($t['phone'] ?? '')) ?>" 
+       data-active="<?= $t['is_active'] ? '1' : '0' ?>"
+       data-form-master="<?= $isFormMaster ? '1' : '0' ?>"
+       data-assigned="<?= $totalSubjectsInSession > 0 ? '1' : '0' ?>"
+       style="border-radius:1.25rem; border:1px solid var(--clr-border); background:var(--clr-surface); transition:all 0.25s ease; min-height:280px;"
+  >
+    <!-- Upper Body Section -->
     <div style="padding:1.5rem 1.5rem 1rem;">
-      <div class="flex justify-between items-start mb-4">
-        <div class="flex items-center gap-3">
-           <div style="width:48px; height:48px; <?= getAvatarStyle($t['id'], $t['full_name']) ?> border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; font-size:1.25rem; font-weight:800;">
-              <?= substr($t['full_name'], 0, 1) ?>
-           </div>
-           <div>
-              <div style="font-weight:800; color:var(--clr-text); font-size:1.125rem; line-height:1.2; display:flex; align-items:center; gap:8px;">
+      <!-- Header: Avatar, Name/Email, Status Toggle -->
+      <div class="flex justify-between items-start gap-3 mb-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div style="width:46px; height:46px; <?= getAvatarStyle($t['id'], $t['full_name']) ?> border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.15rem; font-weight:900; flex-shrink:0; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+            <?= strtoupper(substr(trim($t['full_name']), 0, 1)) ?>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <h3 class="teacher-card-name m-0 truncate" style="font-weight:800; font-size:1rem; color:var(--clr-text); line-height:1.2;">
                 <?= htmlspecialchars($t['full_name']) ?>
-                <?php if ($t['gender'] === 'Male'): ?>
-                    <div style="width:14px; height:14px; background:rgba(14, 165, 233, 0.1); color:var(--clr-info); border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                        <svg fill="currentColor" viewBox="0 0 24 24" width="8" height="8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    </div>
-                <?php elseif ($t['gender'] === 'Female'): ?>
-                    <div style="width:14px; height:14px; background:rgba(236, 72, 153, 0.1); color:#ec4899; border-radius:50%; display:flex; align-items:center; justify-content:center;">
-                        <svg fill="currentColor" viewBox="0 0 24 24" width="8" height="8"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    </div>
-                <?php endif; ?>
-              </div>
-              <div style="font-size:11px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.02em;"><?= htmlspecialchars($t['email']) ?></div>
-           </div>
+              </h3>
+              <?php if ($t['gender']): ?>
+                <span title="<?= htmlspecialchars($t['gender']) ?>" style="color:<?= $genderColor ?>; flex-shrink:0;">
+                  <svg fill="currentColor" viewBox="0 0 24 24" width="11" height="11"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </span>
+              <?php endif; ?>
+            </div>
+            <div class="truncate text-muted" style="font-size:11px; font-weight:600; text-transform:lowercase; margin-top:2px;">
+              <?= htmlspecialchars($t['email']) ?>
+            </div>
+          </div>
         </div>
-        <form method="POST" action="<?= $base ?>/admin/teachers" onsubmit="Loader.show()">
-           <?= CSRF::field() ?>
-           <input type="hidden" name="_action" value="teacher_toggle">
-           <input type="hidden" name="teacher_id" value="<?= $t['id'] ?>">
-           <button type="submit" class="badge <?= $t['is_active'] ? 'badge-success' : 'badge-danger' ?>" style="cursor:pointer; border:none; padding:5px 10px; font-size:9px; letter-spacing:0.05em; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-              <?= $t['is_active'] ? 'ACTIVE' : 'INACTIVE' ?>
-           </button>
+
+        <!-- 1-Click Active / Inactive Status Badge -->
+        <form method="POST" action="<?= $base ?>/admin/teachers" class="m-0" onsubmit="Loader.show()">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="_action" value="teacher_toggle">
+          <input type="hidden" name="teacher_id" value="<?= $t['id'] ?>">
+          <button type="submit" class="badge <?= $t['is_active'] ? 'badge-success' : 'badge-danger' ?>" style="cursor:pointer; border:none; padding:4px 9px; font-size:9px; font-weight:800; letter-spacing:0.04em; border-radius:9999px;" title="Click to toggle active status">
+            <?= $t['is_active'] ? 'ACTIVE' : 'INACTIVE' ?>
+          </button>
         </form>
       </div>
 
-      <?php if ($t['phone']): ?>
-      <div class="flex items-center gap-2 mb-4" style="font-size:13px; color:var(--clr-text-muted);">
-         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
-         <?= htmlspecialchars($t['phone']) ?>
-      </div>
-      <?php endif; ?>
-
-      <div style="margin-top:0.5rem;">
-        <?php if ($t['lead_classes']): ?>
-          <div class="mb-2">
-            <span style="font-size:10px; font-weight:700; color:var(--clr-primary-600); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:4px;">Class Teacher</span>
-            <div class="flex flex-wrap gap-1">
-              <?php foreach (explode(', ', $t['lead_classes']) as $lc): ?>
-                <span class="badge badge-purple" style="font-size:10px; padding:2px 6px;"><?= htmlspecialchars($lc) ?></span>
-              <?php endforeach; ?>
-            </div>
-          </div>
+      <!-- Contact & Role Chips -->
+      <div class="flex items-center gap-2 flex-wrap mb-4">
+        <?php if ($t['phone']): ?>
+          <a href="tel:<?= htmlspecialchars($t['phone']) ?>" class="inline-flex items-center gap-1.5 text-muted hover:text-purple-600 transition" style="font-size:12px; font-weight:600; text-decoration:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+            <?= htmlspecialchars($t['phone']) ?>
+          </a>
         <?php endif; ?>
 
-        <?php if ($t['assignment_summary']): ?>
-          <div class="mb-2">
-            <span style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em; display:block; margin-bottom:4px;">Teaching</span>
-            <div class="flex flex-wrap gap-1">
-              <?php foreach (explode(', ', $t['assignment_summary']) as $as): ?>
-                <span class="badge badge-gray" style="font-size:10px; padding:2px 6px;"><?= htmlspecialchars($as) ?></span>
-              <?php endforeach; ?>
-            </div>
+        <?php if ($isFormMaster): ?>
+          <span class="badge badge-purple" style="font-size:10px; padding:3px 8px; border-radius:9999px; font-weight:700;">
+            🎯 Form Master: <?= htmlspecialchars($t['lead_classes']) ?>
+          </span>
+        <?php endif; ?>
+
+        <span class="badge" style="background:rgba(99, 102, 241, 0.08); color:#6366f1; font-size:10px; padding:3px 8px; border-radius:9999px; font-weight:700;">
+          📚 <?= $totalSubjectsInSession ?> Subject<?= $totalSubjectsInSession !== 1 ? 's' : '' ?> · <?= count($classesAssigned) ?> Class<?= count($classesAssigned) !== 1 ? 'es' : '' ?>
+        </span>
+      </div>
+
+      <!-- Smart Grouped Teaching Allocations -->
+      <div style="border-top:1px solid rgba(0,0,0,0.05); padding-top:0.75rem;">
+        <div style="font-size:10px; font-weight:800; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px;">
+          Teaching Allocations
+        </div>
+
+        <?php if (!empty($classesAssigned)): ?>
+          <div class="flex flex-wrap gap-1.5" style="max-height:85px; overflow:hidden;">
+            <?php 
+              $shownCount = 0;
+              $maxChips = 3;
+              $classKeys = array_keys($classesAssigned);
+              $totalClasses = count($classKeys);
+              
+              foreach ($classesAssigned as $clsName => $subjs):
+                if ($shownCount >= $maxChips) break;
+                $subCount = count($subjs);
+                $subPreview = implode(', ', $subjs);
+                $shownCount++;
+            ?>
+              <span class="badge badge-gray" 
+                    title="<?= htmlspecialchars($clsName . ': ' . $subPreview) ?>" 
+                    style="font-size:11px; padding:4px 8px; border-radius:8px; border:1px solid rgba(0,0,0,0.06); background:#f8fafc; font-weight:600; color:#334155;">
+                <strong style="color:var(--clr-text);"><?= htmlspecialchars($clsName) ?></strong> 
+                <span style="color:var(--clr-text-muted); font-size:10px;">(<?= $subCount == 1 ? htmlspecialchars($subjs[0]) : "{$subCount} subjects" ?>)</span>
+              </span>
+            <?php endforeach; ?>
+
+            <?php if ($totalClasses > $maxChips): 
+              $remaining = $totalClasses - $maxChips;
+              $popoverId = "pop-teacher-{$t['id']}";
+            ?>
+              <div class="relative inline-block" style="z-index:10;">
+                <button type="button" class="badge badge-purple cursor-pointer" 
+                        onclick="toggleTeacherPopover('<?= $popoverId ?>', event)" 
+                        style="font-size:10px; padding:4px 8px; border-radius:8px; border:none; font-weight:800;">
+                  +<?= $remaining ?> more &darr;
+                </button>
+                
+                <!-- Popover -->
+                <div id="<?= $popoverId ?>" class="teacher-popover hidden absolute left-0 bottom-full mb-2 w-64 p-3 bg-white rounded-xl shadow-xl border border-gray-200 z-50 text-left" style="font-size:11px;">
+                  <div class="font-bold text-gray-800 border-b pb-1 mb-2">All Teaching Classes</div>
+                  <div class="space-y-1.5 max-h-48 overflow-y-auto">
+                    <?php foreach ($classesAssigned as $clsName => $subjs): ?>
+                      <div>
+                        <span class="font-bold text-purple-700"><?= htmlspecialchars($clsName) ?>:</span> 
+                        <span class="text-gray-600 text-[10px]"><?= htmlspecialchars(implode(', ', $subjs)) ?></span>
+                      </div>
+                    <?php endforeach; ?>
+                  </div>
+                </div>
+              </div>
+            <?php endif; ?>
           </div>
         <?php else: ?>
-          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; margin-top:0.5rem;">
-             No subjects this session
-             <?php if ($t['subject_count'] > 0): ?>
-                <div style="font-size:10px; color:var(--clr-warning); font-weight:700; margin-top:4px;">
-                   ⚠️ <?= $t['subject_count'] ?> assignments in other sessions
-                </div>
-             <?php endif; ?>
+          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; padding:4px 0;">
+            No subjects assigned for this session
+            <?php if ($t['subject_count'] > 0): ?>
+              <div style="font-size:10px; color:var(--clr-warning); font-weight:700; margin-top:2px;">
+                ⚠️ <?= $t['subject_count'] ?> assignments in other sessions
+              </div>
+            <?php endif; ?>
           </div>
         <?php endif; ?>
-      </div>
-
-      <div class="grid" style="grid-template-columns:1fr 1fr; gap:0.75rem; border-top:1px solid rgba(0,0,0,0.05); padding-top:1.25rem; margin-top:1.5rem;">
-         <div style="background:var(--clr-primary-50); padding:0.875rem; border-radius:var(--radius-lg); text-align:center; border:1px solid rgba(79, 29, 150, 0.05);">
-            <div style="font-size:1.375rem; font-weight:900; color:var(--clr-primary); letter-spacing:-0.03em;"><?= $t['class_count'] ?></div>
-            <div style="font-size:10px; font-weight:800; color:var(--clr-primary-600); text-transform:uppercase; letter-spacing:0.04em;">Classes</div>
-         </div>
-         <div style="background:rgba(124, 58, 237, 0.05); padding:0.875rem; border-radius:var(--radius-lg); text-align:center; border:1px solid rgba(124, 58, 237, 0.05);">
-            <div style="font-size:1.375rem; font-weight:900; color:var(--clr-accent); letter-spacing:-0.03em;"><?= $t['subject_count'] ?></div>
-            <div style="font-size:10px; font-weight:800; color:var(--clr-accent); text-transform:uppercase; letter-spacing:0.04em;">Subjects</div>
-         </div>
       </div>
     </div>
 
-    <div style="margin-top:auto; padding:0.875rem 1.5rem; background:rgba(249,250,251,0.5); border-top:1px solid rgba(0,0,0,0.04); display:flex; justify-content:flex-end; gap:0.625rem; flex-wrap:wrap;">
-       <button class="btn btn-secondary btn-xs font-bold" onclick="openAssignModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">ASSIGN</button>
-       <button class="btn btn-ghost btn-xs font-bold" onclick='editTeacher(<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>)' style="color:var(--clr-primary);">EDIT</button>
-       <button class="btn btn-ghost btn-xs font-bold text-danger" onclick="confirmDeleteTeacher(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')">DELETE</button>
+    <!-- Action Toolbar Footer -->
+    <div style="padding:0.75rem 1.25rem; background:#f8fafc; border-top:1px solid #f1f5f9; border-radius:0 0 1.25rem 1.25rem; display:flex; align-items:center; justify-content:space-between; gap:0.5rem;">
+      <button class="btn btn-primary btn-sm font-bold flex items-center gap-1" 
+              onclick="openAssignModal(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')"
+              style="border-radius:8px; padding:6px 14px; font-size:12px; box-shadow:0 2px 4px rgba(105, 43, 196, 0.15);">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="13" height="13"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        Assign
+      </button>
+
+      <div class="flex items-center gap-1">
+        <button class="btn btn-ghost btn-sm font-bold flex items-center gap-1" 
+                onclick='editTeacher(<?= htmlspecialchars(json_encode($t), ENT_QUOTES) ?>)' 
+                style="color:var(--clr-primary); padding:6px 10px; font-size:12px;"
+                title="Edit Profile">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+          Edit
+        </button>
+
+        <button class="btn btn-ghost btn-sm font-bold text-danger flex items-center" 
+                onclick="confirmDeleteTeacher(<?= $t['id'] ?>, '<?= htmlspecialchars($t['full_name'], ENT_QUOTES) ?>')"
+                style="padding:6px 8px;"
+                title="Delete Teacher">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="14" height="14"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+        </button>
+      </div>
     </div>
   </div>
   <?php endforeach; ?>
+</div>
+
+<!-- No Results Match Search State -->
+<div id="no-filter-results" class="card text-center py-12 px-4 shadow-sm" style="display:none; border-style:dashed; background:rgba(255,255,255,0.7);">
+  <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+  <h3 class="font-bold text-gray-700 text-base m-0">No matching teachers found</h3>
+  <p class="text-xs text-gray-400 mt-1">Try adjusting your search terms or filter selection.</p>
 </div>
 <?php endif; ?>
 
@@ -516,8 +695,8 @@ $(document).ready(function() {
         columnDefs: [{ orderable: false, targets: -1 }]
     });
 
-    // 2. Initial View state
-    const savedView = localStorage.getItem('teacher_view_pref') || 'list';
+    // 2. Initial View state (Default to Grid for modern experience)
+    const savedView = localStorage.getItem('teacher_view_pref') || 'grid';
     toggleView(savedView);
 
     // 3. Action Button Delegation (Works for both Table and Grid)
@@ -530,6 +709,87 @@ $(document).ready(function() {
         const id = $(this).data('id');
         openAssignModal(id);
     });
+});
+
+let currentStatusFilter = 'all';
+
+function setStatusFilter(filter, btn) {
+  currentStatusFilter = filter;
+  document.querySelectorAll('#status-filter-group .filter-tab').forEach(b => {
+    b.classList.remove('btn-primary', 'active');
+    b.classList.add('btn-ghost');
+    b.style.color = 'var(--clr-text-muted)';
+  });
+  btn.classList.remove('btn-ghost');
+  btn.classList.add('btn-primary', 'active');
+  btn.style.color = '#ffffff';
+  filterTeacherCards();
+}
+
+function filterTeacherCards() {
+  const query = (document.getElementById('teacher-search-input')?.value || '').toLowerCase().trim();
+  const cards = document.querySelectorAll('.teacher-grid-card');
+  let visibleCount = 0;
+
+  cards.forEach(card => {
+    const name = (card.dataset.name || '').toLowerCase();
+    const email = (card.dataset.email || '').toLowerCase();
+    const phone = (card.dataset.phone || '').toLowerCase();
+    const isActive = card.dataset.active === '1';
+    const isFormMaster = card.dataset.formMaster === '1';
+    const isAssigned = card.dataset.assigned === '1';
+
+    // Status filter match
+    let statusMatch = true;
+    if (currentStatusFilter === 'active') statusMatch = isActive;
+    else if (currentStatusFilter === 'form-master') statusMatch = isFormMaster;
+    else if (currentStatusFilter === 'unassigned') statusMatch = !isAssigned;
+
+    // Search query match
+    let searchMatch = true;
+    if (query.length > 0) {
+      searchMatch = name.includes(query) || email.includes(query) || phone.includes(query);
+    }
+
+    if (statusMatch && searchMatch) {
+      card.style.display = 'flex';
+      visibleCount++;
+    } else {
+      card.style.display = 'none';
+    }
+  });
+
+  const noResults = document.getElementById('no-filter-results');
+  if (noResults) {
+    noResults.style.display = visibleCount === 0 ? 'block' : 'none';
+  }
+
+  // Also sync with DataTable if in List View
+  if ($.fn.dataTable && $.fn.dataTable.isDataTable('#teacher-table')) {
+    const table = $('#teacher-table').DataTable();
+    table.search(query).draw();
+  }
+}
+
+function toggleTeacherPopover(popId, evt) {
+  if (evt) evt.stopPropagation();
+  const target = document.getElementById(popId);
+  if (!target) return;
+  const isHidden = target.classList.contains('hidden');
+  
+  // Close all open popovers
+  document.querySelectorAll('.teacher-popover').forEach(p => p.classList.add('hidden'));
+
+  if (isHidden) {
+    target.classList.remove('hidden');
+  }
+}
+
+// Dismiss popovers on outside click
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.teacher-popover')) {
+    document.querySelectorAll('.teacher-popover').forEach(p => p.classList.add('hidden'));
+  }
 });
 
 function toggleView(type) {

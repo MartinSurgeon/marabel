@@ -17,14 +17,14 @@ $currentYear = $pageYear        ?? null;
 <!-- ── Page Header ──────────────────────────────────────────────── -->
 <div class="flex justify-between items-center mb-6 gap-4 flex-wrap">
   <div style="flex:1; min-width:300px;">
-    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Student Promotions</h1>
+    <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Promote Students to Next Year</h1>
     <p class="text-muted m-0" style="font-size:var(--text-sm); max-width:640px;">
-      Advance students to the next academic year. Run automated promotions based on aggregate score thresholds or manually override any student's status.
+      Move students to their new class for the upcoming academic year. You can automatically promote passing students based on a pass mark or update any student individually.
     </p>
   </div>
   <?php if ($currentYear): ?>
   <div class="badge badge-primary" style="padding:8px 18px; border-radius:var(--radius-full); font-weight:800; font-size:12px;">
-    Reviewing: <?= htmlspecialchars($currentYear['year_name']) ?>
+    Current Year: <?= htmlspecialchars($currentYear['year_name']) ?>
   </div>
   <?php endif; ?>
 </div>
@@ -70,10 +70,9 @@ $currentYear = $pageYear        ?? null;
 <div class="alert-info" style="margin-bottom:2rem; border-radius:var(--radius-lg); padding:1rem 1.25rem; display:flex; gap:1rem; align-items:flex-start;">
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20" style="flex-shrink:0; margin-top:2px;"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
   <div style="font-size:var(--text-sm);">
-    <strong>Two modes available:</strong>
-    Auto-Promote calculates each student's score average and promotes based on your threshold.
-    Manual Override lets you individually set any student as Promoted or Held Back, regardless of scores.
-    Manual overrides always take priority.
+    <strong>💡 Two ways to move students:</strong><br>
+    <strong>1. Auto-Promote:</strong> Automatically passes students who score at or above your chosen pass mark (e.g. 50%).<br>
+    <strong>2. Manual Override:</strong> Lets you change any individual student's result to Pass or Repeat.
   </div>
 </div>
 
@@ -121,7 +120,7 @@ $currentYear = $pageYear        ?? null;
       </div>
       <div style="padding:1rem 0; text-align:center; background:rgba(239,68,68,0.04);">
         <div style="font-size:1.375rem; font-weight:800; color:var(--clr-danger);"><?= $repeated ?></div>
-        <div style="font-size:10px; font-weight:700; color:var(--clr-danger); text-transform:uppercase; opacity:0.85;">Held Back</div>
+        <div style="font-size:10px; font-weight:700; color:var(--clr-danger); text-transform:uppercase; opacity:0.85;">Repeating</div>
       </div>
     </div>
 
@@ -144,7 +143,7 @@ $currentYear = $pageYear        ?? null;
             <input type="hidden" name="class_id" value="<?= $c['id'] ?>">
             <input type="hidden" name="year_id" value="<?= $currentYear['id'] ?>">
             <button type="submit" class="btn btn-ghost btn-sm text-danger" style="flex:1; justify-content:center; font-size:12px; font-weight:700; border:1px solid rgba(239,68,68,0.2);">
-              🔄 Unpromote All
+              🔄 Reset Class
             </button>
           </form>
           <button class="btn btn-outline btn-sm" style="flex:1; justify-content:center; font-size:12px; color:var(--clr-text);"
@@ -163,30 +162,59 @@ $currentYear = $pageYear        ?? null;
 
 <?php include __DIR__ . '/../layout/footer.php'; ?>
 
+<?php
+// ── Build class hierarchy data for JS ─────────────────────────────────
+global $targetYearClasses;
+$classHierarchy = [
+    'BASIC 1' => 'BASIC 2', 'BASIC 2' => 'BASIC 3', 'BASIC 3' => 'BASIC 4',
+    'BASIC 4' => 'BASIC 5', 'BASIC 5' => 'BASIC 6', 'BASIC 6' => 'BASIC 7',
+    'BASIC 7' => 'BASIC 8', 'BASIC 8' => 'BASIC 9', 'BASIC 9' => null,
+];
+?>
+
 <!-- ════════════════════════════════════════════════════════
-     AUTO-PROMOTE MODAL
+     AUTO-PROMOTE MODAL (Redesigned & Simplified)
 ══════════════════════════════════════════════════════════ -->
 <div id="modal-auto-promote" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
   <div class="modal w-full max-w-md mx-4">
     <div class="modal-header">
-      <h3 class="modal-title" id="auto-modal-title">Auto-Promote Class</h3>
+      <h3 class="modal-title" id="auto-modal-title">Promote Class</h3>
       <button class="modal-close" onclick="closeModal('modal-auto-promote')" aria-label="Close">&times;</button>
     </div>
-    <form method="POST" action="<?= $base ?>/admin/promotions" onsubmit="Loader.show()">
+    <form method="POST" action="<?= $base ?>/admin/promotions" onsubmit="Loader.show()" style="display:flex; flex-direction:column; flex:1; min-height:0;">
       <?= CSRF::field() ?>
       <input type="hidden" name="_action" value="auto_promote">
       <input type="hidden" name="class_id" id="auto-class-id">
       <input type="hidden" name="year_id" value="<?= $currentYear['id'] ?? '' ?>">
       <div class="modal-body" style="display:flex; flex-direction:column; gap:1.25rem;">
 
-        <div class="alert-info" style="border-radius:var(--radius-md); font-size:var(--text-sm);">
-          The system will calculate each student's average score. Students meeting or exceeding the threshold are promoted; others are held back.
+        <!-- ── Visual Progression Preview ── -->
+        <div id="auto-progression-preview" style="display:flex; align-items:center; gap:0.75rem; padding:1rem 1.25rem; background:linear-gradient(135deg, var(--clr-surface-2), rgba(99,102,241,0.06)); border-radius:var(--radius-lg); border:1px solid var(--clr-border);">
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.06em;">Current Class</div>
+            <div id="auto-preview-from" style="font-weight:800; font-size:1rem; color:var(--clr-text); margin-top:2px;">BASIC 1</div>
+            <div id="auto-preview-year-from" style="font-size:11px; color:var(--clr-text-muted);"><?= htmlspecialchars($currentYear['year_name'] ?? '') ?></div>
+          </div>
+          <div id="auto-preview-arrow" style="font-size:1.5rem; color:var(--clr-primary); flex-shrink:0;">→</div>
+          <div style="text-align:center; flex:1;">
+            <div style="font-size:10px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.06em;">New Class</div>
+            <div id="auto-preview-to" style="font-weight:800; font-size:1rem; color:var(--clr-success); margin-top:2px;">BASIC 2</div>
+            <div id="auto-preview-year-to" style="font-size:11px; color:var(--clr-text-muted);">—</div>
+          </div>
         </div>
 
+        <!-- ── Graduation Banner (hidden by default) ── -->
+        <div id="auto-graduation-banner" style="display:none; padding:1rem 1.25rem; background:linear-gradient(135deg, #fef3c7, #fde68a); border-radius:var(--radius-lg); border:1px solid #f59e0b; text-align:center;">
+          <div style="font-size:1.5rem; margin-bottom:0.25rem;">🎓</div>
+          <div style="font-weight:800; font-size:14px; color:#92400e;">Graduation / School Exit</div>
+          <div style="font-size:12px; color:#92400e; opacity:0.8; margin-top:0.25rem;">BASIC 9 students complete junior high school. Passing students graduate; others repeat.</div>
+        </div>
+
+        <!-- ── Target Year ── -->
         <div class="form-group">
-          <label class="form-label">Promote to Academic Year <span class="required">*</span></label>
-          <select name="next_year_id" class="form-control" required>
-            <option value="">— Select Target Year —</option>
+          <label class="form-label">New Academic Year <span class="required">*</span></label>
+          <select name="next_year_id" id="auto-target-year" class="form-control" required onchange="onTargetYearChange()">
+            <option value="">— Select New Academic Year —</option>
             <?php foreach ($nextYears as $ny): ?>
             <option value="<?= $ny['id'] ?>"><?= htmlspecialchars($ny['year_name']) ?></option>
             <?php endforeach; ?>
@@ -196,39 +224,84 @@ $currentYear = $pageYear        ?? null;
           <?php endif; ?>
         </div>
 
-        <div class="form-group">
-          <label class="form-label">Next Class Name (Optional)</label>
-          <input type="text" name="next_class_name" class="form-control" placeholder="e.g. B2, B5A — leave blank to assign later" maxlength="20">
-          <p class="form-text">Students will keep this as their 'next class' until reassigned.</p>
+        <!-- ── Target Class (Smart Dropdown) ── -->
+        <div class="form-group" id="auto-next-class-group">
+          <label class="form-label">New Class for Promoted Students <span class="required">*</span></label>
+          <select name="next_class_name" id="auto-next-class" class="form-control" required>
+            <option value="">— Select new academic year first —</option>
+          </select>
+          <p class="form-text" id="auto-next-class-hint" style="margin-top:0.4rem;">
+            Select the new academic year above to see available classes.
+          </p>
         </div>
 
+        <!-- ── Pass Mark / Threshold ── -->
         <div class="form-group">
-          <label class="form-label">Promotion Threshold (%)</label>
+          <label class="form-label">Required Pass Mark (%)</label>
+          <!-- Quick Presets -->
+          <div style="display:flex; gap:0.5rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+            <button type="button" class="btn btn-xs" id="preset-50"
+                    style="font-size:11px; font-weight:700; padding:4px 14px; border-radius:var(--radius-full); background:var(--clr-primary); color:white; border:none;"
+                    onclick="setThreshold(50)">50% Pass Mark</button>
+            <button type="button" class="btn btn-xs" id="preset-60"
+                    style="font-size:11px; font-weight:700; padding:4px 14px; border-radius:var(--radius-full); background:var(--clr-surface-2); color:var(--clr-text); border:1px solid var(--clr-border);"
+                    onclick="setThreshold(60)">60% High Pass</button>
+            <button type="button" class="btn btn-xs" id="preset-0"
+                    style="font-size:11px; font-weight:700; padding:4px 14px; border-radius:var(--radius-full); background:var(--clr-surface-2); color:var(--clr-text); border:1px solid var(--clr-border);"
+                    onclick="setThreshold(0)">0% Pass Everyone</button>
+          </div>
           <div style="display:flex; align-items:center; gap:1rem;">
-            <input type="range" name="threshold" id="threshold-slider" min="0" max="100" value="50" class="form-control" style="flex:1; height:6px; accent-color:var(--clr-primary);" oninput="document.getElementById('threshold-display').textContent = this.value + '%'">
+            <input type="range" name="threshold" id="threshold-slider" min="0" max="100" value="50" class="form-control"
+                   style="flex:1; height:6px; accent-color:var(--clr-primary);"
+                   oninput="updateThresholdUI(this.value)">
             <span id="threshold-display" style="font-weight:800; font-size:1.125rem; color:var(--clr-primary); min-width:48px;">50%</span>
           </div>
-          <p class="form-text">Students averaging <strong>at or above</strong> this score are promoted. Default: 50%.</p>
+          <p class="form-text">Students scoring this mark or higher will pass to the new class.</p>
+        </div>
+
+        <!-- ── Teacher Assignment Checkbox ── -->
+        <div class="form-group" style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1rem 1.25rem;">
+          <label class="flex items-center gap-3" style="cursor:pointer; margin:0;">
+            <input type="checkbox" name="rollover_teachers" value="1"
+                   style="width:18px; height:18px; accent-color:var(--clr-primary); flex-shrink:0;">
+            <div>
+              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Assign Same Subject Teachers</div>
+              <div style="font-size:11px; color:var(--clr-text-muted); margin-top:2px;">
+                Keep the same Math, English, Science, and other subject teachers for this class in the new year.
+              </div>
+            </div>
+          </label>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modal-auto-promote')">Cancel</button>
-        <button type="submit" class="btn btn-primary">Run Auto-Promotion</button>
+        <button type="submit" class="btn btn-primary" id="auto-submit-btn">Promote Passing Students</button>
       </div>
     </form>
   </div>
 </div>
 
 <!-- ════════════════════════════════════════════════════════
-     MANUAL OVERRIDE MODAL
+     MANUAL OVERRIDE MODAL (Redesigned & Simplified)
 ══════════════════════════════════════════════════════════ -->
 <div id="modal-manual" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
   <div class="modal w-full max-w-xl mx-4">
     <div class="modal-header">
-      <h3 class="modal-title" id="manual-modal-title">Manual Override</h3>
+      <h3 class="modal-title" id="manual-modal-title">Change Student Results</h3>
       <button class="modal-close" onclick="closeModal('modal-manual')" aria-label="Close">&times;</button>
     </div>
     <div class="modal-body" style="padding:0;">
+      <!-- Manual modal header with target year selector -->
+      <div id="manual-header-bar" style="padding:0.75rem 1.5rem; background:var(--clr-surface-2); border-bottom:1px solid var(--clr-border); display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <label style="font-size:12px; font-weight:700; color:var(--clr-text-muted); white-space:nowrap;">New Academic Year:</label>
+        <select id="manual-target-year" class="form-control" style="padding:0.3rem 0.5rem; font-size:12px; height:32px; width:140px;" onchange="onManualTargetYearChange()">
+          <option value="">— Select —</option>
+          <?php foreach ($nextYears as $ny): ?>
+          <option value="<?= $ny['id'] ?>"><?= htmlspecialchars($ny['year_name']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <span id="manual-student-count" style="font-size:11px; color:var(--clr-text-muted); margin-left:auto;"></span>
+      </div>
       <div id="manual-student-list" style="max-height:480px; overflow-y:auto;">
         <div class="flex items-center justify-center" style="padding:3rem; color:var(--clr-text-muted);">
           Loading students…
@@ -246,7 +319,183 @@ $currentYear = $pageYear        ?? null;
 const BASE   = '<?= $base ?>';
 const YEAR_ID = <?= (int)($currentYear['id'] ?? 0) ?>;
 const NEXT_YEARS = <?= json_encode($nextYears) ?>;
+const TARGET_YEAR_CLASSES = <?= json_encode($targetYearClasses ?? []) ?>;
+const CLASS_HIERARCHY = <?= json_encode($classHierarchy) ?>;
 
+// ── State ──────────────────────────────────────────────────
+let currentAutoClassName = '';
+let currentAutoSection = '';
+let currentManualClassId = 0;
+let currentManualClassName = '';
+
+// ── Helpers ────────────────────────────────────────────────
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s || '');
+  return d.innerHTML;
+}
+
+function getExpectedNextClass(className) {
+  return CLASS_HIERARCHY[className] || null;
+}
+
+function isTerminalClass(className) {
+  return className === 'BASIC 9';
+}
+
+// ── Threshold presets ──────────────────────────────────────
+function setThreshold(val) {
+  const slider = document.getElementById('threshold-slider');
+  slider.value = val;
+  updateThresholdUI(val);
+}
+
+function updateThresholdUI(val) {
+  document.getElementById('threshold-display').textContent = val + '%';
+  // Highlight active preset button
+  [0, 50, 60].forEach(p => {
+    const btn = document.getElementById('preset-' + p);
+    if (!btn) return;
+    if (parseInt(val) === p) {
+      btn.style.background = 'var(--clr-primary)';
+      btn.style.color = 'white';
+      btn.style.border = 'none';
+    } else {
+      btn.style.background = 'var(--clr-surface-2)';
+      btn.style.color = 'var(--clr-text)';
+      btn.style.border = '1px solid var(--clr-border)';
+    }
+  });
+}
+
+// ── Auto-Promote Modal ────────────────────────────────────
+function openAutoModal(classId, className) {
+  currentAutoClassName = className;
+  // Parse section from class data
+  const classData = <?= json_encode(array_map(function($c) {
+    return ['id' => $c['id'], 'class_name' => $c['class_name'], 'section' => $c['section'] ?? ''];
+  }, $classes ?? [])) ?>;
+  const matched = classData.find(c => c.id === classId);
+  currentAutoSection = matched ? matched.section : '';
+
+  document.getElementById('auto-class-id').value = classId;
+  document.getElementById('auto-modal-title').textContent = 'Promote Class · ' + className + (currentAutoSection ? ' (' + currentAutoSection + ')' : '');
+
+  // Update progression preview
+  const expectedNext = getExpectedNextClass(className);
+  const isGraduation = isTerminalClass(className);
+
+  document.getElementById('auto-preview-from').textContent = className + (currentAutoSection ? ' (' + currentAutoSection + ')' : '');
+  document.getElementById('auto-progression-preview').style.display = isGraduation ? 'none' : 'flex';
+  document.getElementById('auto-graduation-banner').style.display = isGraduation ? 'block' : 'none';
+
+  if (expectedNext) {
+    document.getElementById('auto-preview-to').textContent = expectedNext;
+  }
+
+  // Auto-select the next academic year (pick the first one chronologically after current)
+  const targetYearSelect = document.getElementById('auto-target-year');
+  if (NEXT_YEARS.length === 1) {
+    targetYearSelect.value = NEXT_YEARS[0].id;
+  } else if (NEXT_YEARS.length > 0) {
+    // Pick the closest next year (first in the sorted list)
+    targetYearSelect.value = NEXT_YEARS[NEXT_YEARS.length - 1].id;
+  }
+  onTargetYearChange();
+
+  // Reset threshold
+  setThreshold(50);
+
+  // Graduation mode: hide next class group, change submit text
+  const nextClassGroup = document.getElementById('auto-next-class-group');
+  const submitBtn = document.getElementById('auto-submit-btn');
+  if (isGraduation) {
+    nextClassGroup.style.display = 'none';
+    document.getElementById('auto-next-class').removeAttribute('required');
+    submitBtn.textContent = '🎓 Run Graduation Review';
+  } else {
+    nextClassGroup.style.display = 'block';
+    document.getElementById('auto-next-class').setAttribute('required', 'required');
+    submitBtn.textContent = 'Promote Passing Students';
+  }
+
+  openModal('modal-auto-promote');
+}
+
+function onTargetYearChange() {
+  const targetYearId = document.getElementById('auto-target-year').value;
+  const nextClassSelect = document.getElementById('auto-next-class');
+  const hint = document.getElementById('auto-next-class-hint');
+  const previewTo = document.getElementById('auto-preview-to');
+  const previewYearTo = document.getElementById('auto-preview-year-to');
+
+  // Update target year label in preview
+  const selectedYear = NEXT_YEARS.find(y => y.id == targetYearId);
+  previewYearTo.textContent = selectedYear ? selectedYear.year_name : '—';
+
+  if (!targetYearId) {
+    nextClassSelect.innerHTML = '<option value="">— Select new academic year first —</option>';
+    hint.textContent = 'Select the new academic year above to see available classes.';
+    return;
+  }
+
+  const classes = TARGET_YEAR_CLASSES[targetYearId] || [];
+  const expectedNext = getExpectedNextClass(currentAutoClassName);
+
+  if (classes.length === 0) {
+    nextClassSelect.innerHTML = '<option value="">No classes in this year</option>';
+    hint.innerHTML = '⚠ No classes exist in this year yet. <a href="' + BASE + '/admin/classes">Create classes first</a>, or the system will auto-create them.';
+    // Fall back to showing the expected name
+    if (expectedNext) {
+      nextClassSelect.innerHTML += '<option value="' + esc(expectedNext) + '" selected>✨ ' + esc(expectedNext) + ' (auto-create)</option>';
+      previewTo.textContent = expectedNext;
+    }
+    return;
+  }
+
+  // Build dropdown options, marking the recommended one
+  let options = '';
+  let autoSelected = false;
+
+  classes.forEach(c => {
+    const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
+    const value = c.class_name; // The backend uses class_name for matching
+    // Determine if this is the recommended target
+    let isRecommended = false;
+    if (expectedNext && c.class_name === expectedNext) {
+      // If source has a section, try to match section too
+      if (currentAutoSection && c.section === currentAutoSection) {
+        isRecommended = true;
+      } else if (!currentAutoSection || !autoSelected) {
+        isRecommended = true;
+      }
+    }
+
+    const recLabel = isRecommended ? '⭐ ' + label + ' (Recommended)' : label;
+    const selected = isRecommended && !autoSelected ? ' selected' : '';
+    if (isRecommended && !autoSelected) autoSelected = true;
+
+    options += '<option value="' + esc(value) + '"' + selected + '>' + esc(recLabel) + '</option>';
+  });
+
+  if (!autoSelected && expectedNext) {
+    // Expected class doesn't exist in target year — offer auto-create
+    options = '<option value="' + esc(expectedNext) + '" selected>✨ ' + esc(expectedNext) + ' (auto-create)</option>' + options;
+    autoSelected = true;
+  }
+
+  nextClassSelect.innerHTML = '<option value="">— Choose new class —</option>' + options;
+
+  // Update preview
+  if (autoSelected && expectedNext) {
+    previewTo.textContent = expectedNext;
+    hint.innerHTML = '<span style="color:var(--clr-success);">✓</span> Recommended next class auto-selected.';
+  } else {
+    hint.textContent = 'Choose the class where promoted students will be placed.';
+  }
+}
+
+// ── Unpromote confirmation ─────────────────────────────────
 function confirmUnpromote(e, className) {
   e.preventDefault();
   confirmAction({
@@ -258,59 +507,112 @@ function confirmUnpromote(e, className) {
   return false;
 }
 
-function openAutoModal(classId, className) {
-  document.getElementById('auto-class-id').value = classId;
-  document.getElementById('auto-modal-title').textContent = 'Auto-Promote · ' + className;
-  // Reset slider
-  const slider = document.getElementById('threshold-slider');
-  slider.value = 50;
-  document.getElementById('threshold-display').textContent = '50%';
-  openModal('modal-auto-promote');
+// ── Manual Override Modal ──────────────────────────────────
+function openManualModal(classId, className) {
+  currentManualClassId = classId;
+  currentManualClassName = className;
+  document.getElementById('manual-modal-title').textContent = 'Change Student Results · ' + className;
+
+  // Auto-select the target year
+  const manualYearSel = document.getElementById('manual-target-year');
+  if (NEXT_YEARS.length === 1) {
+    manualYearSel.value = NEXT_YEARS[0].id;
+  } else if (NEXT_YEARS.length > 0) {
+    manualYearSel.value = NEXT_YEARS[NEXT_YEARS.length - 1].id;
+  }
+
+  openModal('modal-manual');
+  loadManualStudents(classId, className);
 }
 
-function openManualModal(classId, className) {
-  document.getElementById('manual-modal-title').textContent = 'Manual Override · ' + className;
-  openModal('modal-manual');
+function onManualTargetYearChange() {
+  // Re-render the student list with updated year options
+  if (currentManualClassId) {
+    loadManualStudents(currentManualClassId, currentManualClassName);
+  }
+}
 
-  // Build next-year options HTML
-  const nextYearOpts = NEXT_YEARS.map(y => `<option value="${y.id}">${esc(y.year_name)}</option>`).join('');
+function loadManualStudents(classId, className) {
+  const targetYearId = document.getElementById('manual-target-year').value;
+  const expectedNext = getExpectedNextClass(className);
+  const isGraduation = isTerminalClass(className);
 
-  // Fetch students for this class via inline query results
+  // Build next-class dropdown options from target year classes
+  let nextClassOpts = '<option value="">— Class —</option>';
+  if (targetYearId) {
+    const classes = TARGET_YEAR_CLASSES[targetYearId] || [];
+    classes.forEach(c => {
+      const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
+      const isRec = expectedNext && c.class_name === expectedNext;
+      const selected = isRec ? ' selected' : '';
+      nextClassOpts += `<option value="${esc(c.class_name)}"${selected}>${esc(label)}${isRec ? ' ⭐' : ''}</option>`;
+    });
+    // If expected class doesn't exist, offer auto-create
+    if (expectedNext && !classes.some(c => c.class_name === expectedNext)) {
+      nextClassOpts = `<option value="">— Class —</option><option value="${esc(expectedNext)}" selected>✨ ${esc(expectedNext)} (auto-create)</option>` +
+        classes.map(c => {
+          const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
+          return `<option value="${esc(c.class_name)}">${esc(label)}</option>`;
+        }).join('');
+    }
+  }
+
   fetch(`${BASE}/admin/promotions?ajax_students=1&class_id=${classId}&year_id=${YEAR_ID}`, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
   })
   .then(r => r.ok ? r.json() : Promise.reject(r.status))
   .then(data => {
     const el = document.getElementById('manual-student-list');
+    const countEl = document.getElementById('manual-student-count');
+
     if (!data.students || data.students.length === 0) {
       el.innerHTML = '<div style="padding:3rem; text-align:center; color:var(--clr-text-muted);">No students found in this class.</div>';
+      countEl.textContent = '';
       return;
     }
+
+    countEl.textContent = data.students.length + ' student' + (data.students.length !== 1 ? 's' : '');
+
     el.innerHTML = data.students.map(s => {
       const statusColor = s.promotion_status === 'promoted' ? 'var(--clr-success)'
                         : s.promotion_status === 'repeated' ? 'var(--clr-danger)' : 'var(--clr-text-muted)';
-      const statusLabel = s.promotion_status ? s.promotion_status.charAt(0).toUpperCase() + s.promotion_status.slice(1) : 'Pending';
+      const statusLabel = s.promotion_status === 'promoted' ? 'Passed'
+                        : s.promotion_status === 'repeated' ? 'Repeating' : 'Pending';
+      const statusIcon = s.promotion_status === 'promoted' ? '✓' : s.promotion_status === 'repeated' ? '✗' : '○';
+
+      // Score badge colour
+      const scoreColor = s.avg_score >= 60 ? 'var(--clr-success)' : s.avg_score >= 50 ? '#d97706' : 'var(--clr-danger)';
+
       return `
-      <div style="padding:1rem 1.5rem; border-bottom:1px solid var(--clr-border); display:flex; flex-wrap:wrap; gap:0.75rem; align-items:center;">
+      <div style="padding:0.75rem 1.5rem; border-bottom:1px solid var(--clr-border); display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+        <!-- Student Info -->
         <div style="flex:1; min-width:160px;">
-          <div style="font-weight:700; color:var(--clr-text);">${esc(s.full_name)}</div>
-          <div style="font-size:var(--text-xs); color:var(--clr-text-muted);">ID: ${esc(s.student_id_number)} · Avg: ${s.avg_score}%</div>
+          <div style="font-weight:700; font-size:13px; color:var(--clr-text);">${esc(s.full_name)}</div>
+          <div style="font-size:11px; color:var(--clr-text-muted); display:flex; gap:0.5rem; align-items:center; margin-top:2px;">
+            <span>ID: ${esc(s.student_id_number)}</span>
+            <span style="width:4px; height:4px; border-radius:50%; background:var(--clr-border); display:inline-block;"></span>
+            <span style="font-weight:700; color:${scoreColor};">${s.avg_score}% Avg</span>
+          </div>
         </div>
-        <span style="font-size:11px; font-weight:700; color:${statusColor}; text-transform:uppercase;">${statusLabel}</span>
-        <form method="POST" action="${BASE}/admin/promotions" onsubmit="Loader.show()" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <!-- Current Status Badge -->
+        <span style="font-size:10px; font-weight:800; color:${statusColor}; text-transform:uppercase; padding:3px 10px; border-radius:var(--radius-full); background:${statusColor}15; white-space:nowrap;">
+          ${statusIcon} ${statusLabel}
+        </span>
+        <!-- Action Form -->
+        <form method="POST" action="${BASE}/admin/promotions" onsubmit="Loader.show()" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap;">
           <input type="hidden" name="_csrf_token" value="${document.querySelector('input[name=_csrf_token]').value}">
           <input type="hidden" name="_action" value="manual_promote">
           <input type="hidden" name="student_id" value="${s.id}">
           <input type="hidden" name="year_id" value="${YEAR_ID}">
-          <select name="next_year_id" class="form-control" style="padding:0.3rem 0.5rem; font-size:12px; height:32px; width:130px;">
-            <option value="">Target Year</option>
-            ${nextYearOpts}
+          <input type="hidden" name="next_year_id" value="${targetYearId || ''}">
+          <select name="next_class_name" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:120px; border-radius:var(--radius-sm);">
+            ${nextClassOpts}
           </select>
-          <select name="promo_status" class="form-control" style="padding:0.3rem 0.5rem; font-size:12px; height:32px; width:120px;">
-            <option value="promoted" ${s.promotion_status==='promoted'?'selected':''}>✓ Promote</option>
-            <option value="repeated" ${s.promotion_status==='repeated'?'selected':''}>✗ Hold Back</option>
+          <select name="promo_status" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:100px; border-radius:var(--radius-sm);">
+            <option value="promoted" ${s.promotion_status==='promoted'?'selected':''}>✓ Pass</option>
+            <option value="repeated" ${s.promotion_status==='repeated'?'selected':''}>✗ Repeat</option>
           </select>
-          <button type="submit" class="btn btn-xs btn-primary" style="height:32px; font-size:11px;">Save</button>
+          <button type="submit" class="btn btn-xs btn-primary" style="height:30px; font-size:11px; padding:0 12px; border-radius:var(--radius-sm);">Save</button>
         </form>
       </div>`;
     }).join('');
@@ -320,10 +622,5 @@ function openManualModal(classId, className) {
       '<div style="padding:3rem; text-align:center; color:var(--clr-danger);">Failed to load students. Please reload.</div>';
   });
 }
-
-function esc(s) {
-  const d = document.createElement('div');
-  d.textContent = String(s || '');
-  return d.innerHTML;
-}
 </script>
+

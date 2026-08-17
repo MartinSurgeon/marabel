@@ -25,11 +25,39 @@ class ProfileController {
 
     private function updatePassword(): void {
         $userId = Session::userId();
+        $isStudent = Session::role() === 'student';
         $currentPassword = $_POST['current_password'] ?? '';
         $newPassword     = $_POST['new_password'] ?? '';
         $confirmPassword = $_POST['confirm_password'] ?? '';
 
-        // 1. Basic validation
+        if ($isStudent) {
+            // Student PIN validation (4 digits)
+            if (!preg_match('/^\d{4}$/', $newPassword)) {
+                Session::flash('error', 'New PIN must be exactly 4 digits.');
+                return;
+            }
+
+            if ($newPassword !== $confirmPassword) {
+                Session::flash('error', 'PINs do not match.');
+                return;
+            }
+
+            $student = DB::queryOne("SELECT pin_hash FROM students WHERE id = ?", [$userId]);
+            if (!$student || !password_verify($currentPassword, $student['pin_hash'])) {
+                Session::flash('error', 'The current PIN you entered is incorrect.');
+                return;
+            }
+
+            $newHash = password_hash($newPassword, PASSWORD_BCRYPT);
+            DB::execute("UPDATE students SET pin_hash = ? WHERE id = ?", [$newHash, $userId]);
+            Session::flash('success', 'Your 4-digit PIN has been changed successfully.');
+
+            $base = defined('APP_BASE') ? APP_BASE : '';
+            header('Location: ' . $base . '/student');
+            exit;
+        }
+
+        // 1. Staff / Parent password validation
         if (strlen($newPassword) < 8) {
             Session::flash('error', 'New password must be at least 8 characters long.');
             return;

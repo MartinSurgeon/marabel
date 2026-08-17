@@ -105,8 +105,20 @@ if (Session::isLoggedIn()) {
                   No notifications yet.
                 </div>
               <?php else: ?>
-                <?php foreach ($latestNotifs as $n): ?>
-                  <div class="px-4 py-3 hover:bg-gray-50 border-b last:border-0 transition <?= $n['is_read'] ? 'opacity-60' : 'bg-purple-50/30' ?>">
+                <?php 
+                  $currentRole = Session::get('user_role') ?? 'guest';
+                  foreach ($latestNotifs as $n): 
+                    $safeLink = $n['link'] ?? '';
+                    // Prevent non-admin users from navigating to admin-only pages
+                    if ($safeLink && ($currentRole === 'parent' || $currentRole === 'student') && (str_starts_with($safeLink, '/admin') || str_starts_with($safeLink, '/teacher'))) {
+                        $safeLink = '';
+                    }
+                ?>
+                  <div 
+                    class="px-4 py-3 hover:bg-gray-50 border-b last:border-0 transition cursor-pointer <?= $n['is_read'] ? 'opacity-60 bg-white' : 'bg-purple-50/30 font-semibold' ?>" 
+                    id="header-notif-<?= $n['id'] ?>"
+                    onclick="headerMarkRead(<?= $n['id'] ?>, '<?= $safeLink ? htmlspecialchars($base . $safeLink) : '' ?>')"
+                  >
                     <div class="flex items-start">
                       <div class="flex-shrink-0 mt-1">
                         <?php if ($n['type'] === 'success'): ?>
@@ -114,13 +126,13 @@ if (Session::isLoggedIn()) {
                         <?php elseif ($n['type'] === 'error'): ?>
                           <svg class="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <?php else: ?>
-                          <svg class="h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                          <svg class="h-4 w-4 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         <?php endif; ?>
                       </div>
                       <div class="ml-3 flex-1">
-                        <p class="text-xs font-semibold text-gray-900"><?= htmlspecialchars($n['title']) ?></p>
-                        <p class="text-[11px] text-gray-600 mt-0.5 leading-snug"><?= htmlspecialchars($n['message']) ?></p>
-                        <p class="text-[10px] text-gray-400 mt-1"><?= date('M j, g:i a', strtotime($n['created_at'])) ?></p>
+                        <p class="text-xs font-semibold text-gray-900 m-0"><?= htmlspecialchars($n['title']) ?></p>
+                        <p class="text-[11px] text-gray-600 mt-0.5 leading-snug m-0"><?= htmlspecialchars($n['message']) ?></p>
+                        <p class="text-[10px] text-gray-400 mt-1 m-0"><?= date('M j, g:i a', strtotime($n['created_at'])) ?></p>
                       </div>
                     </div>
                   </div>
@@ -129,13 +141,48 @@ if (Session::isLoggedIn()) {
             </div>
 
             <div class="p-2 border-t bg-gray-50 text-center">
-              <span class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Recent Activity</span>
+              <?php 
+                $activityLink = match($currentRole ?? '') {
+                  'parent'  => $base . '/parent',
+                  'student' => $base . '/student',
+                  default   => $base . '/admin/notifications',
+                };
+              ?>
+              <a href="<?= $activityLink ?>" class="text-xs text-purple-600 hover:text-purple-800 font-semibold inline-block">View All Activity &rarr;</a>
             </div>
           </div>
         </div>
 
         <script>
-          // Simple notification dropdown toggle
+          function headerMarkRead(notifId, targetUrl) {
+            const item = document.getElementById('header-notif-' + notifId);
+            fetch('<?= $base ?>/admin/notifications/read', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: 'id=' + encodeURIComponent(notifId)
+            })
+            .then(res => res.json())
+            .then(data => {
+              if (item) {
+                item.classList.remove('bg-purple-50/30', 'font-semibold');
+                item.classList.add('opacity-60', 'bg-white');
+              }
+              const pingBadge = document.querySelector('#notif-toggle .relative');
+              if (pingBadge && data.unreadCount <= 0) pingBadge.remove();
+              if (targetUrl && targetUrl !== '#' && targetUrl !== '') {
+                window.location.href = targetUrl;
+              }
+            })
+            .catch(() => {
+              if (targetUrl && targetUrl !== '#' && targetUrl !== '') {
+                window.location.href = targetUrl;
+              }
+            });
+          }
+
           document.addEventListener('DOMContentLoaded', function() {
             const toggle = document.getElementById('notif-toggle');
             const dropdown = document.getElementById('notif-dropdown');

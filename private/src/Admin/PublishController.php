@@ -187,8 +187,12 @@ class PublishController {
             ", [$classId]);
 
             $sendSms = (isset($_POST['send_sms']) && $_POST['send_sms'] === '1');
-            $termName = $term['name'] ?? 'Current Term';
-            $yearName = $activeYear['year_name'] ?? '';
+            $termInfo = DB::queryOne(
+                "SELECT t.name, ay.year_name FROM terms t JOIN academic_years ay ON ay.id = t.academic_year_id WHERE t.id = ?",
+                [$termId]
+            );
+            $termName = $termInfo['name'] ?? 'Current Term';
+            $yearName = $termInfo['year_name'] ?? '';
 
             foreach ($parents as $p) {
                 // In-app notification

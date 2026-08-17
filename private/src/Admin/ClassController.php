@@ -19,6 +19,7 @@ class ClassController {
             match ($action) {
                 'class_store'  => $this->classStore(),
                 'class_delete' => $this->classDelete(),
+                'class_clone'  => $this->classClone(),
                 default => $this->back(),
             };
         }
@@ -33,8 +34,6 @@ class ClassController {
         $teachersList  = DB::query("SELECT id, full_name FROM users WHERE role = 'teacher' AND is_active = 1 ORDER BY full_name");
 
         $filterYear = $_GET['year_id'] ?? $activeYearId;
-        $classesList = [];
-        if ($filterYear) {
         $classesList = [];
         if ($filterYear) {
             $classesList = DB::query(
@@ -53,7 +52,6 @@ class ClassController {
                  ORDER BY sl.sort_order, c.class_name",
                 [$filterYear]
             );
-        }
         }
     }
 
@@ -79,12 +77,15 @@ class ClassController {
 
         $id = $_POST['class_id'] ?? null;
         try {
+            DB::beginTransaction();
+
             if ($id) {
                 DB::execute(
                     "UPDATE classes SET level_id=?, class_name=?, section=?, academic_year_id=?, grading_system=? WHERE id=?",
                     array_merge(array_values($data), [(int)$id])
                 );
                 $this->syncClassTeachers((int)$id, $_POST['teacher_ids'] ?? []);
+                DB::commit();
                 Session::flash('success', "Classroom '{$data['class_name']}' updated.");
             } else {
                 $newId = DB::insert(
@@ -92,14 +93,19 @@ class ClassController {
                     array_values($data)
                 );
                 $this->syncClassTeachers((int)$newId, $_POST['teacher_ids'] ?? []);
+                DB::commit();
                 Session::flash('success', "Classroom '{$data['class_name']}' created.");
             }
         } catch (PDOException $e) {
+            if (DB::inTransaction()) DB::rollBack();
             if ($e->getCode() == 23000) { // Integrity constraint violation
                 Session::flash('error', "A classroom with this name and section already exists for the selected academic year.");
             } else {
                 Session::flash('error', "A database error occurred while saving the classroom.");
             }
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', "Failed to save classroom: " . $e->getMessage());
         }
         $this->back();
     }
@@ -179,12 +185,123 @@ class ClassController {
             Session::flash('error', "Failed to delete classroom. Database error: " . $e->getMessage());
         }
 
-        $this->back();
+        $this->back($row['academic_year_id'] ?? null);
     }
 
-    private function back(): never {
+    private function classClone(): void {
+        $sourceYearId  = (int)($_POST['source_year_id'] ?? 0);
+        $targetYearId  = (int)($_POST['target_year_id'] ?? 0);
+        $cloneTeachers = !empty($_POST['clone_teachers']);
+
+        if (!$sourceYearId || !$targetYearId) {
+            Session::flash('error', 'Please select both source and target academic sessions.');
+            $this->back($targetYearId);
+        }
+
+        try {
+            DB::beginTransaction();
+            $res = self::cloneYearClasses($sourceYearId, $targetYearId, $cloneTeachers);
+            DB::commit();
+
+            $msg = "Cloned {$res['cloned_classes']} classroom(s) successfully.";
+            if ($res['linked_students'] > 0) {
+                $msg .= " Automatically linked {$res['linked_students']} promoted student(s) to their new classes.";
+            }
+            Session::flash('success', $msg);
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', 'Failed to clone classrooms: ' . $e->getMessage());
+        }
+
+        $this->back($targetYearId);
+    }
+
+    /**
+     * Reusable helper to clone classrooms from one academic year to another.
+     * Also links any promoted students awaiting placement.
+     */
+    public static function cloneYearClasses(int $sourceYearId, int $targetYearId, bool $cloneTeachers = true): array {
+        if (!$sourceYearId || !$targetYearId || $sourceYearId === $targetYearId) {
+            throw new InvalidArgumentException("Invalid source or target academic year.");
+        }
+
+        $sourceClasses = DB::query("SELECT * FROM classes WHERE academic_year_id = ?", [$sourceYearId]);
+        if (empty($sourceClasses)) {
+            return ['cloned_classes' => 0, 'linked_students' => 0];
+        }
+
+        $clonedCount = 0;
+        $classMap = [];
+
+        foreach ($sourceClasses as $c) {
+            $existing = DB::queryOne(
+                "SELECT id FROM classes WHERE class_name = ? AND level_id = ? AND academic_year_id = ? LIMIT 1",
+                [$c['class_name'], $c['level_id'], $targetYearId]
+            );
+
+            if ($existing) {
+                $newId = (int)$existing['id'];
+            } else {
+                $newId = (int)DB::insert(
+                    "INSERT INTO classes (level_id, class_name, section, academic_year_id, grading_system) VALUES (?, ?, ?, ?, ?)",
+                    [$c['level_id'], $c['class_name'], $c['section'], $targetYearId, $c['grading_system'] ?? 'proficiency']
+                );
+                $clonedCount++;
+            }
+            $classMap[$c['id']] = $newId;
+
+            if ($cloneTeachers) {
+                $teachers = DB::query("SELECT teacher_id FROM class_teachers WHERE class_id = ?", [$c['id']]);
+                foreach ($teachers as $t) {
+                    DB::execute(
+                        "INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)",
+                        [$newId, $t['teacher_id']]
+                    );
+                }
+            }
+        }
+
+        // Auto-link any promoted students in target year
+        $linkedCount = self::autoLinkPromotedStudents($targetYearId);
+
+        return ['cloned_classes' => $clonedCount, 'linked_students' => $linkedCount];
+    }
+
+    /**
+     * Auto-link students in target year to their new class based on next_class_name
+     */
+    public static function autoLinkPromotedStudents(int $targetYearId): int {
+        $promotedStudents = DB::query(
+            "SELECT s.id as student_id, sp.next_class_name
+             FROM students s
+             JOIN student_promotions sp ON sp.student_id = s.id
+             WHERE s.academic_year_id = ? AND sp.promotion_status = 'promoted' AND sp.next_class_name IS NOT NULL AND sp.next_class_name != ''",
+            [$targetYearId]
+        );
+
+        $linked = 0;
+        foreach ($promotedStudents as $ps) {
+            $nextClass = trim($ps['next_class_name']);
+            $targetClass = DB::queryOne(
+                "SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1",
+                [$nextClass, $targetYearId]
+            );
+            if ($targetClass) {
+                DB::execute(
+                    "UPDATE students SET current_class_id = ? WHERE id = ? AND academic_year_id = ?",
+                    [$targetClass['id'], $ps['student_id'], $targetYearId]
+                );
+                $linked++;
+            }
+        }
+        return $linked;
+    }
+
+    private function back(?int $yearId = null): never {
         $base = defined('APP_BASE') ? APP_BASE : '';
-        header('Location: ' . $base . '/admin/classes');
+        $qs   = $yearId ? "?year_id={$yearId}" : '';
+        header('Location: ' . $base . '/admin/classes' . $qs);
         exit;
     }
 }
+

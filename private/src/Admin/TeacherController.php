@@ -27,24 +27,27 @@ class TeacherController {
         }
 
         // Prepare data for view
-        global $teachersList, $classesList, $subjectsList, $assignmentsList;
+        global $teachersList, $classesList, $subjectsList, $assignmentsList, $activeYearName, $activeTermInfo;
         
         $activeYear = DB::queryOne("SELECT id, year_name FROM academic_years WHERE is_active = 1 LIMIT 1");
         $activeYearId = $activeYear['id'] ?? null;
         $activeYearName = $activeYear['year_name'] ?? 'None';
 
+        $activeTerm = DB::queryOne("SELECT id, term_number FROM terms WHERE is_active = 1 LIMIT 1");
+        $activeTermId = $activeTerm['id'] ?? null;
+        $activeTermInfo = $activeTerm ? "Term {$activeTerm['term_number']}" : 'No Active Term';
+
         $teachersList = DB::query(
             "SELECT u.*, 
-                    (SELECT COUNT(*) FROM class_teachers ct WHERE ct.teacher_id = u.id) as class_count,
+                    (SELECT COUNT(DISTINCT ct.class_id) FROM class_teachers ct WHERE ct.teacher_id = u.id) as class_count,
                     (SELECT COUNT(*) FROM class_subjects cs WHERE cs.teacher_id = u.id) as subject_count,
                     (SELECT COUNT(*) FROM class_subjects cs 
-                     JOIN classes c ON c.id = cs.class_id
-                     WHERE cs.teacher_id = u.id AND c.academic_year_id = ?) as current_year_subjects,
-                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, ' (', s.subject_name, ')') SEPARATOR ', ')
+                     WHERE cs.teacher_id = u.id AND cs.term_id = ?) as current_year_subjects,
+                    (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, IF(c.section != '', CONCAT(' ', c.section), ''), ' (', s.subject_name, ')') SEPARATOR ', ')
                      FROM class_subjects cs 
                      JOIN classes c ON c.id = cs.class_id
                      JOIN subjects s ON s.id = cs.subject_id
-                     WHERE cs.teacher_id = u.id AND c.academic_year_id = ?) as assignment_summary,
+                     WHERE cs.teacher_id = u.id AND cs.term_id = ?) as assignment_summary,
                     (SELECT GROUP_CONCAT(DISTINCT CONCAT(c.class_name, IFNULL(c.section, '')) SEPARATOR ', ')
                      FROM class_teachers ct 
                      JOIN classes c ON c.id = ct.class_id
@@ -54,10 +57,8 @@ class TeacherController {
              FROM users u 
              WHERE u.role = 'teacher' 
              ORDER BY u.full_name",
-            [$activeYearId, $activeYearId]
+            [$activeTermId, $activeTermId]
         );
-
-        global $activeYearName; // Make it available for template
 
         $classesList = DB::query(
             "SELECT c.id, c.class_name, c.section, sl.name as level_name
@@ -77,13 +78,14 @@ class TeacherController {
         );
 
         $assignmentsList = DB::query(
-            "SELECT DISTINCT cs.id, cs.teacher_id, c.class_name, c.section, s.subject_name, sl.name as level_name
+            "SELECT DISTINCT cs.id, cs.teacher_id, c.class_name, c.section, s.subject_name, sl.name as level_name, cs.term_id, t.term_number
              FROM class_subjects cs
+             JOIN terms t ON t.id = cs.term_id
              JOIN classes c ON c.id = cs.class_id
              JOIN subjects s ON s.id = cs.subject_id
              JOIN school_levels sl ON sl.id = c.level_id
              JOIN academic_years ay ON ay.id = c.academic_year_id
-             WHERE ay.is_active = 1
+             WHERE ay.is_active = 1 AND t.is_active = 1
              ORDER BY sl.sort_order, c.class_name, s.subject_name"
         );
     }
@@ -110,46 +112,56 @@ class TeacherController {
         ];
 
         $id = $_POST['teacher_id'] ?? null;
-        if ($id) {
-            DB::execute(
-                "UPDATE users SET full_name=?, email=?, phone=?, gender=? WHERE id=? AND role='teacher'",
-                [$data['full_name'], $data['email'], $data['phone'], $data['gender'], (int)$id]
-            );
-            $this->syncTeacherClassrooms((int)$id, $_POST['class_ids'] ?? []);
-            Session::flash('success', "Teacher record updated.");
-        } else {
-            // Check for existing email
-            $exists = DB::queryOne("SELECT id FROM users WHERE email = ? LIMIT 1", [$email]);
-            if ($exists) {
-                Session::flash('error', "A user with this email already exists.");
-                $this->redirect();
-            }
-            
-            $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
-            $newId = DB::insert(
-                "INSERT INTO users (full_name, email, phone, gender, role, password_hash) VALUES (?,?,?,?,?,?)",
-                array_values($data)
-            );
-            $this->syncTeacherClassrooms((int)$newId, $_POST['class_ids'] ?? []);
-            
-            // Notifications
-            require_once __DIR__ . '/../Helpers/Notification.php';
-            // 1. Welcome the new teacher
-            Notification::send(
-                (int)$newId,
-                "Welcome to " . SCHOOL_NAME,
-                "Your account has been created. Your default password is: password123",
-                "success"
-            );
-            // 2. Alert admins (Audit)
-            Notification::sendToRole(
-                'admin',
-                "New Teacher Joined",
-                "Staff member '{$data['full_name']}' was registered by " . Session::get('user_name') . ".",
-                "info"
-            );
+        try {
+            DB::beginTransaction();
 
-            Session::flash('success', "Teacher created with default password: password123");
+            if ($id) {
+                DB::execute(
+                    "UPDATE users SET full_name=?, email=?, phone=?, gender=? WHERE id=? AND role='teacher'",
+                    [$data['full_name'], $data['email'], $data['phone'], $data['gender'], (int)$id]
+                );
+                $this->syncTeacherClassrooms((int)$id, $_POST['class_ids'] ?? []);
+                DB::commit();
+                Session::flash('success', "Teacher record updated.");
+            } else {
+                // Check for existing email
+                $exists = DB::queryOne("SELECT id FROM users WHERE email = ? LIMIT 1", [$email]);
+                if ($exists) {
+                    DB::rollBack();
+                    Session::flash('error', "A user with this email already exists.");
+                    $this->redirect();
+                }
+                
+                $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
+                $newId = DB::insert(
+                    "INSERT INTO users (full_name, email, phone, gender, role, password_hash) VALUES (?,?,?,?,?,?)",
+                    array_values($data)
+                );
+                $this->syncTeacherClassrooms((int)$newId, $_POST['class_ids'] ?? []);
+                DB::commit();
+
+                // Notifications
+                require_once __DIR__ . '/../Helpers/Notification.php';
+                // 1. Welcome the new teacher
+                Notification::send(
+                    (int)$newId,
+                    "Welcome to " . SCHOOL_NAME,
+                    "Your account has been created. Your default password is: password123",
+                    "success"
+                );
+                // 2. Alert admins (Audit)
+                Notification::sendToRole(
+                    'admin',
+                    "New Teacher Joined",
+                    "Staff member '{$data['full_name']}' was registered by " . Session::get('user_name') . ".",
+                    "info"
+                );
+
+                Session::flash('success', "Teacher created with default password: password123");
+            }
+        } catch (\Throwable $e) {
+            if (DB::inTransaction()) DB::rollBack();
+            Session::flash('error', "Failed to save teacher: " . $e->getMessage());
         }
         $this->redirect();
     }
@@ -215,44 +227,52 @@ class TeacherController {
 
         if ($teacherId && !empty($classIds) && !empty($subjectIds)) {
             $successCount = 0;
-            $dupCount = 0;
 
-            foreach ($classIds as $cid) {
-                foreach ($subjectIds as $sid) {
-                    // Check if this class/subject/term combination already exists
-                    $existing = DB::queryOne(
-                        "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
-                        [$cid, $sid, $termId]
-                    );
+            try {
+                DB::beginTransaction();
 
-                    if ($existing) {
-                        // Only update the teacher assignment — never insert a duplicate row
-                        DB::execute(
-                            "UPDATE class_subjects SET teacher_id = ? WHERE id = ?",
-                            [$teacherId, $existing['id']]
+                foreach ($classIds as $cid) {
+                    foreach ($subjectIds as $sid) {
+                        // Check if this class/subject/term combination already exists
+                        $existing = DB::queryOne(
+                            "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
+                            [$cid, $sid, $termId]
                         );
-                    } else {
-                        DB::insert(
-                            "INSERT IGNORE INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
-                            [$cid, $sid, $teacherId, $termId]
-                        );
+
+                        if ($existing) {
+                            // Only update the teacher assignment — never insert a duplicate row
+                            DB::execute(
+                                "UPDATE class_subjects SET teacher_id = ? WHERE id = ?",
+                                [$teacherId, $existing['id']]
+                            );
+                        } else {
+                            DB::insert(
+                                "INSERT IGNORE INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
+                                [$cid, $sid, $teacherId, $termId]
+                            );
+                        }
+                        $successCount++;
                     }
-                    $successCount++;
                 }
-            }
-            
-            if ($successCount > 0) {
-                // Notify Teacher
-                require_once __DIR__ . '/../Helpers/Notification.php';
-                $classNames = [];
-                $q = "SELECT class_name FROM classes WHERE id IN (" . implode(',', array_fill(0, count($classIds), '?')) . ")";
-                $cData = DB::query($q, $classIds);
-                $classNames = array_column($cData, 'class_name');
+
+                DB::commit();
                 
-                $msg = "You have been assigned new subject(s) in: " . implode(', ', $classNames) . ".";
-                Notification::send($teacherId, "New Subject Assignment", $msg, "success", "/teacher/scores");
-                
-                Session::flash('success', "Assigned {$successCount} subject/class combinations successfully.");
+                if ($successCount > 0) {
+                    // Notify Teacher
+                    require_once __DIR__ . '/../Helpers/Notification.php';
+                    $classNames = [];
+                    $q = "SELECT class_name FROM classes WHERE id IN (" . implode(',', array_fill(0, count($classIds), '?')) . ")";
+                    $cData = DB::query($q, $classIds);
+                    $classNames = array_column($cData, 'class_name');
+                    
+                    $msg = "You have been assigned new subject(s) in: " . implode(', ', $classNames) . ".";
+                    Notification::send($teacherId, "New Subject Assignment", $msg, "success", "/teacher/scores");
+                    
+                    Session::flash('success', "Assigned {$successCount} subject/class combinations successfully.");
+                }
+            } catch (\Throwable $e) {
+                if (DB::inTransaction()) DB::rollBack();
+                Session::flash('error', "Failed to assign subjects: " . $e->getMessage());
             }
         } else {
             Session::flash('error', "Please select at least one class and one subject.");
@@ -288,23 +308,30 @@ class TeacherController {
         $assignmentIds = array_filter(array_map('intval', $assignmentIds));
 
         if (!empty($assignmentIds)) {
-            $removed = 0;
-            $unassigned = 0;
-            foreach ($assignmentIds as $id) {
-                // Check for scores across all relevant tables (same logic as removeSubject)
-                $hasSba  = (int)DB::queryValue("SELECT COUNT(*) FROM sba_component_scores WHERE class_subject_id = ?", [$id]);
-                $hasEx   = (int)DB::queryValue("SELECT COUNT(*) FROM exam_scores WHERE class_subject_id = ?", [$id]);
-                $hasComp = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores WHERE class_subject_id = ?", [$id]);
+            try {
+                DB::beginTransaction();
+                $removed = 0;
+                $unassigned = 0;
+                foreach ($assignmentIds as $id) {
+                    // Check for scores across all relevant tables (same logic as removeSubject)
+                    $hasSba  = (int)DB::queryValue("SELECT COUNT(*) FROM sba_component_scores WHERE class_subject_id = ?", [$id]);
+                    $hasEx   = (int)DB::queryValue("SELECT COUNT(*) FROM exam_scores WHERE class_subject_id = ?", [$id]);
+                    $hasComp = (int)DB::queryValue("SELECT COUNT(*) FROM computed_scores WHERE class_subject_id = ?", [$id]);
 
-                if ($hasSba > 0 || $hasEx > 0 || $hasComp > 0) {
-                    DB::execute("UPDATE class_subjects SET teacher_id = NULL WHERE id = ?", [$id]);
-                    $unassigned++;
-                } else {
-                    DB::execute("DELETE FROM class_subjects WHERE id = ?", [$id]);
-                    $removed++;
+                    if ($hasSba > 0 || $hasEx > 0 || $hasComp > 0) {
+                        DB::execute("UPDATE class_subjects SET teacher_id = NULL WHERE id = ?", [$id]);
+                        $unassigned++;
+                    } else {
+                        DB::execute("DELETE FROM class_subjects WHERE id = ?", [$id]);
+                        $removed++;
+                    }
                 }
+                DB::commit();
+                Session::flash('success', "Processed " . ($removed + $unassigned) . " subjects. ($removed deleted, $unassigned unassigned due to existing scores)");
+            } catch (\Throwable $e) {
+                if (DB::inTransaction()) DB::rollBack();
+                Session::flash('error', "Failed to remove assignments: " . $e->getMessage());
             }
-            Session::flash('success', "Processed " . ($removed + $unassigned) . " subjects. ($removed deleted, $unassigned unassigned due to existing scores)");
         }
         $this->redirect();
     }

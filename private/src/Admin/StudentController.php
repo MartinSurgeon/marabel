@@ -35,7 +35,9 @@ class StudentController {
         }
 
         // Prepare data for view
-        global $studentsList, $classesList, $activeYearId, $yearsList;
+        global $studentsList, $classesList, $activeYearId, $yearsList, $nextStudentId;
+
+        $nextStudentId = self::generateNextStudentId();
 
         $activeYear   = DB::queryOne("SELECT id FROM academic_years WHERE is_active = 1 LIMIT 1");
         if (!$activeYear) {
@@ -82,7 +84,39 @@ class StudentController {
         );
     }
 
+    /**
+     * Auto-generate the next sequential 4-digit numeric student ID (e.g. 0661)
+     */
+    public static function generateNextStudentId(): string {
+        $allIds = DB::query("SELECT student_id_number FROM students");
+        $maxNum = 0;
+        foreach ($allIds as $row) {
+            $val = trim($row['student_id_number'] ?? '');
+            if (preg_match('/^(\d+)$/', $val, $m)) {
+                $n = (int)$m[1];
+                if ($n > $maxNum) $maxNum = $n;
+            }
+        }
+        $next = $maxNum + 1;
+        return sprintf('%04d', $next);
+    }
+
     private function studentStore(): void {
+        $id = $_POST['student_id'] ?? null;
+
+        // Auto-generate ID on new registrations and prevent manual overrides
+        if (!$id) {
+            $submittedId = self::generateNextStudentId();
+            $_POST['student_id_number'] = $submittedId;
+        } else {
+            $submittedId = trim($_POST['student_id_number'] ?? '');
+            if ($submittedId === '') {
+                $existing = DB::queryOne("SELECT student_id_number FROM students WHERE id = ?", [(int)$id]);
+                $submittedId = $existing['student_id_number'] ?? self::generateNextStudentId();
+                $_POST['student_id_number'] = $submittedId;
+            }
+        }
+
         $rules = [
             'full_name'         => 'required|max:200',
             'student_id_number' => 'required|max:50',
@@ -97,7 +131,7 @@ class StudentController {
         }
 
         $data = [
-            'student_id_number' => trim($_POST['student_id_number']),
+            'student_id_number' => $submittedId,
             'full_name'         => trim($_POST['full_name']),
             'surname'           => trim($_POST['surname'] ?? ''),
             'gender'            => $_POST['gender'] ?? null,
@@ -130,12 +164,15 @@ class StudentController {
                 Session::flash('error', "Student ID '{$data['student_id_number']}' is already in use.");
                 $this->redirect();
             }
-            
+
+            $pinHash = password_hash('1234', PASSWORD_BCRYPT);
+            $insertData = array_merge(array_values($data), [$pinHash]);
+
             DB::insert(
-                "INSERT INTO students (student_id_number, full_name, surname, gender, date_of_birth, current_class_id, academic_year_id, status) VALUES (?,?,?,?,?,?,?,?)",
-                array_values($data)
+                "INSERT INTO students (student_id_number, full_name, surname, gender, date_of_birth, current_class_id, academic_year_id, status, pin_hash) VALUES (?,?,?,?,?,?,?,?,?)",
+                $insertData
             );
-            Session::flash('success', "Student '{$data['full_name']}' registered successfully.");
+            Session::flash('success', "Student '{$data['full_name']}' registered successfully with ID ({$data['student_id_number']}) and default PIN (1234).");
         }
         $this->redirect();
     }

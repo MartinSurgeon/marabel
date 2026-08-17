@@ -59,11 +59,11 @@ class Notification {
     }
 
     /**
-     * Mark all as read for a user
+     * Mark all notifications as read for a user
      */
     public static function markAllAsRead(int $userId): void {
         DB::execute(
-            "UPDATE notifications SET is_read = 1 WHERE (user_id = ? OR user_id IS NULL)",
+            "UPDATE notifications SET is_read = 1 WHERE user_id = ? OR user_id IS NULL",
             [$userId]
         );
     }

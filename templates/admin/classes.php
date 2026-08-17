@@ -40,6 +40,12 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
         <?php endforeach; ?>
       </select>
     </form>
+    <?php if (count($yearsList) > 1): ?>
+    <button class="btn btn-outline" onclick="openCloneModal()" style="height:42px; background:#fff;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+      Clone Classrooms
+    </button>
+    <?php endif; ?>
     <button class="btn btn-primary shadow-purple" onclick="openClassModal()" style="height:42px;">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       New Classroom
@@ -65,17 +71,23 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5" width="64" height="64" style="color:var(--clr-primary)"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
   </div>
   <h2 style="font-weight:800; color:var(--clr-text); margin-bottom:0.5rem;">Create Your Classes</h2>
-  <p class="text-muted" style="max-width:320px; margin:0 auto 1.5rem;">No class sections have been registered for this academic session yet.</p>
+  <p class="text-muted" style="max-width:400px; margin:0 auto 1.5rem;">No class sections have been registered for this academic session yet.</p>
   
-  <div class="flex gap-4">
-    <button class="btn btn-primary" onclick="openClassModal()">Register First Class</button>
+  <div class="flex gap-3 flex-wrap justify-center">
     <?php if (count($yearsList) > 1): ?>
-      <button class="btn btn-secondary" onclick="document.querySelector('select[name=year_id]').focus()">Check Other Years</button>
+      <button class="btn btn-primary shadow-purple" onclick="openCloneModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+        Clone Classrooms from Previous Year
+      </button>
     <?php endif; ?>
+    <button class="btn <?= count($yearsList) > 1 ? 'btn-outline' : 'btn-primary' ?>" onclick="openClassModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+      Create Classroom Manually
+    </button>
   </div>
   
-  <div style="margin-top:2rem; font-size:12px; font-weight:700; color:var(--clr-warning); background:var(--clr-warning-50); padding:10px 20px; border-radius:var(--radius-md); border:1px solid rgba(245, 158, 11, 0.2);">
-     TIP: If you were previously working in another year, select it from the filter at the top right.
+  <div style="margin-top:2rem; font-size:12px; font-weight:700; color:var(--clr-primary-700); background:var(--clr-primary-50); padding:10px 20px; border-radius:var(--radius-md); border:1px solid var(--clr-primary-200);">
+     💡 Cloning from a previous session will copy all classroom definitions, Form Masters, and automatically link any promoted students!
   </div>
 </div>
 
@@ -251,6 +263,61 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
   </div>
 </div>
 
+<!-- ── Clone Classrooms Modal ──────────────────────────────── -->
+<div id="modal-clone-classes" class="modal-backdrop" role="dialog" aria-modal="true" style="display:none;">
+  <div class="modal w-full max-w-md mx-4">
+    <div class="modal-header">
+      <h3 class="modal-title">Clone Classrooms</h3>
+      <button class="modal-close" onclick="closeModal('modal-clone-classes')" aria-label="Close">&times;</button>
+    </div>
+    <form method="POST" action="<?= $base ?>/admin/classes" onsubmit="Loader.show()" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      <?= CSRF::field() ?>
+      <input type="hidden" name="_action" value="class_clone">
+      <input type="hidden" name="target_year_id" value="<?= $filterYear ?>">
+
+      <div class="modal-body" style="display:flex; flex-direction:column; gap:1.25rem;">
+        <div class="alert-info" style="border-radius:var(--radius-md); font-size:var(--text-sm);">
+          Select a source academic session. All classroom sections (e.g. BASIC 1 to BASIC 9) will be copied to the current session (<strong><?= htmlspecialchars(array_column($yearsList, 'year_name', 'id')[$filterYear] ?? 'Selected Year') ?></strong>).
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Source Academic Session <span class="required">*</span></label>
+          <select name="source_year_id" class="form-control" required>
+            <option value="">— Select Source Session —</option>
+            <?php foreach ($yearsList as $y): ?>
+              <?php if ($y['id'] != $filterYear): ?>
+                <option value="<?= $y['id'] ?>"><?= htmlspecialchars($y['year_name']) ?></option>
+              <?php endif; ?>
+            <?php endforeach; ?>
+          </select>
+        </div>
+
+        <div class="form-group" style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1rem 1.25rem;">
+          <label class="flex items-center gap-3" style="cursor:pointer; margin:0;">
+            <input type="checkbox" name="clone_teachers" value="1" checked
+                   style="width:18px; height:18px; accent-color:var(--clr-primary); flex-shrink:0;">
+            <div>
+              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Copy Form Masters (Class Teachers)</div>
+              <div style="font-size:11px; color:var(--clr-text-muted); margin-top:2px;">
+                Keep the same class teachers assigned to these classrooms in the new session.
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <div style="font-size:11px; color:var(--clr-primary-700); background:var(--clr-primary-50); padding:8px 12px; border-radius:var(--radius-md);">
+          ✓ Any students already marked as promoted will automatically be linked to their new classes upon cloning!
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('modal-clone-classes')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Clone Classrooms</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Delete Form -->
 <form method="POST" action="<?= $base ?>/admin/classes" id="form-class-delete" style="display:none">
   <?= CSRF::field() ?>
@@ -259,6 +326,10 @@ $levelColors = ['LP' => 'success', 'UP' => 'warning', 'JHS' => 'purple'];
 </form>
 
 <script>
+function openCloneModal() {
+  openModal('modal-clone-classes');
+}
+
 function openClassModal() {
   document.getElementById('form-class').reset();
   document.getElementById('class-id-field').value = '';

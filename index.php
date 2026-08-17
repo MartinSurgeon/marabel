@@ -66,7 +66,7 @@ $routes = [
     // ── Admin ────────────────────────────────────────────────
     '/admin'                    => ['admin/dashboard',     ['admin'], 'Admin\\DashboardController'],
     '/admin/years'              => ['admin/academic_years',['admin'], 'Admin\\AcademicController'],
-    '/admin/terms'              => ['admin/terms',         ['admin'], 'Admin\\AcademicController'],
+    '/admin/terms'              => ['admin/academic_years',['admin'], 'Admin\\AcademicController'],
     '/admin/transition'         => ['admin/transition',    ['admin'], 'Admin\\TransitionController'],
     '/admin/transition/terms'   => [null,                  ['admin'], 'Admin\\TransitionController'],
     '/admin/classes'            => ['admin/classes',       ['admin'], 'Admin\\ClassController'],
@@ -82,8 +82,9 @@ $routes = [
     '/admin/sms'                => ['admin/sms',           ['admin'], 'Admin\\SMSController'],
     '/admin/promotions'         => ['admin/promotions',    ['admin','teacher'], 'Admin\\PromotionController'],
     '/admin/remarks'            => ['admin/remarks',       ['admin'], 'Admin\\RemarkController'],
-    '/admin/notifications'      => [null,                  ['admin', 'teacher'], 'Admin\\NotificationController'],
-    '/admin/notifications/read-all' => [null,              ['admin', 'teacher'], 'Admin\\NotificationController'],
+    '/admin/notifications'          => [null,                  ['admin', 'teacher', 'parent', 'student'], 'Admin\\NotificationController'],
+    '/admin/notifications/read'     => [null,                  ['admin', 'teacher', 'parent', 'student'], 'Admin\\NotificationController'],
+    '/admin/notifications/read-all' => [null,                  ['admin', 'teacher', 'parent', 'student'], 'Admin\\NotificationController'],
 
     // ── Teacher ──────────────────────────────────────────────
     '/teacher'                  => ['teacher/dashboard',   ['admin','teacher'], 'Teacher\\DashboardController'],
@@ -132,12 +133,15 @@ foreach ($routes as $path => $config) {
             }
         }
 
-        // Render template
-        $templateFile = __DIR__ . "/templates/{$template}.php";
-        if (file_exists($templateFile)) {
-            include $templateFile;
-        } else {
-            include __DIR__ . '/templates/errors/404.php';
+        // Render template if specified
+        if ($template !== null) {
+            $templateFile = __DIR__ . "/templates/{$template}.php";
+            if (file_exists($templateFile)) {
+                include $templateFile;
+            } else {
+                http_response_code(404);
+                include __DIR__ . '/templates/errors/404.php';
+            }
         }
         break;
     }

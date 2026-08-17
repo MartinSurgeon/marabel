@@ -48,19 +48,39 @@ class AcademicController {
         }
         $name = trim($_POST['year_name']);
         $id   = $_POST['year_id'] ?? null;
+        $cloneClasses = !empty($_POST['clone_classes']);
+        $cloneSourceId = (int)($_POST['clone_source_year_id'] ?? 0);
+
         try {
             if ($id) {
                 DB::execute("UPDATE academic_years SET year_name = ? WHERE id = ?", [$name, $id]);
                 Session::flash('success', "Academic year '{$name}' updated.");
             } else {
-                DB::insert("INSERT INTO academic_years (year_name) VALUES (?)", [$name]);
-                Session::flash('success', "Academic year '{$name}' created.");
+                $newYearId = DB::insert("INSERT INTO academic_years (year_name) VALUES (?)", [$name]);
+                
+                $clonedMsg = '';
+                if ($cloneClasses && $newYearId) {
+                    if (!$cloneSourceId) {
+                        $activeYear = DB::queryOne("SELECT id FROM academic_years WHERE is_active = 1 AND id != ? LIMIT 1", [$newYearId])
+                                   ?? DB::queryOne("SELECT id FROM academic_years WHERE id != ? ORDER BY year_name DESC LIMIT 1", [$newYearId]);
+                        $cloneSourceId = $activeYear['id'] ?? 0;
+                    }
+                    if ($cloneSourceId) {
+                        require_once __DIR__ . '/ClassController.php';
+                        $res = ClassController::cloneYearClasses((int)$cloneSourceId, (int)$newYearId, true);
+                        if ($res['cloned_classes'] > 0) {
+                            $clonedMsg = " with {$res['cloned_classes']} classroom(s) cloned";
+                        }
+                    }
+                }
+                
+                Session::flash('success', "Academic year '{$name}' created{$clonedMsg}.");
             }
         } catch (\PDOException $e) {
             if ($e->getCode() === '23000') {
                 Session::flash('error', "Academic year '{$name}' already exists.");
             } else {
-                Session::flash('error', 'An error occurred. Please try again.');
+                Session::flash('error', 'An error occurred: ' . $e->getMessage());
             }
         }
         $this->back();

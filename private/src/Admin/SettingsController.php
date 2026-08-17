@@ -3,12 +3,13 @@
  * Admin Settings Controller
  * Uaddara Basic School — SBA Management System
  * 
- * Handles uploading the Headmaster's signature and the School stamp.
+ * Handles uploading the Headmaster's signature, School stamp, and branding settings.
  */
 
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
 require_once PRIVATE_PATH . '/src/Helpers/Config.php';
 require_once PRIVATE_PATH . '/src/Helpers/DB.php';
+require_once PRIVATE_PATH . '/src/Helpers/CSRF.php';
 
 class SettingsController {
 
@@ -30,6 +31,12 @@ class SettingsController {
         }
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!CSRF::verify()) {
+                Session::flash('error', 'Invalid security token. Please try again.');
+                header('Location: ' . APP_BASE . '/admin/settings');
+                exit;
+            }
+
             $type = $_POST['type'] ?? '';
             
             if ($type === 'branding') {
@@ -44,15 +51,15 @@ class SettingsController {
     }
 
     private function handleBrandingUpdate(): void {
-        $schoolName        = $_POST['school_name'] ?? '';
-        $schoolBody        = $_POST['school_body'] ?? '';
-        $schoolTagline     = $_POST['school_tagline'] ?? '';
-        $brandAccentColor  = $_POST['brand_accent_color'] ?? '#c00000';
+        $schoolName        = trim($_POST['school_name'] ?? '');
+        $schoolBody        = trim($_POST['school_body'] ?? '');
+        $schoolTagline     = trim($_POST['school_tagline'] ?? '');
+        $brandAccentColor  = trim($_POST['brand_accent_color'] ?? '#c00000');
         
         // SMS Connectivity
-        $smsApiKey = $_POST['sms_api_key'] ?? '';
-        $smsHost   = $_POST['sms_host'] ?? 'api.smsonlinegh.com';
-        $smsSender = $_POST['sms_sender'] ?? 'Marabel';
+        $smsApiKey = trim($_POST['sms_api_key'] ?? '');
+        $smsHost   = trim($_POST['sms_host'] ?? 'api.smsonlinegh.com');
+        $smsSender = trim($_POST['sms_sender'] ?? 'Marabel');
 
         if (empty($schoolName)) {
             Session::flash('error', 'School name cannot be empty.');
@@ -130,7 +137,15 @@ class SettingsController {
              exit;
         }
 
-        // Remove existing variations Before saving the new one
+        // Validate image binary header
+        $imgInfo = @getimagesize($file['tmp_name']);
+        if (!$imgInfo || !in_array($imgInfo[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG])) {
+            Session::flash('error', 'Uploaded file is not a valid PNG or JPEG image.');
+            header('Location: ' . APP_BASE . '/admin/settings');
+            exit;
+        }
+
+        // Remove existing variations before saving the new one
         @unlink($dir . '/' . $basename . '.png');
         @unlink($dir . '/' . $basename . '.jpg');
         @unlink($dir . '/' . $basename . '.jpeg');

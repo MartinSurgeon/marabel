@@ -46,7 +46,7 @@ function fmtDate(?string $d): string {
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="18" height="18" class="mr-2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
       Session Transition
     </a>
-    <button class="btn btn-primary shadow-purple" onclick="openModal('modal-year')" aria-haspopup="dialog">
+    <button class="btn btn-primary shadow-purple" onclick="openYearModal()" aria-haspopup="dialog">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="18" height="18"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
       New Academic Year
     </button>
@@ -61,7 +61,7 @@ function fmtDate(?string $d): string {
   </div>
   <h2 style="font-weight:800; color:var(--clr-text); margin-bottom:0.5rem;">No Academic Years Setup</h2>
   <p class="text-muted" style="max-width:320px; margin:0 auto 2rem;">You need at least one academic year (e.g. 2025/2026) to manage terms and scores.</p>
-  <button class="btn btn-primary btn-lg" onclick="openModal('modal-year')">
+  <button class="btn btn-primary btn-lg" onclick="openYearModal()">
     Build First Academic Year
   </button>
 </div>
@@ -81,10 +81,17 @@ function fmtDate(?string $d): string {
         </div>
         <div>
           <h3 class="m-0" style="font-size:1.25rem; font-weight:800; letter-spacing:-0.02em;"><?= htmlspecialchars($year['year_name']) ?></h3>
-          <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 mt-0.5 flex-wrap">
              <span class="text-muted" style="font-size:var(--text-xs); font-weight:600; text-transform:uppercase; letter-spacing:0.05em;"><?= count($yearTerms) ?> Term<?= count($yearTerms) != 1 ? 's' : '' ?></span>
              <?php if ($year['is_active']): ?>
                <span class="badge badge-purple" style="padding:0.25rem 0.6rem; font-size:10px;">ACTIVE SESSION</span>
+             <?php endif; ?>
+             <?php 
+               $activeTermInYear = null;
+               foreach ($yearTerms as $yt) { if (!empty($yt['is_active'])) { $activeTermInYear = $yt; break; } }
+             ?>
+             <?php if ($activeTermInYear): ?>
+               <span class="badge badge-success" style="padding:0.25rem 0.6rem; font-size:10px; font-weight:800;">● <?= htmlspecialchars($activeTermInYear['name']) ?> Active</span>
              <?php endif; ?>
           </div>
         </div>
@@ -95,14 +102,14 @@ function fmtDate(?string $d): string {
           <?= CSRF::field() ?>
           <input type="hidden" name="_action" value="year_activate">
           <input type="hidden" name="year_id" value="<?= $year['id'] ?>">
-          <button type="submit" class="btn btn-outline btn-sm" style="background:#fff;">Set Active</button>
+          <button type="submit" class="btn btn-outline btn-sm font-bold" style="background:#fff;">Set Active Year</button>
         </form>
         <?php endif; ?>
-        <button class="btn btn-outline btn-sm" style="background:#fff;" onclick="editYear(<?= $year['id'] ?>, '<?= htmlspecialchars($year['year_name'], ENT_QUOTES) ?>')">Edit</button>
+        <button class="btn btn-outline btn-sm font-bold" style="background:#fff;" onclick="editYear(<?= $year['id'] ?>, '<?= htmlspecialchars($year['year_name'], ENT_QUOTES) ?>')">Edit</button>
         <button class="btn btn-ghost btn-sm text-danger" onclick="confirmDeleteYear(<?= $year['id'] ?>, '<?= htmlspecialchars($year['year_name'], ENT_QUOTES) ?>')">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
         </button>
-        <button class="btn btn-primary btn-sm" onclick="openTermModal(<?= $year['id'] ?>, '<?= htmlspecialchars($year['year_name'], ENT_QUOTES) ?>')">
+        <button class="btn btn-primary btn-sm font-bold" onclick="openTermModal(<?= $year['id'] ?>, '<?= htmlspecialchars($year['year_name'], ENT_QUOTES) ?>')">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="14" height="14" class="mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg> Add Term
         </button>
       </div>
@@ -124,17 +131,22 @@ function fmtDate(?string $d): string {
               <th>Period</th>
               <th class="text-center">Days</th>
               <th>Next Term</th>
-              <th style="width:100px;">Status</th>
-              <th style="width:140px;" class="text-right pr-8">Actions</th>
+              <th style="width:130px;">Status</th>
+              <th style="width:160px;" class="text-right pr-8">Actions</th>
             </tr>
           </thead>
           <tbody>
             <?php foreach ($yearTerms as $term): ?>
-            <tr class="<?= $term['is_active'] ? 'row-active' : '' ?>">
+            <tr class="<?= $term['is_active'] ? 'row-active' : '' ?>" style="<?= $term['is_active'] ? 'background:rgba(16, 185, 129, 0.04);' : '' ?>">
               <td style="padding-left:2rem;">
                 <span style="font-weight:800; color:var(--clr-primary-700);">NO. 0<?= $term['term_number'] ?></span>
               </td>
-              <td><span style="font-weight:600;"><?= htmlspecialchars($term['name']) ?></span></td>
+              <td>
+                <span style="font-weight:700; color:var(--clr-text);"><?= htmlspecialchars($term['name']) ?></span>
+                <?php if ($term['is_active']): ?>
+                  <span class="text-xs font-semibold text-green-600 block" style="font-size:11px;">Current School Term</span>
+                <?php endif; ?>
+              </td>
               <td class="text-muted" style="font-size:var(--text-sm);">
                 <?= fmtDate($term['start_date']) ?> — <?= fmtDate($term['end_date']) ?>
               </td>
@@ -142,28 +154,34 @@ function fmtDate(?string $d): string {
               <td class="text-muted" style="font-size:var(--text-sm);"><?= fmtDate($term['next_term_begins']) ?></td>
               <td>
                 <?php if ($term['is_active']): ?>
-                  <span class="badge badge-purple">LIVE</span>
+                  <span class="badge badge-success" style="padding:5px 12px; font-size:11px; font-weight:800; border-radius:9999px; letter-spacing:0.04em; display:inline-flex; align-items:center; gap:5px; box-shadow:0 2px 6px rgba(16,185,129,0.2);">
+                    <span style="width:6px; height:6px; border-radius:50%; background:#fff; display:inline-block;"></span>
+                    ACTIVE
+                  </span>
                 <?php else: ?>
-                  <span class="text-muted" style="font-size:10px; font-weight:700; text-transform:uppercase;">Inactive</span>
+                  <span class="badge" style="background:var(--clr-surface-2); color:var(--clr-text-muted); padding:4px 10px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; border-radius:9999px; border:1px solid var(--clr-border);">
+                    INACTIVE
+                  </span>
                 <?php endif; ?>
               </td>
               <td class="text-right pr-8">
-                <div class="flex justify-end gap-2">
+                <div class="flex justify-end items-center gap-1.5">
                   <?php if (!$term['is_active']): ?>
-                  <form method="POST" action="<?= $base ?>/admin/years" onsubmit="Loader.show()">
+                  <form method="POST" action="<?= $base ?>/admin/years" onsubmit="Loader.show()" style="margin:0;">
                     <?= CSRF::field() ?>
                     <input type="hidden" name="_action" value="term_activate">
                     <input type="hidden" name="term_id" value="<?= $term['id'] ?>">
-                    <button type="submit" class="btn btn-ghost btn-xs text-primary" data-tooltip="Set as Live Term">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                    <button type="submit" class="btn btn-outline btn-xs font-bold text-primary" style="background:#fff; border-radius:6px; padding:3px 8px;" data-tooltip="Set this term as active">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" width="12" height="12" class="mr-0.5 inline"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+                      Activate
                     </button>
                   </form>
                   <?php endif; ?>
                   <button class="btn btn-ghost btn-xs" onclick="editTerm(<?= htmlspecialchars(json_encode($term), ENT_QUOTES) ?>)" data-tooltip="Edit Term">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                   </button>
                   <button class="btn btn-ghost btn-xs text-danger" onclick="confirmDeleteTerm(<?= $term['id'] ?>, '<?= htmlspecialchars($term['name'], ENT_QUOTES) ?>')" data-tooltip="Delete Term">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   </button>
                 </div>
               </td>
@@ -204,6 +222,21 @@ function fmtDate(?string $d): string {
             pattern="^\d{4}/\d{4}$" autocomplete="off">
           <p class="form-text">Format: YYYY/YYYY (e.g. 2025/2026)</p>
         </div>
+
+        <?php if (!empty($years)): ?>
+        <div class="form-group" id="clone-classes-group" style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1rem 1.25rem; margin-top:1rem;">
+          <label class="flex items-center gap-3" style="cursor:pointer; margin:0;">
+            <input type="checkbox" name="clone_classes" value="1" checked
+                   style="width:18px; height:18px; accent-color:var(--clr-primary); flex-shrink:0;">
+            <div>
+              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Clone classroom structure (Recommended)</div>
+              <div style="font-size:11px; color:var(--clr-text-muted); margin-top:2px;">
+                Automatically copy all classrooms (BASIC 1 to 9) and Form Masters from the active session into this new year.
+              </div>
+            </div>
+          </label>
+        </div>
+        <?php endif; ?>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modal-year')">Cancel</button>
@@ -281,11 +314,23 @@ function fmtDate(?string $d): string {
 
 
 <script>
+function openYearModal() {
+  document.getElementById('form-year').reset();
+  document.getElementById('year-id-field').value = '';
+  document.getElementById('modal-year-title').textContent = 'New Academic Year';
+  document.getElementById('year-submit-btn').textContent = 'Save Academic Year';
+  const cloneGrp = document.getElementById('clone-classes-group');
+  if (cloneGrp) cloneGrp.style.display = 'block';
+  openModal('modal-year');
+}
+
 function editYear(id, name) {
   document.getElementById('year-id-field').value = id;
   document.getElementById('year-name-input').value = name;
   document.getElementById('modal-year-title').textContent = 'Edit Academic Year';
   document.getElementById('year-submit-btn').textContent = 'Update Year';
+  const cloneGrp = document.getElementById('clone-classes-group');
+  if (cloneGrp) cloneGrp.style.display = 'none';
   openModal('modal-year');
 }
 

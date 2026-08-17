@@ -11,10 +11,10 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 $s = $stats ?? ['students' => 0, 'teachers' => 0, 'classes' => 0];
 
 // Safe calculations for progress bars
-$expected = max(1, $gradingProgress['expected_scores']);
-$sbaPct = min(100, round(($gradingProgress['entered_sba'] / $expected) * 100));
-$examPct = min(100, round(($gradingProgress['entered_exam'] / $expected) * 100));
-$totalPct = min(100, round((($gradingProgress['entered_sba'] + $gradingProgress['entered_exam']) / ($expected * 2)) * 100));
+$expected = (int)($gradingProgress['expected_scores'] ?? 0);
+$sbaPct   = $expected > 0 ? min(100, round(($gradingProgress['entered_sba'] / $expected) * 100)) : 0;
+$examPct  = $expected > 0 ? min(100, round(($gradingProgress['entered_exam'] / $expected) * 100)) : 0;
+$totalPct = $expected > 0 ? min(100, round((($gradingProgress['entered_sba'] + $gradingProgress['entered_exam']) / ($expected * 2)) * 100)) : 0;
 
 // Checklist calculations
 $checklist  = $setupChecklist ?? [];
