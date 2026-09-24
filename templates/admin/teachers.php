@@ -32,12 +32,14 @@ $avatarPalettes = [
     '#831843', // Pink
 ];
 
-function getAvatarStyle(string $id, string $name) {
-    global $avatarPalettes;
-    // Combine ID and Name for a more unique seed
-    $hash = crc32($id . $name);
-    $color = $avatarPalettes[abs($hash) % count($avatarPalettes)];
-    return "background: $color; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);";
+if (!function_exists('getAvatarStyle')) {
+    function getAvatarStyle(string $id, string $name) {
+        global $avatarPalettes;
+        // Combine ID and Name for a more unique seed
+        $hash = crc32($id . $name);
+        $color = $avatarPalettes[abs($hash) % count($avatarPalettes)];
+        return "background: $color; color: #ffffff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);";
+    }
 }
 ?>
 
@@ -512,6 +514,7 @@ $totalPairings     = count($assignments);
             <div class="form-group">
               <label class="form-label">Phone</label>
               <input type="tel" name="phone" id="teacher-phone" class="form-control" placeholder="024XXXXXXX" maxlength="20" autocomplete="tel">
+              <p class="form-text mt-1" style="font-size:11px; color:var(--clr-text-muted);">A welcome SMS with login credentials will be sent to this number.</p>
             </div>
             <div class="form-group">
               <label class="form-label">Gender <span class="required">*</span></label>

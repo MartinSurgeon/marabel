@@ -74,7 +74,7 @@ class StudentImportController {
         }
 
         // Build class lookup: "BASIC 1|" => id, "BASIC 5|A" => id, etc.
-        $allClasses = DB::query("SELECT id, class_name, section FROM classes");
+        $allClasses = DB::query("SELECT id, class_name, section FROM classes WHERE academic_year_id = ?", [$academicYearId]);
         $classMap   = [];
         foreach ($allClasses as $cls) {
             $key = strtoupper(trim($cls['class_name'])) . '|' . strtoupper(trim($cls['section']));

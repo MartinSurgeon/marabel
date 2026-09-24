@@ -10,6 +10,7 @@
 
 require_once PRIVATE_PATH . '/src/Helpers/DB.php';
 require_once PRIVATE_PATH . '/src/Helpers/Session.php';
+require_once PRIVATE_PATH . '/src/Helpers/ResultCalculator.php';
 
 class BulkPrintController {
 
@@ -47,6 +48,9 @@ class BulkPrintController {
         if (!$isPublished && $role !== 'admin') {
              $this->abort('Results for this class have not been published yet.');
         }
+
+        // On-the-fly computation ensures all aggregate scores and ranks are fresh
+        ResultCalculator::compute($classId, $termId);
 
         // 2. Class Info
         $classInfo = DB::queryOne(

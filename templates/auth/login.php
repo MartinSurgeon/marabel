@@ -106,7 +106,7 @@ $logoVersion = $schoolLogo . '?v=' . time();
 
       <!-- Role tabs -->
       <div class="role-tabs" role="tablist" aria-label="Select your role">
-        <button class="role-tab active" id="tab-staff"   role="tab" aria-selected="true"  data-target="form-staff"   aria-controls="form-staff"   type="button">Admin / Teacher</button>
+        <button class="role-tab active" id="tab-staff"   role="tab" aria-selected="true"  data-target="form-staff"   aria-controls="form-staff"   type="button">Staff</button>
         <button class="role-tab"        id="tab-parent"  role="tab" aria-selected="false" data-target="form-parent"  aria-controls="form-parent"  type="button">Parent</button>
         <button class="role-tab"        id="tab-student" role="tab" aria-selected="false" data-target="form-student" aria-controls="form-student" type="button">Student</button>
       </div>
@@ -119,15 +119,15 @@ $logoVersion = $schoolLogo . '?v=' . time();
 
           <div class="form-group">
             <label class="form-label" for="staff-email">
-              Email Address <span class="required">*</span>
+              Email or Phone Number <span class="required">*</span>
             </label>
             <input
-              type="email"
+              type="text"
               id="staff-email"
               name="email"
               class="form-control"
-              placeholder="yourname@school.edu.gh"
-              autocomplete="email"
+              placeholder="e.g. name@school.edu or 024XXXXXXX"
+              autocomplete="username"
               required
               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
             >

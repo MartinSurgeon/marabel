@@ -116,6 +116,23 @@ class TeacherController {
             DB::beginTransaction();
 
             if ($id) {
+                // Check email collision
+                $emailExists = DB::queryOne("SELECT id FROM users WHERE email = ? AND id != ? LIMIT 1", [$email, (int)$id]);
+                if ($emailExists) {
+                    DB::rollBack();
+                    Session::flash('error', "Another user is already registered with this email address.");
+                    $this->redirect();
+                }
+                // Check phone collision if phone is provided
+                if (!empty($data['phone'])) {
+                    $phoneExists = DB::queryOne("SELECT id, full_name FROM users WHERE phone = ? AND id != ? AND role IN ('admin','teacher') LIMIT 1", [$data['phone'], (int)$id]);
+                    if ($phoneExists) {
+                        DB::rollBack();
+                        Session::flash('error', "Phone number '{$data['phone']}' is already used by {$phoneExists['full_name']}.");
+                        $this->redirect();
+                    }
+                }
+
                 DB::execute(
                     "UPDATE users SET full_name=?, email=?, phone=?, gender=? WHERE id=? AND role='teacher'",
                     [$data['full_name'], $data['email'], $data['phone'], $data['gender'], (int)$id]
@@ -130,6 +147,15 @@ class TeacherController {
                     DB::rollBack();
                     Session::flash('error', "A user with this email already exists.");
                     $this->redirect();
+                }
+                // Check for existing phone if phone is provided
+                if (!empty($data['phone'])) {
+                    $phoneExists = DB::queryOne("SELECT id, full_name FROM users WHERE phone = ? AND role IN ('admin','teacher') LIMIT 1", [$data['phone']]);
+                    if ($phoneExists) {
+                        DB::rollBack();
+                        Session::flash('error', "Phone number '{$data['phone']}' is already registered to {$phoneExists['full_name']}.");
+                        $this->redirect();
+                    }
                 }
                 
                 $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
@@ -157,7 +183,31 @@ class TeacherController {
                     "info"
                 );
 
-                Session::flash('success', "Teacher created with default password: password123");
+                // 3. Send SMS with credentials if phone number is provided
+                $smsNotice = '';
+                $phone = trim($data['phone'] ?? '');
+                if (!empty($phone)) {
+                    $schoolName = Config::get('school_name', defined('SCHOOL_NAME') ? SCHOOL_NAME : 'Uaddara Basic School');
+                    $firstName = explode(' ', trim($data['full_name']))[0];
+                    $smsMessage = "Hello {$firstName}, welcome to {$schoolName}! Your teacher account is ready.\nYou can log in with your email ({$data['email']}) or phone ({$phone}).\nPassword: password123\nPlease log in and change your password in your profile settings if you want.";
+                    
+                    try {
+                        $smsResult = SMS::send($phone, $smsMessage, 'broadcast');
+                        if (!empty($smsResult['success'])) {
+                            $smsNotice = " Login credentials sent via SMS to {$phone}.";
+                        } else {
+                            $err = $smsResult['message'] ?? 'SMS delivery failed';
+                            $smsNotice = " (SMS could not be sent: {$err})";
+                        }
+                    } catch (\Throwable $ex) {
+                        $smsNotice = " (SMS error: " . $ex->getMessage() . ")";
+                        error_log("Teacher welcome SMS error: " . $ex->getMessage());
+                    }
+                } else {
+                    $smsNotice = " (No phone number provided for SMS).";
+                }
+
+                Session::flash('success', "Teacher created successfully with default password: password123.{$smsNotice}");
             }
         } catch (\Throwable $e) {
             if (DB::inTransaction()) DB::rollBack();

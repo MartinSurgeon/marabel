@@ -40,37 +40,74 @@ class AuthController {
     }
 
     private function staffLogin(): void {
-        $email    = trim($_POST['email']    ?? '');
-        $password = $_POST['password'] ?? '';
+        $loginInput = trim($_POST['email'] ?? '');
+        $password   = $_POST['password'] ?? '';
 
-        if (!$email || !$password) {
-            Session::flash('login_error', 'Email and password are required.');
+        if (!$loginInput || !$password) {
+            Session::flash('login_error', 'Email or Phone Number and password are required.');
             $this->redirect('/login');
         }
 
         // Rate limit check
-        if ($this->isLockedOut($email)) {
+        if ($this->isLockedOut($loginInput)) {
             Session::flash('login_error', 'Too many failed attempts. Please wait 15 minutes.');
             $this->redirect('/login');
         }
 
-        $user = DB::queryOne(
-            "SELECT * FROM users WHERE email = ? AND role IN ('admin','teacher') AND is_active = 1",
-            [$email]
+        // Normalize phone variations (e.g. 024XXXXXXX, +23324XXXXXXX, 23324XXXXXXX)
+        $cleanedDigits = preg_replace('/\D/', '', $loginInput);
+        $localPhone = '';
+        $intlPhone  = '';
+        if (strlen($cleanedDigits) >= 9) {
+            if (str_starts_with($cleanedDigits, '233') && strlen($cleanedDigits) === 12) {
+                $localPhone = '0' . substr($cleanedDigits, 3);
+                $intlPhone  = $cleanedDigits;
+            } elseif (str_starts_with($cleanedDigits, '0') && strlen($cleanedDigits) === 10) {
+                $localPhone = $cleanedDigits;
+                $intlPhone  = '233' . substr($cleanedDigits, 1);
+            } elseif (strlen($cleanedDigits) === 9) {
+                $localPhone = '0' . $cleanedDigits;
+                $intlPhone  = '233' . $cleanedDigits;
+            }
+        }
+
+        // Find candidate accounts by email OR phone (ignoring blank phones)
+        $candidates = DB::query(
+            "SELECT * FROM users
+             WHERE role IN ('admin','teacher')
+               AND is_active = 1
+               AND (
+                   email = ?
+                   OR (
+                       phone IS NOT NULL AND phone != ''
+                       AND (phone = ? OR phone = ? OR phone = ?)
+                   )
+               )",
+            [$loginInput, $loginInput, $localPhone ?: $loginInput, $intlPhone ?: $loginInput]
         );
 
-        if (!$user || !password_verify($password, $user['password_hash'])) {
-            $this->recordFailedAttempt($email);
-            Session::flash('login_error', 'Invalid email or password.');
+        $matchedUser = null;
+        if (!empty($candidates)) {
+            foreach ($candidates as $candidate) {
+                if (password_verify($password, $candidate['password_hash'])) {
+                    $matchedUser = $candidate;
+                    break;
+                }
+            }
+        }
+
+        if (!$matchedUser) {
+            $this->recordFailedAttempt($loginInput);
+            Session::flash('login_error', 'Invalid email, phone number, or password.');
             $this->redirect('/login');
         }
 
         // Success
-        $this->clearAttempts($email);
-        $this->createSession($user);
-        $this->updateLastLogin($user['id']);
+        $this->clearAttempts($loginInput);
+        $this->createSession($matchedUser);
+        $this->updateLastLogin($matchedUser['id']);
 
-        $this->redirect($user['role'] === 'admin' ? '/admin' : '/teacher');
+        $this->redirect($matchedUser['role'] === 'admin' ? '/admin' : '/teacher');
     }
 
     private function studentLogin(): void {

@@ -35,11 +35,13 @@ foreach (['png', 'jpg', 'jpeg'] as $ext) {
   if (!$stampPath && file_exists("$sigDir/school_stamp.$ext")) $stampPath = "$base/assets/uploads/signatures/school_stamp.$ext";
 }
 
-function ordinal(int $n): string
-{
-  $s = ['th', 'st', 'nd', 'rd'];
-  $v = $n % 100;
-  return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+if (!function_exists('ordinal')) {
+  function ordinal(int $n): string
+  {
+    $s = ['th', 'st', 'nd', 'rd'];
+    $v = $n % 100;
+    return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+  }
 }
 
 ?>

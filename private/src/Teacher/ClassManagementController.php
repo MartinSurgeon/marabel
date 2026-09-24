@@ -109,12 +109,13 @@ class ClassManagementController {
         $field     = $_POST['field'] ?? '';
         $value     = $_POST['value'] ?? '';
 
-        if (!$studentId || !$field) {
+        if (!$field || ($field !== 'save_predefined' && !$studentId)) {
             echo json_encode(['success' => false, 'message' => 'Missing parameters']);
             return;
         }
 
         try {
+            DB::beginTransaction();
             if ($field === 'days_present') {
                 $days = (int)$value;
                 $this->upsertAttendance($studentId, $termId, $days);
@@ -124,8 +125,10 @@ class ClassManagementController {
             } else {
                 $this->upsertRemark($studentId, $termId, $field, $value);
             }
+            DB::commit();
             echo json_encode(['success' => true]);
         } catch (Exception $e) {
+            if (DB::inTransaction()) DB::rollBack();
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
     }

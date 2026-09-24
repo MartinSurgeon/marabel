@@ -122,8 +122,12 @@ class TransitionController {
             $classMap = []; // old_id => new_id
             
             foreach ($oldClasses as $c) {
-                // Check if already exists in target
-                $newId = DB::queryValue("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ?", [$c['class_name'], $targetYearId]);
+                // Check if already exists in target (matching section)
+                $sec = $c['section'] ?? '';
+                $newId = DB::queryValue(
+                    "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND academic_year_id = ?",
+                    [$c['class_name'], $sec, $sec, $targetYearId]
+                );
                 if (!$newId) {
                     $newId = DB::insert(
                         "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?, ?, ?, ?)",
@@ -169,8 +173,13 @@ class TransitionController {
             $repeaters = DB::query("SELECT student_id FROM student_promotions WHERE academic_year_id = ? AND promotion_status = 'repeated'", [$sourceYearId]);
             foreach ($repeaters as $r) {
                 $oldCid = DB::queryValue("SELECT current_class_id FROM students WHERE id = ?", [$r['student_id']]);
-                $oldClassName = DB::queryValue("SELECT class_name FROM classes WHERE id = ?", [$oldCid]);
-                $newCid = DB::queryValue("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ?", [$oldClassName, $targetYearId]);
+                $oldClass = $oldCid ? DB::queryOne("SELECT class_name, section FROM classes WHERE id = ?", [$oldCid]) : null;
+                $oldClassName = $oldClass['class_name'] ?? '';
+                $oldSection   = $oldClass['section'] ?? '';
+                $newCid = DB::queryValue(
+                    "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND academic_year_id = ?",
+                    [$oldClassName, $oldSection, $oldSection, $targetYearId]
+                );
                 
                 if ($newCid) {
                     DB::execute("UPDATE students SET current_class_id = ?, academic_year_id = ? WHERE id = ?", [$newCid, $targetYearId, $r['student_id']]);

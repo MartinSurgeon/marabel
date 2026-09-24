@@ -234,9 +234,10 @@ class ClassController {
         $classMap = [];
 
         foreach ($sourceClasses as $c) {
+            $sec = $c['section'] ?? '';
             $existing = DB::queryOne(
-                "SELECT id FROM classes WHERE class_name = ? AND level_id = ? AND academic_year_id = ? LIMIT 1",
-                [$c['class_name'], $c['level_id'], $targetYearId]
+                "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND level_id = ? AND academic_year_id = ? LIMIT 1",
+                [$c['class_name'], $sec, $sec, $c['level_id'], $targetYearId]
             );
 
             if ($existing) {

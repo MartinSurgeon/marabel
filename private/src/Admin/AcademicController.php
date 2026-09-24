@@ -121,9 +121,28 @@ class AcademicController {
     private function yearActivate(): void {
         $id = (int)($_POST['year_id'] ?? 0);
         if (!$id) $this->back();
-        DB::execute("UPDATE academic_years SET is_active = 0");
-        DB::execute("UPDATE academic_years SET is_active = 1 WHERE id = ?", [$id]);
+
         $row = DB::queryOne("SELECT year_name FROM academic_years WHERE id = ?", [$id]);
+        if (!$row) $this->back();
+
+        DB::beginTransaction();
+        try {
+            DB::execute("UPDATE academic_years SET is_active = 0");
+            DB::execute("UPDATE academic_years SET is_active = 1 WHERE id = ?", [$id]);
+
+            // Synchronize active term: pick first term belonging to this year
+            $term = DB::queryOne("SELECT id FROM terms WHERE academic_year_id = ? ORDER BY term_number ASC, id ASC LIMIT 1", [$id]);
+            if ($term) {
+                DB::execute("UPDATE terms SET is_active = 0");
+                DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$term['id']]);
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Session::flash('error', 'Failed to activate academic year: ' . $e->getMessage());
+            $this->back();
+        }
+
         Session::flash('success', "'{$row['year_name']}' is now the active academic year.");
         Session::updateActiveTerm();
         Notification::send(null, "Academic Year Activated", "'{$row['year_name']}' has been set as the active academic year.", 'success', '/admin/years');
@@ -217,10 +236,28 @@ class AcademicController {
     private function termActivate(): void {
         $id = (int)($_POST['term_id'] ?? 0);
         if (!$id) $this->back();
-        // Deactivate all, then activate selected
-        DB::execute("UPDATE terms SET is_active = 0");
-        DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$id]);
-        $row = DB::queryOne("SELECT name FROM terms WHERE id = ?", [$id]);
+
+        $row = DB::queryOne("SELECT name, academic_year_id FROM terms WHERE id = ?", [$id]);
+        if (!$row) $this->back();
+
+        DB::beginTransaction();
+        try {
+            // Deactivate all, then activate selected term
+            DB::execute("UPDATE terms SET is_active = 0");
+            DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$id]);
+
+            // Synchronize parent academic year
+            if (!empty($row['academic_year_id'])) {
+                DB::execute("UPDATE academic_years SET is_active = 0");
+                DB::execute("UPDATE academic_years SET is_active = 1 WHERE id = ?", [$row['academic_year_id']]);
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Session::flash('error', 'Failed to activate term: ' . $e->getMessage());
+            $this->back();
+        }
+
         Session::flash('success', "'{$row['name']}' is now the active term.");
         Session::updateActiveTerm();
         Notification::send(null, "Term Activated", "'{$row['name']}' has been set as the active term.", 'success', '/admin/terms');

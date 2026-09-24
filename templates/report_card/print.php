@@ -26,11 +26,13 @@ $gradeLabel = ($gradingSystem === 'waec') ? 'Grade' : 'Proficiency';
 
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-function ordinal(int $n): string
-{
-  $s = ['th', 'st', 'nd', 'rd'];
-  $v = $n % 100;
-  return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+if (!function_exists('ordinal')) {
+  function ordinal(int $n): string
+  {
+    $s = ['th', 'st', 'nd', 'rd'];
+    $v = $n % 100;
+    return $n . ($s[($v - 20) % 10] ?? $s[$v] ?? $s[0]);
+  }
 }
 
 $photoSrc = (!empty($student['photo_path']) && file_exists(ROOT_PATH . '/' . ltrim($student['photo_path'], '/')))

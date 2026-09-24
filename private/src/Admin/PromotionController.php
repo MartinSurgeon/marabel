@@ -194,6 +194,10 @@ class PromotionController {
                 $nextClassId = self::findOrCreateTargetClass($nextClass, $nextYearId, $classId);
             }
 
+            // Find or create equivalent class for repeating students in the target year
+            $currClass = DB::queryOne("SELECT class_name FROM classes WHERE id = ?", [$classId]);
+            $repeatClassId = $currClass ? self::findOrCreateTargetClass($currClass['class_name'], $nextYearId, $classId) : null;
+
             foreach ($students as $student) {
                 $sid = $student['id'];
 
@@ -230,6 +234,16 @@ class PromotionController {
                     DB::execute($sql, $p);
                     $promoted++;
                 } else {
+                    // Place repeating student into target academic year in their repeating class
+                    $sql = "UPDATE students SET academic_year_id = ?";
+                    $p   = [$nextYearId];
+                    if ($repeatClassId) {
+                        $sql .= ", current_class_id = ?";
+                        $p[] = $repeatClassId;
+                    }
+                    $sql .= " WHERE id = ?";
+                    $p[] = $sid;
+                    DB::execute($sql, $p);
                     $repeated++;
                 }
             }
@@ -246,10 +260,11 @@ class PromotionController {
                 );
 
                 if ($currentClass) {
-                    // 2. Find or auto-create the equivalent class in the target academic year
+                    $sec = $currentClass['section'] ?? '';
+                    // 2. Find or auto-create the equivalent class in the target academic year (matching section)
                     $targetClass = DB::queryOne(
-                        "SELECT id FROM classes WHERE class_name = ? AND level_id = ? AND academic_year_id = ? LIMIT 1",
-                        [$currentClass['class_name'], $currentClass['level_id'], $nextYearId]
+                        "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND academic_year_id = ? LIMIT 1",
+                        [$currentClass['class_name'], $sec, $sec, $nextYearId]
                     );
 
                     if (!$targetClass) {
@@ -395,20 +410,27 @@ class PromotionController {
                 ]
             );
 
-            if ($status === 'promoted' && $nextYearId) {
-                // Try to find or auto-create target class in next year
-                $nextClassId = null;
-                if ($nextClass) {
-                    $currentStudent = DB::queryOne("SELECT current_class_id FROM students WHERE id = ?", [$studentId]);
-                    $srcClassId = (int)($currentStudent['current_class_id'] ?? 0);
-                    $nextClassId = self::findOrCreateTargetClass($nextClass, $nextYearId, $srcClassId);
+            if ($nextYearId) {
+                $currentStudent = DB::queryOne("SELECT current_class_id FROM students WHERE id = ?", [$studentId]);
+                $srcClassId     = (int)($currentStudent['current_class_id'] ?? 0);
+
+                if ($status === 'promoted') {
+                    $targetClassName = $nextClass;
+                } else {
+                    $srcClassRow = $srcClassId ? DB::queryOne("SELECT class_name FROM classes WHERE id = ?", [$srcClassId]) : null;
+                    $targetClassName = $srcClassRow['class_name'] ?? '';
+                }
+
+                $targetClassId = null;
+                if ($targetClassName) {
+                    $targetClassId = self::findOrCreateTargetClass($targetClassName, $nextYearId, $srcClassId);
                 }
 
                 $sql = "UPDATE students SET academic_year_id = ?";
                 $p   = [$nextYearId];
-                if ($nextClassId) {
+                if ($targetClassId) {
                     $sql .= ", current_class_id = ?";
-                    $p[] = $nextClassId;
+                    $p[] = $targetClassId;
                 }
                 $sql .= " WHERE id = ?";
                 $p[] = $studentId;
@@ -566,21 +588,19 @@ class PromotionController {
      */
     public static function findOrCreateTargetClass(string $className, int $targetYearId, int $sourceClassId): int {
         $className = strtoupper(trim($className));
-        if (!$className || !$targetYearId) return 0;
-
-        $existing = DB::queryOne(
-            "SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1",
-            [$className, $targetYearId]
-        );
-        if ($existing) {
-            return (int)$existing['id'];
-        }
-
-        // Determine level_id and grading_system from source class or infer from name
+        // Determine level_id, section, and grading_system from source class or infer from name
         $currClass = $sourceClassId ? DB::queryOne("SELECT level_id, section, grading_system FROM classes WHERE id = ?", [$sourceClassId]) : null;
         $levelId   = $currClass['level_id'] ?? 1;
         $grading   = $currClass['grading_system'] ?? 'proficiency';
         $section   = $currClass['section'] ?? '';
+
+        $existing = DB::queryOne(
+            "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND academic_year_id = ? LIMIT 1",
+            [$className, $section, $section, $targetYearId]
+        );
+        if ($existing) {
+            return (int)$existing['id'];
+        }
 
         // Infer level from class name if it follows standard Basic school structure (B1-B3 = LP, B4-B6 = UP, B7-B9 = JHS)
         if (preg_match('/(?:BASIC|B)\s*([1-9])/i', $className, $m)) {
