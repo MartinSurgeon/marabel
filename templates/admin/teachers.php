@@ -260,17 +260,21 @@ $totalPairings     = count($assignments);
                         <?php endif; ?>
                     </td>
                     <td>
-                        <div style="font-size:12px; font-weight:700; color:var(--clr-text);">
-                            <?= $t['current_year_subjects'] ?> Subj · <?= $t['class_count'] ?> Cls
-                            <?php if ($t['subject_count'] > $t['current_year_subjects']): ?>
-                               <span class="text-warning" title="Teacher has <?= ($t['subject_count'] - $t['current_year_subjects']) ?> assignments in other sessions" style="cursor:help;">
-                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" width="14" height="14" style="display:inline; vertical-align:text-bottom; margin-left:2px;"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
-                               </span>
+                        <?php if ($t['current_year_subjects'] > 0): ?>
+                            <div style="font-size:12px; font-weight:700; color:var(--clr-text);">
+                                <?= $t['current_year_subjects'] ?> Subj · <?= $t['class_count'] ?> Cls
+                            </div>
+                            <div style="font-size:10px; color:var(--clr-text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="<?= htmlspecialchars($t['assignment_summary'] ?? '') ?>">
+                                <?= htmlspecialchars($t['assignment_summary'] ?? '') ?>
+                            </div>
+                        <?php else: ?>
+                            <span class="badge" style="background:#fef3c7; color:#92400e; font-size:9px; padding:2px 7px; border-radius:9999px; font-weight:700;">
+                                Awaiting Allocation
+                            </span>
+                            <?php if ($t['subject_count'] > 0): ?>
+                                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">(Taught <?= $t['subject_count'] ?> in past)</div>
                             <?php endif; ?>
-                        </div>
-                        <div style="font-size:10px; color:var(--clr-text-muted); max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                            <?= htmlspecialchars($t['assignment_summary'] ?: 'No assignments this session') ?>
-                        </div>
+                        <?php endif; ?>
                     </td>
                     <td class="text-center">
                         <form method="POST" action="<?= $base ?>/admin/teachers" onsubmit="Loader.show()">
@@ -368,9 +372,15 @@ $totalPairings     = count($assignments);
           </span>
         <?php endif; ?>
 
-        <span class="badge" style="background:rgba(99, 102, 241, 0.08); color:#6366f1; font-size:10px; padding:3px 8px; border-radius:9999px; font-weight:700;">
-          📚 <?= $totalSubjectsInSession ?> Subject<?= $totalSubjectsInSession !== 1 ? 's' : '' ?> · <?= count($classesAssigned) ?> Class<?= count($classesAssigned) !== 1 ? 'es' : '' ?>
-        </span>
+        <?php if ($totalSubjectsInSession > 0): ?>
+          <span class="badge" style="background:rgba(99, 102, 241, 0.08); color:#6366f1; font-size:10px; padding:3px 8px; border-radius:9999px; font-weight:700;">
+            📚 <?= $totalSubjectsInSession ?> Subject<?= $totalSubjectsInSession !== 1 ? 's' : '' ?> · <?= count($classesAssigned) ?> Class<?= count($classesAssigned) !== 1 ? 'es' : '' ?>
+          </span>
+        <?php else: ?>
+          <span class="badge" style="background:#fef3c7; color:#92400e; font-size:10px; padding:3px 8px; border-radius:9999px; font-weight:700; border:1px solid #fde68a;">
+            ⏳ Awaiting Term Allocation
+          </span>
+        <?php endif; ?>
       </div>
 
       <!-- Smart Grouped Teaching Allocations -->
@@ -428,11 +438,13 @@ $totalPairings     = count($assignments);
             <?php endif; ?>
           </div>
         <?php else: ?>
-          <div style="font-size:11px; color:var(--clr-text-muted); font-style:italic; padding:4px 0;">
-            No subjects assigned for this session
+          <div style="padding:4px 0;">
+            <div style="font-size:12px; font-weight:600; color:#64748b;">
+              Not yet allocated for <?= htmlspecialchars($activeYearName ?? '') ?> <?= htmlspecialchars($activeTermInfo ?? '') ?>
+            </div>
             <?php if ($t['subject_count'] > 0): ?>
-              <div style="font-size:10px; color:var(--clr-warning); font-weight:700; margin-top:2px;">
-                ⚠️ <?= $t['subject_count'] ?> assignments in other sessions
+              <div style="font-size:11px; color:#94a3b8; margin-top:2px;">
+                Taught <?= $t['subject_count'] ?> subject class<?= $t['subject_count'] !== 1 ? 'es' : '' ?> in previous terms
               </div>
             <?php endif; ?>
           </div>
