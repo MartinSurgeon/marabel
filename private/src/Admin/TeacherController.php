@@ -170,8 +170,7 @@ class TeacherController {
                 $phone = trim($data['phone'] ?? '');
                 if (!empty($phone)) {
                     $schoolName = Config::get('school_name', defined('SCHOOL_NAME') ? SCHOOL_NAME : 'Uaddara Basic School');
-                    $firstName = explode(' ', trim($data['full_name']))[0];
-                    $smsMessage = "Hello {$firstName}, welcome to {$schoolName}! Your teacher account is ready.\nYou can log in with your email ({$data['email']}) or phone ({$phone}).\nPassword: password123\nPlease log in and change your password in your profile settings if you want.";
+                    $smsMessage = "Welcome to {$schoolName}!\nLogin: {$phone} or {$data['email']}\nPassword: password123\nYou can change your password in your profile.";
                     
                     try {
                         $smsResult = SMS::send($phone, $smsMessage, 'broadcast');
