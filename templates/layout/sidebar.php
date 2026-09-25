@@ -162,6 +162,14 @@ if (!function_exists('navActive')) {
   </div><!-- /sidebar-nav -->
 
   <!-- User footer -->
+  <!-- PWA Install Button (Unobtrusive: only shows when browser supports install) -->
+  <div id="pwa-install-container" style="display:none; padding: 0.5rem 0.85rem; margin-top: auto;">
+    <button id="pwa-install-btn" type="button" class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-xs font-bold text-white transition hover:bg-white/20" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); cursor:pointer;">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="15" height="15"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+      Install App
+    </button>
+  </div>
+
   <div class="sidebar-footer">
     <a href="<?= $base ?>/profile/password" class="user-avatar" aria-label="Change Password" style="display:flex; align-items:center; justify-content:center; text-decoration:none;">
       <?= strtoupper(substr(Session::get('user_name', '?'), 0, 1)) ?>
@@ -339,4 +347,30 @@ const LogoutModal = {
     }
   }
 };
+
+// PWA Install Prompt Handler
+let pwaDeferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  pwaDeferredPrompt = e;
+  const container = document.getElementById('pwa-install-container');
+  if (container) container.style.display = 'block';
+});
+
+document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
+  if (pwaDeferredPrompt) {
+    pwaDeferredPrompt.prompt();
+    const { outcome } = await pwaDeferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      const container = document.getElementById('pwa-install-container');
+      if (container) container.style.display = 'none';
+    }
+    pwaDeferredPrompt = null;
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  const container = document.getElementById('pwa-install-container');
+  if (container) container.style.display = 'none';
+});
 </script>

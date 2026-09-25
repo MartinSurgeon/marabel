@@ -27,6 +27,22 @@ $logoVersion = $schoolLogo . '?v=' . time();
   <meta name="description" content="<?= htmlspecialchars($schoolTag) ?>">
       <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css">
   <link rel="icon" type="image/png" href="<?= htmlspecialchars($logoVersion) ?>">
+  <!-- PWA Meta & Manifest -->
+  <link rel="manifest" href="<?= $base ?>/manifest.json">
+  <meta name="theme-color" content="<?= htmlspecialchars($accentColor) ?>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars($schoolName) ?>">
+  <link rel="apple-touch-icon" href="<?= $base ?>/assets/img/icons/apple-touch-icon.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('<?= $base ?>/sw.js').catch(function(err) {
+          console.warn('PWA ServiceWorker registration failed:', err);
+        });
+      });
+    }
+  </script>
   
   <style>
     :root {

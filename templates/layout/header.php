@@ -25,6 +25,22 @@ if (Session::isLoggedIn()) {
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="<?= $base ?>/assets/css/app.css?v=<?= time() ?>">
   <link rel="icon" type="image/png" href="<?= $base . Config::get('school_logo', '/assets/img/school-logo.png') ?>">
+  <!-- PWA Meta & Manifest -->
+  <link rel="manifest" href="<?= $base ?>/manifest.json">
+  <meta name="theme-color" content="<?= htmlspecialchars(Config::get('brand_accent_color', '#9633cc')) ?>">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="<?= htmlspecialchars(Config::get('school_name', 'Uaddara SBA')) ?>">
+  <link rel="apple-touch-icon" href="<?= $base ?>/assets/img/icons/apple-touch-icon.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('<?= $base ?>/sw.js').catch(function(err) {
+          console.warn('PWA ServiceWorker registration failed:', err);
+        });
+      });
+    }
+  </script>
 </head>
 <body>
 <div class="app-layout">
