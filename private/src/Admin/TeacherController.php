@@ -123,15 +123,6 @@ class TeacherController {
                     Session::flash('error', "Another user is already registered with this email address.");
                     $this->redirect();
                 }
-                // Check phone collision if phone is provided
-                if (!empty($data['phone'])) {
-                    $phoneExists = DB::queryOne("SELECT id, full_name FROM users WHERE phone = ? AND id != ? AND role IN ('admin','teacher') LIMIT 1", [$data['phone'], (int)$id]);
-                    if ($phoneExists) {
-                        DB::rollBack();
-                        Session::flash('error', "Phone number '{$data['phone']}' is already used by {$phoneExists['full_name']}.");
-                        $this->redirect();
-                    }
-                }
 
                 DB::execute(
                     "UPDATE users SET full_name=?, email=?, phone=?, gender=? WHERE id=? AND role='teacher'",
@@ -147,15 +138,6 @@ class TeacherController {
                     DB::rollBack();
                     Session::flash('error', "A user with this email already exists.");
                     $this->redirect();
-                }
-                // Check for existing phone if phone is provided
-                if (!empty($data['phone'])) {
-                    $phoneExists = DB::queryOne("SELECT id, full_name FROM users WHERE phone = ? AND role IN ('admin','teacher') LIMIT 1", [$data['phone']]);
-                    if ($phoneExists) {
-                        DB::rollBack();
-                        Session::flash('error', "Phone number '{$data['phone']}' is already registered to {$phoneExists['full_name']}.");
-                        $this->redirect();
-                    }
                 }
                 
                 $data['password_hash'] = password_hash('password123', PASSWORD_BCRYPT); // Default password
