@@ -346,79 +346,12 @@ class PromotionController {
                 }
             }
 
-            // ── Teacher Rollover ─────────────────────────────────────
-            $rolloverTeachers = !empty($_POST['rollover_teachers']);
-            $rolloverMsg = '';
-
-            if ($rolloverTeachers && $nextYearId && $srcClass) {
-                $targetClassId = self::findOrCreateTargetClass($srcClassName, $srcSection, $nextYearId, $classId);
-
-                if ($targetClassId) {
-                    // 1. Copy Form Masters (class_teachers)
-                    $formMasters = DB::query("SELECT teacher_id FROM class_teachers WHERE class_id = ?", [$classId]);
-                    foreach ($formMasters as $fm) {
-                        DB::execute(
-                            "INSERT IGNORE INTO class_teachers (class_id, teacher_id) VALUES (?, ?)",
-                            [$targetClassId, $fm['teacher_id']]
-                        );
-                    }
-
-                    // 2. Find or create Term 1 in target year
-                    $targetTerm = DB::queryOne(
-                        "SELECT id FROM terms WHERE academic_year_id = ? ORDER BY term_number ASC LIMIT 1",
-                        [$nextYearId]
-                    );
-
-                    if (!$targetTerm) {
-                        $targetTermId = (int)DB::insert(
-                            "INSERT INTO terms (academic_year_id, name, term_number, is_active) VALUES (?, 'Term 1', 1, 0)",
-                            [$nextYearId]
-                        );
-                        $rolloverMsg .= ' (Term 1 auto-created)';
-                    } else {
-                        $targetTermId = (int)$targetTerm['id'];
-                    }
-
-                    // 3. Copy subject assignments (class_subjects)
-                    if ($termId) {
-                        $subjectAssignments = DB::query(
-                            "SELECT subject_id, teacher_id FROM class_subjects WHERE class_id = ? AND term_id = ?",
-                            [$classId, $termId]
-                        );
-
-                        $assignedCount = 0;
-                        foreach ($subjectAssignments as $sa) {
-                            $exists = DB::queryOne(
-                                "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
-                                [$targetClassId, $sa['subject_id'], $targetTermId]
-                            );
-
-                            if ($exists) {
-                                DB::execute("UPDATE class_subjects SET teacher_id = ? WHERE id = ?", [$sa['teacher_id'], $exists['id']]);
-                            } else {
-                                DB::insert(
-                                    "INSERT INTO class_subjects (class_id, subject_id, teacher_id, term_id) VALUES (?, ?, ?, ?)",
-                                    [$targetClassId, $sa['subject_id'], $sa['teacher_id'], $targetTermId]
-                                );
-                            }
-                            $assignedCount++;
-                        }
-                        if ($assignedCount > 0) {
-                            $rolloverMsg .= " — {$assignedCount} subject teacher(s) automatically assigned to the new session.";
-                        }
-                    }
-                }
-            }
-
             DB::commit();
 
             if ($isTerminal) {
                 $msg = "Done! {$graduated} student(s) graduated, {$repeated} repeating.";
             } else {
                 $msg = "Done! {$promoted} student(s) promoted, {$repeated} repeating.";
-            }
-            if ($rolloverMsg) {
-                $msg .= $rolloverMsg;
             }
             Session::flash('success', $msg);
         } catch (\Throwable $e) {

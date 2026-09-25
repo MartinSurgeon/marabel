@@ -258,20 +258,6 @@ $classHierarchy = [
           </div>
           <p class="form-text">Students scoring this mark or higher will pass to the new class.</p>
         </div>
-
-        <!-- ── Teacher Assignment Checkbox ── -->
-        <div class="form-group" style="background:var(--clr-surface-2); border-radius:var(--radius-md); padding:1rem 1.25rem;">
-          <label class="flex items-center gap-3" style="cursor:pointer; margin:0;">
-            <input type="checkbox" name="rollover_teachers" value="1"
-                   style="width:18px; height:18px; accent-color:var(--clr-primary); flex-shrink:0;">
-            <div>
-              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Keep Teachers in this Classroom</div>
-              <div style="font-size:11px; color:var(--clr-text-muted); margin-top:2px;">
-                Keep current teachers assigned to this class to teach the new incoming students next year.
-              </div>
-            </div>
-          </label>
-        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-ghost" onclick="closeModal('modal-auto-promote')">Cancel</button>
