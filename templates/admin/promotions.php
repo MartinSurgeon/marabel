@@ -227,7 +227,7 @@ $classHierarchy = [
         <!-- ── Target Class (Smart Dropdown) ── -->
         <div class="form-group" id="auto-next-class-group">
           <label class="form-label">New Class for Promoted Students <span class="required">*</span></label>
-          <select name="next_class_name" id="auto-next-class" class="form-control" required>
+          <select name="target_class_id" id="auto-next-class" class="form-control" required>
             <option value="">— Select new academic year first —</option>
           </select>
           <p class="form-text" id="auto-next-class-hint" style="margin-top:0.4rem;">
@@ -459,15 +459,14 @@ function onTargetYearChange() {
 
   classes.forEach(c => {
     const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
-    const value = c.class_name; // The backend uses class_name for matching
+    const value = c.id;
     // Determine if this is the recommended target
     let isRecommended = false;
     if (expectedNext && c.class_name === expectedNext) {
-      // If source has a section, try to match section too
       if (currentAutoSection && c.section === currentAutoSection) {
         isRecommended = true;
-      } else if (!currentAutoSection || !autoSelected) {
-        isRecommended = true;
+      } else if (!currentAutoSection && (c.section === 'A' || !c.section)) {
+        isRecommended = !autoSelected;
       }
     }
 
@@ -480,7 +479,7 @@ function onTargetYearChange() {
 
   if (!autoSelected && expectedNext) {
     // Expected class doesn't exist in target year — offer auto-create
-    options = '<option value="' + esc(expectedNext) + '" selected>✨ ' + esc(expectedNext) + ' (auto-create)</option>' + options;
+    options = '<option value="auto:' + esc(expectedNext) + '" selected>✨ ' + esc(expectedNext) + ' (auto-create)</option>' + options;
     autoSelected = true;
   }
 
@@ -534,28 +533,7 @@ function onManualTargetYearChange() {
 
 function loadManualStudents(classId, className) {
   const targetYearId = document.getElementById('manual-target-year').value;
-  const expectedNext = getExpectedNextClass(className);
   const isGraduation = isTerminalClass(className);
-
-  // Build next-class dropdown options from target year classes
-  let nextClassOpts = '<option value="">— Class —</option>';
-  if (targetYearId) {
-    const classes = TARGET_YEAR_CLASSES[targetYearId] || [];
-    classes.forEach(c => {
-      const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
-      const isRec = expectedNext && c.class_name === expectedNext;
-      const selected = isRec ? ' selected' : '';
-      nextClassOpts += `<option value="${esc(c.class_name)}"${selected}>${esc(label)}${isRec ? ' ⭐' : ''}</option>`;
-    });
-    // If expected class doesn't exist, offer auto-create
-    if (expectedNext && !classes.some(c => c.class_name === expectedNext)) {
-      nextClassOpts = `<option value="">— Class —</option><option value="${esc(expectedNext)}" selected>✨ ${esc(expectedNext)} (auto-create)</option>` +
-        classes.map(c => {
-          const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
-          return `<option value="${esc(c.class_name)}">${esc(label)}</option>`;
-        }).join('');
-    }
-  }
 
   fetch(`${BASE}/admin/promotions?ajax_students=1&class_id=${classId}&year_id=${YEAR_ID}`, {
     headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -564,6 +542,8 @@ function loadManualStudents(classId, className) {
   .then(data => {
     const el = document.getElementById('manual-student-list');
     const countEl = document.getElementById('manual-student-count');
+    const expectedNext = data.expected_next || getExpectedNextClass(className);
+    const isTerminal = data.is_terminal || isGraduation;
 
     if (!data.students || data.students.length === 0) {
       el.innerHTML = '<div style="padding:3rem; text-align:center; color:var(--clr-text-muted);">No students found in this class.</div>';
@@ -573,15 +553,35 @@ function loadManualStudents(classId, className) {
 
     countEl.textContent = data.students.length + ' student' + (data.students.length !== 1 ? 's' : '');
 
+    const classes = targetYearId ? (TARGET_YEAR_CLASSES[targetYearId] || []) : [];
+
     el.innerHTML = data.students.map(s => {
       const statusColor = s.promotion_status === 'promoted' ? 'var(--clr-success)'
                         : s.promotion_status === 'repeated' ? 'var(--clr-danger)' : 'var(--clr-text-muted)';
-      const statusLabel = s.promotion_status === 'promoted' ? 'Passed'
+      const statusLabel = s.promotion_status === 'promoted' ? (isTerminal ? 'Graduated' : 'Passed')
                         : s.promotion_status === 'repeated' ? 'Repeating' : 'Pending';
       const statusIcon = s.promotion_status === 'promoted' ? '✓' : s.promotion_status === 'repeated' ? '✗' : '○';
 
       // Score badge colour
       const scoreColor = s.avg_score >= 60 ? 'var(--clr-success)' : s.avg_score >= 50 ? '#d97706' : 'var(--clr-danger)';
+
+      let targetClassWidget = '';
+      if (isTerminal) {
+        targetClassWidget = `<input type="hidden" name="target_class_id" value=""><span style="font-size:11px; font-weight:700; color:var(--clr-primary); min-width:80px;">🎓 Graduating</span>`;
+      } else {
+        let opts = '<option value="">— Class —</option>';
+        classes.forEach(c => {
+          const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
+          const isAssigned = s.target_class_id && parseInt(s.target_class_id) === parseInt(c.id);
+          const isRec = !s.target_class_id && expectedNext && c.class_name === expectedNext;
+          const selected = (isAssigned || isRec) ? ' selected' : '';
+          opts += `<option value="${esc(c.id)}"${selected}>${esc(label)}${isRec ? ' ⭐' : ''}</option>`;
+        });
+        if (expectedNext && !classes.some(c => c.class_name === expectedNext)) {
+          opts += `<option value="auto:${esc(expectedNext)}" selected>✨ ${esc(expectedNext)} (auto-create)</option>`;
+        }
+        targetClassWidget = `<select name="target_class_id" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:130px; border-radius:var(--radius-sm);">${opts}</select>`;
+      }
 
       return `
       <div style="padding:0.75rem 1.5rem; border-bottom:1px solid var(--clr-border); display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
@@ -592,6 +592,7 @@ function loadManualStudents(classId, className) {
             <span>ID: ${esc(s.student_id_number)}</span>
             <span style="width:4px; height:4px; border-radius:50%; background:var(--clr-border); display:inline-block;"></span>
             <span style="font-weight:700; color:${scoreColor};">${s.avg_score}% Avg</span>
+            ${s.manual_override == 1 ? '<span class="badge" style="font-size:9px; padding:1px 5px; background:rgba(99,102,241,0.1); color:var(--clr-primary);">Override</span>' : ''}
           </div>
         </div>
         <!-- Current Status Badge -->
@@ -605,11 +606,9 @@ function loadManualStudents(classId, className) {
           <input type="hidden" name="student_id" value="${s.id}">
           <input type="hidden" name="year_id" value="${YEAR_ID}">
           <input type="hidden" name="next_year_id" value="${targetYearId || ''}">
-          <select name="next_class_name" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:120px; border-radius:var(--radius-sm);">
-            ${nextClassOpts}
-          </select>
-          <select name="promo_status" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:100px; border-radius:var(--radius-sm);">
-            <option value="promoted" ${s.promotion_status==='promoted'?'selected':''}>✓ Pass</option>
+          ${targetClassWidget}
+          <select name="promo_status" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:105px; border-radius:var(--radius-sm);">
+            <option value="promoted" ${s.promotion_status==='promoted'?'selected':''}>${isTerminal ? '🎓 Graduate' : '✓ Pass'}</option>
             <option value="repeated" ${s.promotion_status==='repeated'?'selected':''}>✗ Repeat</option>
           </select>
           <button type="submit" class="btn btn-xs btn-primary" style="height:30px; font-size:11px; padding:0 12px; border-radius:var(--radius-sm);">Save</button>
