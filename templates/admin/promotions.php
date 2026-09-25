@@ -457,12 +457,21 @@ function onTargetYearChange() {
   let options = '';
   let autoSelected = false;
 
+  // School policy: Special streaming rules for Basic 4 and Basic 8
+  if (currentAutoClassName === 'BASIC 4') {
+    options += '<option value="split_ab" selected>⚖️ Balanced 50/50 Split (BASIC 5A & 5B) ⭐ (Recommended)</option>';
+    autoSelected = true;
+  } else if (currentAutoClassName === 'BASIC 8') {
+    options += '<option value="stream_merit" selected>🏆 Academic Stream (Top Grades → 9B, Others → 9A) ⭐ (Recommended)</option>';
+    autoSelected = true;
+  }
+
   classes.forEach(c => {
     const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
     const value = c.id;
     // Determine if this is the recommended target
     let isRecommended = false;
-    if (expectedNext && c.class_name === expectedNext) {
+    if (!autoSelected && expectedNext && c.class_name === expectedNext) {
       if (currentAutoSection && c.section === currentAutoSection) {
         isRecommended = true;
       } else if (!currentAutoSection && (c.section === 'A' || !c.section)) {
@@ -479,16 +488,24 @@ function onTargetYearChange() {
 
   if (!autoSelected && expectedNext) {
     // Expected class doesn't exist in target year — offer auto-create
-    options = '<option value="auto:' + esc(expectedNext) + '" selected>✨ ' + esc(expectedNext) + ' (auto-create)</option>' + options;
+    const targetLabel = expectedNext + (currentAutoSection ? ' (' + currentAutoSection + ')' : '');
+    options = '<option value="auto:' + esc(expectedNext) + '" selected>✨ ' + esc(targetLabel) + ' (auto-create)</option>' + options;
     autoSelected = true;
   }
 
   nextClassSelect.innerHTML = '<option value="">— Choose new class —</option>' + options;
 
-  // Update preview
-  if (autoSelected && expectedNext) {
-    previewTo.textContent = expectedNext;
-    hint.innerHTML = '<span style="color:var(--clr-success);">✓</span> Recommended next class auto-selected.';
+  // Update preview & hint
+  if (currentAutoClassName === 'BASIC 4') {
+    previewTo.textContent = 'BASIC 5A & 5B';
+    hint.innerHTML = '<span style="color:var(--clr-success); font-weight:700;">✓ Even Split:</span> Passing students will be divided 50/50 alternately between <strong>BASIC 5A</strong> and <strong>BASIC 5B</strong>.';
+  } else if (currentAutoClassName === 'BASIC 8') {
+    previewTo.textContent = 'BASIC 9B & 9A';
+    hint.innerHTML = '<span style="color:var(--clr-success); font-weight:700;">✓ Merit Streaming:</span> Top-performing students go to <strong>BASIC 9B</strong>; remaining passing students go to <strong>BASIC 9A</strong>.';
+  } else if (autoSelected && expectedNext) {
+    const targetStreamLabel = expectedNext + (currentAutoSection ? ' (' + currentAutoSection + ')' : '');
+    previewTo.textContent = targetStreamLabel;
+    hint.innerHTML = '<span style="color:var(--clr-success); font-weight:700;">✓ Direct Stream:</span> Students in <strong>' + esc(currentAutoClassName) + (currentAutoSection ? ' (' + esc(currentAutoSection) + ')' : '') + '</strong> continue into <strong>' + esc(targetStreamLabel) + '</strong>.';
   } else {
     hint.textContent = 'Choose the class where promoted students will be placed.';
   }
@@ -570,15 +587,17 @@ function loadManualStudents(classId, className) {
         targetClassWidget = `<input type="hidden" name="target_class_id" value=""><span style="font-size:11px; font-weight:700; color:var(--clr-primary); min-width:80px;">🎓 Graduating</span>`;
       } else {
         let opts = '<option value="">— Class —</option>';
+        const srcSec = data.source_section || '';
         classes.forEach(c => {
           const label = c.class_name + (c.section ? ' (' + c.section + ')' : '');
           const isAssigned = s.target_class_id && parseInt(s.target_class_id) === parseInt(c.id);
-          const isRec = !s.target_class_id && expectedNext && c.class_name === expectedNext;
+          const isRec = !s.target_class_id && expectedNext && c.class_name === expectedNext && (!srcSec || c.section === srcSec);
           const selected = (isAssigned || isRec) ? ' selected' : '';
           opts += `<option value="${esc(c.id)}"${selected}>${esc(label)}${isRec ? ' ⭐' : ''}</option>`;
         });
-        if (expectedNext && !classes.some(c => c.class_name === expectedNext)) {
-          opts += `<option value="auto:${esc(expectedNext)}" selected>✨ ${esc(expectedNext)} (auto-create)</option>`;
+        if (expectedNext && !classes.some(c => c.class_name === expectedNext && (!srcSec || c.section === srcSec))) {
+          const targetAutoLabel = expectedNext + (srcSec ? ' (' + srcSec + ')' : '');
+          opts += `<option value="auto:${esc(expectedNext)}" selected>✨ ${esc(targetAutoLabel)} (auto-create)</option>`;
         }
         targetClassWidget = `<select name="target_class_id" class="form-control" style="padding:0.25rem 0.4rem; font-size:11px; height:30px; width:130px; border-radius:var(--radius-sm);">${opts}</select>`;
       }

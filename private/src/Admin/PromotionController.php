@@ -162,11 +162,27 @@ class PromotionController {
         );
         $termId = $term['id'] ?? null;
 
+        $isSplitAB     = ($targetClassIn === 'split_ab' || (strtoupper($srcClassName) === 'BASIC 4' && ($targetClassIn === '' || $targetClassIn === 'split_ab')));
+        $isMeritStream = ($targetClassIn === 'stream_merit' || (in_array(strtoupper($srcClassName), ['BASIC 8', 'JHS 2']) && $targetClassIn === 'stream_merit'));
+
         // Resolve Target Class for promoted students
         $nextClassId   = null;
         $nextClassName = '';
+        $target5AId    = null;
+        $target5BId    = null;
+        $target9AId    = null;
+        $target9BId    = null;
+
         if ($isTerminal) {
             $nextClassName = 'Graduated';
+        } elseif ($isSplitAB) {
+            $target5AId = self::findOrCreateTargetClass('BASIC 5', 'A', $nextYearId, $classId);
+            $target5BId = self::findOrCreateTargetClass('BASIC 5', 'B', $nextYearId, $classId);
+            $nextClassName = 'BASIC 5 (A/B Split)';
+        } elseif ($isMeritStream) {
+            $target9AId = self::findOrCreateTargetClass('BASIC 9', 'A', $nextYearId, $classId);
+            $target9BId = self::findOrCreateTargetClass('BASIC 9', 'B', $nextYearId, $classId);
+            $nextClassName = 'BASIC 9 (Merit Stream)';
         } else {
             if (is_numeric($targetClassIn) && (int)$targetClassIn > 0) {
                 $targetRow = DB::queryOne("SELECT id, class_name, section FROM classes WHERE id = ? AND academic_year_id = ?", [(int)$targetClassIn, $nextYearId]);
@@ -189,7 +205,7 @@ class PromotionController {
 
         // Fetch students belonging to this class in this year
         $students = DB::query(
-            "SELECT s.id, s.full_name,
+            "SELECT s.id, s.full_name, s.student_id_number,
                     COALESCE(SUM(sa.aggregate_score), 0) as aggregate_score,
                     COALESCE(SUM(sa.number_of_subjects), 0) as subject_count,
                     sp.manual_override,
@@ -199,9 +215,44 @@ class PromotionController {
              LEFT JOIN student_promotions sp ON sp.student_id = s.id AND sp.academic_year_id = ? AND sp.from_class_id = ?
              WHERE (s.current_class_id = ? AND s.academic_year_id = ? AND s.status = 'active')
                 OR (sp.from_class_id = ? AND sp.academic_year_id = ?)
-             GROUP BY s.id, s.full_name",
+             GROUP BY s.id, s.full_name, s.student_id_number",
             [$classId, $yearId, $classId, $classId, $yearId, $classId, $yearId]
         );
+
+        // Calculate avg_score and initial status for all students
+        foreach ($students as &$st) {
+            $sc = (int)$st['subject_count'];
+            $ag = (float)$st['aggregate_score'];
+            $st['avg_score'] = ($sc > 0) ? ($ag / ($sc * 100)) * 100 : 0;
+
+            if (!empty($st['manual_override']) && !empty($st['existing_status'])) {
+                $st['promo_status'] = $st['existing_status'];
+            } else {
+                $st['promo_status'] = ($st['avg_score'] >= $threshold) ? 'promoted' : 'repeated';
+            }
+        }
+        unset($st);
+
+        // If Merit Streaming (Basic 8 -> Basic 9): Rank promoted students so top performers get 9B, rest get 9A
+        $meritAssignments = [];
+        if ($isMeritStream) {
+            $promotedStudents = array_filter($students, fn($s) => $s['promo_status'] === 'promoted');
+            // Sort by avg_score DESC (highest first)
+            usort($promotedStudents, fn($a, $b) => $b['avg_score'] <=> $a['avg_score']);
+            $promCount = count($promotedStudents);
+            $topHalfCut = (int)ceil($promCount / 2);
+
+            $rank = 0;
+            foreach ($promotedStudents as $ps) {
+                // Top half -> 9B (high grades); Lower half -> 9A
+                if ($rank < $topHalfCut) {
+                    $meritAssignments[$ps['id']] = ['id' => $target9BId, 'name' => 'BASIC 9 B'];
+                } else {
+                    $meritAssignments[$ps['id']] = ['id' => $target9AId, 'name' => 'BASIC 9 A'];
+                }
+                $rank++;
+            }
+        }
 
         try {
             DB::beginTransaction();
@@ -209,24 +260,38 @@ class PromotionController {
             $promoted  = 0;
             $repeated  = 0;
             $graduated = 0;
+            $splitIdx  = 0;
 
             foreach ($students as $student) {
-                $sid = (int)$student['id'];
+                $sid    = (int)$student['id'];
+                $status = $student['promo_status'];
 
-                // Calculate average score if they have subjects
-                $avgScore = ($student['subject_count'] > 0)
-                    ? ($student['aggregate_score'] / ($student['subject_count'] * 100)) * 100
-                    : 0;
-
-                // Respect manual override if previously set
-                if (!empty($student['manual_override']) && !empty($student['existing_status'])) {
-                    $status = $student['existing_status'];
+                if ($status === 'promoted') {
+                    if ($isTerminal) {
+                        $assignedTargetId = null;
+                        $assignedNextName = 'Graduated';
+                    } elseif ($isSplitAB) {
+                        // Break even 50/50 split across Section A and Section B
+                        if ($splitIdx % 2 === 0) {
+                            $assignedTargetId = $target5AId;
+                            $assignedNextName = 'BASIC 5 A';
+                        } else {
+                            $assignedTargetId = $target5BId;
+                            $assignedNextName = 'BASIC 5 B';
+                        }
+                        $splitIdx++;
+                    } elseif ($isMeritStream) {
+                        $m = $meritAssignments[$sid] ?? ['id' => $target9BId, 'name' => 'BASIC 9 B'];
+                        $assignedTargetId = $m['id'];
+                        $assignedNextName = $m['name'];
+                    } else {
+                        $assignedTargetId = $nextClassId;
+                        $assignedNextName = $nextClassName;
+                    }
                 } else {
-                    $status = ($avgScore >= $threshold) ? 'promoted' : 'repeated';
+                    $assignedTargetId = $repeatClassId;
+                    $assignedNextName = $srcClassName;
                 }
-
-                $assignedTargetId = ($status === 'promoted') ? $nextClassId : $repeatClassId;
-                $assignedNextName = ($status === 'promoted') ? $nextClassName : $srcClassName;
 
                 // Upsert promotion record
                 DB::execute(
@@ -254,12 +319,12 @@ class PromotionController {
                         DB::execute("UPDATE students SET status = 'inactive' WHERE id = ?", [$sid]);
                         $graduated++;
                     } else {
-                        // Move to next year and class
+                        // Move to next year and assigned target class
                         $sql = "UPDATE students SET academic_year_id = ?, status = 'active'";
                         $p   = [$nextYearId];
-                        if ($nextClassId) {
+                        if ($assignedTargetId) {
                             $sql .= ", current_class_id = ?";
-                            $p[]  = $nextClassId;
+                            $p[]  = $assignedTargetId;
                         }
                         $sql .= " WHERE id = ?";
                         $p[]  = $sid;
@@ -599,9 +664,10 @@ class PromotionController {
 
         header('Content-Type: application/json');
         echo json_encode([
-            'students'      => $students,
-            'is_terminal'   => $isTerminal,
-            'expected_next' => $expectedNext,
+            'students'       => $students,
+            'is_terminal'    => $isTerminal,
+            'expected_next'  => $expectedNext,
+            'source_section' => $cls['section'] ?? '',
         ]);
         exit;
     }
