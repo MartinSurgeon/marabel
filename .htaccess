@@ -1,6 +1,8 @@
 Options -Indexes
 RewriteEngine On
-RewriteBase /marabel
+# RewriteBase /marabel
+# Note: On live shared hosting (e.g. Namecheap public_html), leave commented or set to /
+# RewriteBase /
 
 # ── Deny access to private directory ────────────────────────────
 RewriteRule ^private(/|$) - [F,L]

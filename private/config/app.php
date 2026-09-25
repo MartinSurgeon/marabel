@@ -5,9 +5,15 @@
  */
 
 // ── Environment ────────────────────────────────────────────────────
-define('APP_ENV',        'development'); // 'production' on live server
+// Auto-detect production on live hosting (e.g. Namecheap) vs local development
+$serverHost = $_SERVER['HTTP_HOST'] ?? 'localhost';
+$isLocalDev = in_array(explode(':', $serverHost)[0], ['localhost', '127.0.0.1', '::1'])
+              || str_ends_with($serverHost, '.local')
+              || str_ends_with($serverHost, '.test');
+
+define('APP_ENV',        $isLocalDev ? 'development' : 'production');
 define('APP_DEBUG',      APP_ENV === 'development');
-define('APP_KEY',        'change-this-to-a-random-64-char-string');
+define('APP_KEY',        '5a802a5cb1566ce0111efee2e3122922d4282c7cbb00a67d0266caa8daa98af1');
 
 // ── School Identity ─────────────────────────────────────────────────
 define('SCHOOL_NAME',        'Uaddara Basic School');
