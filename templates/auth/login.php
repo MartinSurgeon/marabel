@@ -120,6 +120,20 @@ $logoVersion = $schoolLogo . '?v=' . time();
         </div>
       <?php endif; ?>
 
+      <!-- PWA Install Banner -->
+      <div id="pwa-login-banner" style="display:none; margin-bottom:1.25rem; padding:0.75rem 1rem; background:linear-gradient(135deg, rgba(150,51,204,0.06), rgba(99,102,241,0.06)); border:1px solid rgba(150,51,204,0.2); border-radius:12px; align-items:center; justify-content:space-between; gap:0.75rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <img src="<?= $base ?>/assets/img/icons/icon-192x192.png" alt="App Icon" style="width:36px; height:36px; border-radius:8px; flex-shrink:0;">
+          <div>
+            <div style="font-weight:700; font-size:13px; color:var(--clr-text, #1e293b); line-height:1.2;">Install Uaddara SBA</div>
+            <div style="font-size:11px; color:#64748b; margin-top:2px;">Fast access & offline support</div>
+          </div>
+        </div>
+        <button type="button" id="pwa-login-install-btn" class="btn btn-sm btn-primary" style="padding:6px 14px; font-size:12px; font-weight:700; border-radius:8px; white-space:nowrap;">
+          Install App
+        </button>
+      </div>
+
       <!-- Role tabs -->
       <div class="role-tabs" role="tablist" aria-label="Select your role">
         <button class="role-tab active" id="tab-staff"   role="tab" aria-selected="true"  data-target="form-staff"   aria-controls="form-staff"   type="button">Staff</button>
@@ -316,6 +330,32 @@ if (pinInput) {
     e.target.value = e.target.value.replace(/\D/g, '').slice(0, 4);
   });
 }
+
+// ── PWA Install Prompt Handler ─────────────────────────────────
+let pwaLoginPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  pwaLoginPrompt = e;
+  const banner = document.getElementById('pwa-login-banner');
+  if (banner) banner.style.display = 'flex';
+});
+
+document.getElementById('pwa-login-install-btn')?.addEventListener('click', async () => {
+  if (pwaLoginPrompt) {
+    pwaLoginPrompt.prompt();
+    const { outcome } = await pwaLoginPrompt.userChoice;
+    if (outcome === 'accepted') {
+      const banner = document.getElementById('pwa-login-banner');
+      if (banner) banner.style.display = 'none';
+    }
+    pwaLoginPrompt = null;
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  const banner = document.getElementById('pwa-login-banner');
+  if (banner) banner.style.display = 'none';
+});
 </script>
 
 <style>

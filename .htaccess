@@ -35,8 +35,23 @@ RewriteRule ^(.*)$ index.php [QSA,L]
   php_value session.use_strict_mode 1
 </IfModule>
 
-# ── Block sensitive files ────────────────────────────────────────
-<FilesMatch "\.(sql|log|env|md|json|lock|bak)$">
-  Order deny,allow
-  Deny from all
+# ── Block sensitive files (allow manifest.json for PWA) ──────────
+<FilesMatch "(composer\.json|package\.json|\.env|\.sql|\.log|\.bak|\.lock|\.md)$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
 </FilesMatch>
+
+<Files "manifest.json">
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Allow from all
+  </IfModule>
+</Files>

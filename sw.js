@@ -6,7 +6,7 @@
  *  - POST requests: Always bypass directly to network
  */
 
-const CACHE_NAME = 'uaddara-sba-v1';
+const CACHE_NAME = 'uaddara-sba-v2';
 
 const STATIC_PRECACHE = [
   './offline.html',

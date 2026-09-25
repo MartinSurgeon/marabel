@@ -2,6 +2,7 @@
   "name": "Uaddara Basic School SBA",
   "short_name": "Uaddara SBA",
   "description": "School-Based Assessment (SBA) Management System for Uaddara Basic School",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
