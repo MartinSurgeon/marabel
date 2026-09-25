@@ -265,9 +265,9 @@ $classHierarchy = [
             <input type="checkbox" name="rollover_teachers" value="1"
                    style="width:18px; height:18px; accent-color:var(--clr-primary); flex-shrink:0;">
             <div>
-              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Assign Same Subject Teachers</div>
+              <div style="font-weight:700; font-size:13px; color:var(--clr-text);">Keep Teachers in this Classroom</div>
               <div style="font-size:11px; color:var(--clr-text-muted); margin-top:2px;">
-                Keep the same Math, English, Science, and other subject teachers for this class in the new year.
+                Keep current teachers assigned to this class to teach the new incoming students next year.
               </div>
             </div>
           </label>
