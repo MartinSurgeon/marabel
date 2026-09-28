@@ -1272,3 +1272,171 @@ thead th.col-sticky { background: var(--clr-surface-2); }
 @keyframes shine {
   to { left: 200%; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   MOBILE-FIRST BOTTOM NAVIGATION DOCK (App Experience)
+══════════════════════════════════════════════════════════════════════ */
+.mobile-bottom-nav {
+  display: none;
+}
+.bottom-sheet-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* On non-admin roles, hide the bulky off-canvas drawer and hamburger button */
+  body.has-bottom-nav .sidebar {
+    display: none !important;
+  }
+  body.has-bottom-nav #sidebar-toggle {
+    display: none !important;
+  }
+  body.has-bottom-nav .app-content {
+    margin-left: 0 !important;
+    padding-bottom: calc(72px + env(safe-area-inset-bottom, 16px)) !important;
+  }
+
+  /* Bottom Navigation Dock */
+  .mobile-bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(64px + env(safe-area-inset-bottom, 0px));
+    padding: 6px 8px max(6px, env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.88);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.04), 0 -1px 3px rgba(0, 0, 0, 0.02);
+    z-index: 1000;
+    justify-content: space-around;
+    align-items: center;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    height: 100%;
+    color: #64748b;
+    text-decoration: none;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition: color 0.15s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 12px;
+    padding: 4px 2px;
+    position: relative;
+    border: none;
+    background: none;
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .bottom-nav-item:active {
+    transform: scale(0.92);
+  }
+
+  .bottom-nav-item .nav-icon {
+    width: 22px;
+    height: 22px;
+    margin-bottom: 3px;
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), color 0.2s;
+  }
+
+  .bottom-nav-item.active {
+    color: var(--clr-primary, #9633cc);
+    font-weight: 800;
+  }
+
+  .bottom-nav-item.active .nav-icon {
+    transform: translateY(-2px);
+    color: var(--clr-primary, #9633cc);
+  }
+
+  .bottom-nav-item.active::before {
+    content: '';
+    position: absolute;
+    top: 0px;
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--clr-primary, #9633cc);
+    box-shadow: 0 2px 8px rgba(150, 51, 204, 0.5);
+  }
+
+  /* Bottom Sheet Overlay & Drawer */
+  .bottom-sheet-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 9100;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+  }
+  .bottom-sheet-overlay.open {
+    opacity: 1;
+    visibility: visible;
+  }
+  .bottom-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9101;
+    background: var(--clr-surface, #ffffff);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.18);
+    padding: 1rem 1.25rem calc(1.5rem + env(safe-area-inset-bottom, 12px));
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 85vh;
+    overflow-y: auto;
+  }
+  .bottom-sheet-overlay.open .bottom-sheet {
+    transform: translateY(0);
+  }
+  .sheet-handle {
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--clr-border, #cbd5e1);
+    margin: 0 auto 1rem;
+  }
+  .sheet-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0.875rem 1rem;
+    border-radius: 12px;
+    color: var(--clr-text, #1e293b);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.15s, transform 0.1s;
+    border: 1px solid transparent;
+  }
+  .sheet-item:active {
+    background: var(--clr-surface-2, #f1f5f9);
+    transform: scale(0.98);
+  }
+  .sheet-item svg {
+    color: var(--clr-text-muted, #64748b);
+    flex-shrink: 0;
+  }
+  .sheet-item.danger {
+    color: var(--clr-danger, #dc2626);
+  }
+  .sheet-item.danger svg {
+    color: var(--clr-danger, #dc2626);
+  }
+}

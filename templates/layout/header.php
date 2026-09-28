@@ -41,8 +41,7 @@ if (Session::isLoggedIn()) {
       });
     }
   </script>
-</head>
-<body>
+<body class="<?= (Session::role() && Session::role() !== 'admin') ? 'has-bottom-nav' : '' ?>">
 <div class="app-layout">
 
   <?php include __DIR__ . '/sidebar.php'; ?>

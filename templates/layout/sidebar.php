@@ -6,6 +6,16 @@ $currentPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $role = Session::role();
 $base = defined('APP_BASE') ? APP_BASE : '';
 
+$managedClass = null;
+if ($role === 'teacher') {
+    $managedClass = DB::queryOne(
+        "SELECT c.id, c.class_name, c.section FROM classes c 
+         JOIN class_teachers ct ON ct.class_id = c.id 
+         WHERE ct.teacher_id = ? LIMIT 1",
+        [Session::userId()]
+    );
+}
+
 if (!function_exists('navActive')) {
     function navActive(string $path, bool $exact = false): string {
         global $currentPath;
@@ -105,14 +115,6 @@ if (!function_exists('navActive')) {
     </a>
 
     <?php elseif (Session::role() === 'teacher'): ?>
-    <?php
-    $managedClass = DB::queryOne(
-        "SELECT c.id, c.class_name, c.section FROM classes c 
-         JOIN class_teachers ct ON ct.class_id = c.id 
-         WHERE ct.teacher_id = ? LIMIT 1",
-        [Session::userId()]
-    );
-    ?>
     <!-- ── Teacher Navigation ───────────────────────────── -->
     <div class="nav-section-label">Overview</div>
     <a href="<?= $base ?>/teacher" class="nav-item<?= navActive($base . '/teacher', true) ?>">
@@ -318,6 +320,172 @@ if (!function_exists('navActive')) {
   </div>
 </div>
 
+<?php if ($role && $role !== 'admin'): ?>
+<!-- ════════════════════════════════════════════════════════
+     MOBILE-FIRST BOTTOM NAVIGATION TAB BAR (App Experience)
+══════════════════════════════════════════════════════════ -->
+<nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Mobile Navigation">
+  <?php if ($role === 'teacher'): ?>
+    <!-- 1. Dashboard -->
+    <a href="<?= $base ?>/teacher" class="bottom-nav-item<?= navActive($base . '/teacher', true) ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>
+      </svg>
+      <span>Home</span>
+    </a>
+
+    <!-- 2. Score Entry -->
+    <a href="<?= $base ?>/teacher/scores" class="bottom-nav-item<?= navActive($base . '/teacher/scores') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+      </svg>
+      <span>Scores</span>
+    </a>
+
+    <!-- 3. Managed Class or Excel Import -->
+    <?php if (!empty($managedClass)): ?>
+    <a href="<?= $base ?>/teacher/class?id=<?= (int)$managedClass['id'] ?>" class="bottom-nav-item<?= navActive($base . '/teacher/class') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+      </svg>
+      <span>My Class</span>
+    </a>
+    <?php else: ?>
+    <a href="<?= $base ?>/teacher/import" class="bottom-nav-item<?= navActive($base . '/teacher/import') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+      </svg>
+      <span>Import</span>
+    </a>
+    <?php endif; ?>
+
+    <!-- 4. More Sheet Trigger -->
+    <button type="button" class="bottom-nav-item" id="bottom-more-trigger" onclick="BottomSheet.open()" aria-label="Open more options">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
+      </svg>
+      <span>More</span>
+    </button>
+
+  <?php elseif ($role === 'parent'): ?>
+    <!-- Parent Navigation Tabs -->
+    <a href="<?= $base ?>/parent" class="bottom-nav-item<?= navActive($base . '/parent') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+      </svg>
+      <span>Children</span>
+    </a>
+
+    <a href="<?= $base ?>/profile/password" class="bottom-nav-item<?= navActive($base . '/profile/password') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+      </svg>
+      <span>Password</span>
+    </a>
+
+    <button type="button" class="bottom-nav-item" onclick="BottomSheet.open()" aria-label="Open account options">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
+      </svg>
+      <span>Account</span>
+    </button>
+
+  <?php elseif ($role === 'student'): ?>
+    <!-- Student Navigation Tabs -->
+    <a href="<?= $base ?>/student" class="bottom-nav-item<?= navActive($base . '/student') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+      </svg>
+      <span>Results</span>
+    </a>
+
+    <a href="<?= $base ?>/profile/password" class="bottom-nav-item<?= navActive($base . '/profile/password') ?>">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+      </svg>
+      <span>Password</span>
+    </a>
+
+    <button type="button" class="bottom-nav-item" onclick="BottomSheet.open()" aria-label="Open account options">
+      <svg class="nav-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/><circle cx="5" cy="12" r="1.5"/>
+      </svg>
+      <span>Account</span>
+    </button>
+  <?php endif; ?>
+</nav>
+
+<!-- ── Slide-up Bottom Sheet (Action Sheet for More / Account) ── -->
+<div id="bottom-sheet-overlay" class="bottom-sheet-overlay" onclick="BottomSheet.onBackdrop(event)" role="dialog" aria-modal="true" aria-label="More navigation options">
+  <div class="bottom-sheet" id="bottom-sheet">
+    <div class="sheet-handle"></div>
+
+    <!-- User Profile Header -->
+    <div style="display:flex; align-items:center; gap:0.875rem; padding:0.25rem 0.5rem 1rem; border-bottom:1px solid var(--clr-border, #e2e8f0); margin-bottom:0.75rem;">
+      <div style="width:42px; height:42px; border-radius:50%; background:var(--clr-primary, #9633cc); color:#ffffff; font-weight:800; font-size:16px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+        <?= strtoupper(substr(Session::get('user_name', '?'), 0, 1)) ?>
+      </div>
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:800; font-size:15px; color:var(--clr-text, #0f172a); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <?= htmlspecialchars(Session::get('user_name', 'User')) ?>
+        </div>
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-top:2px;">
+          <span style="font-size:11px; font-weight:700; color:var(--clr-primary, #9633cc); background:rgba(150,51,204,0.1); padding:2px 8px; border-radius:99px; text-transform:uppercase;">
+            <?= ucfirst($role ?? '') ?>
+          </span>
+          <?php if (!empty($managedClass)): ?>
+          <span style="font-size:11px; color:var(--clr-text-muted, #64748b);">
+            <?= htmlspecialchars($managedClass['class_name'] . ($managedClass['section'] ? ' ' . $managedClass['section'] : '')) ?>
+          </span>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sheet Menu Actions -->
+    <div style="display:flex; flex-direction:column; gap:0.25rem;">
+      <?php if ($role === 'teacher'): ?>
+        <?php if (!empty($managedClass)): ?>
+        <a href="<?= $base ?>/admin/promotions" class="sheet-item" onclick="BottomSheet.close()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+          <span>Student Promotions</span>
+        </a>
+        <a href="<?= $base ?>/teacher/import" class="sheet-item" onclick="BottomSheet.close()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+          <span>Import Scores (Excel)</span>
+        </a>
+        <?php endif; ?>
+      <?php endif; ?>
+
+      <!-- Shared: Change Password -->
+      <a href="<?= $base ?>/profile/password" class="sheet-item" onclick="BottomSheet.close()">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <span>Change Password</span>
+      </a>
+
+      <!-- Shared: Install App button (shown when installable) -->
+      <button type="button" id="sheet-pwa-install-btn" class="sheet-item" style="display:none; width:100%; border:none; background:none; text-align:left; cursor:pointer;" onclick="BottomSheet.close(); document.getElementById('pwa-install-btn')?.click();">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+        <span>Install App</span>
+      </button>
+
+      <!-- Shared: Sign Out -->
+      <button type="button" class="sheet-item danger" style="width:100%; border:none; background:none; text-align:left; cursor:pointer;" onclick="BottomSheet.close(); LogoutModal.open();">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" width="20" height="20"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Sign Out</span>
+      </button>
+    </div>
+
+    <!-- Sheet Dismiss button -->
+    <div style="margin-top:1rem; padding-top:0.75rem; border-top:1px solid var(--clr-border, #e2e8f0);">
+      <button type="button" class="btn btn-ghost" style="width:100%; justify-content:center; border-radius:12px; font-weight:700;" onclick="BottomSheet.close()">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <script>
 const LogoutModal = {
   open() {
@@ -348,6 +516,35 @@ const LogoutModal = {
   }
 };
 
+// Bottom Sheet Controller
+const BottomSheet = {
+  open() {
+    const el = document.getElementById('bottom-sheet-overlay');
+    if (!el) return;
+    el.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (typeof pwaDeferredPrompt !== 'undefined' && pwaDeferredPrompt) {
+      const btn = document.getElementById('sheet-pwa-install-btn');
+      if (btn) btn.style.display = 'flex';
+    }
+  },
+  close() {
+    const el = document.getElementById('bottom-sheet-overlay');
+    if (!el) return;
+    el.classList.remove('open');
+    document.body.style.overflow = '';
+  },
+  onBackdrop(e) {
+    if (e.target === document.getElementById('bottom-sheet-overlay')) {
+      BottomSheet.close();
+    }
+  }
+};
+
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') BottomSheet.close();
+});
+
 // PWA Install Prompt Handler
 let pwaDeferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -355,6 +552,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   pwaDeferredPrompt = e;
   const container = document.getElementById('pwa-install-container');
   if (container) container.style.display = 'block';
+  const sheetBtn = document.getElementById('sheet-pwa-install-btn');
+  if (sheetBtn) sheetBtn.style.display = 'flex';
 });
 
 document.getElementById('pwa-install-btn')?.addEventListener('click', async () => {
@@ -364,6 +563,8 @@ document.getElementById('pwa-install-btn')?.addEventListener('click', async () =
     if (outcome === 'accepted') {
       const container = document.getElementById('pwa-install-container');
       if (container) container.style.display = 'none';
+      const sheetBtn = document.getElementById('sheet-pwa-install-btn');
+      if (sheetBtn) sheetBtn.style.display = 'none';
     }
     pwaDeferredPrompt = null;
   }
@@ -372,5 +573,7 @@ document.getElementById('pwa-install-btn')?.addEventListener('click', async () =
 window.addEventListener('appinstalled', () => {
   const container = document.getElementById('pwa-install-container');
   if (container) container.style.display = 'none';
+  const sheetBtn = document.getElementById('sheet-pwa-install-btn');
+  if (sheetBtn) sheetBtn.style.display = 'none';
 });
 </script>
