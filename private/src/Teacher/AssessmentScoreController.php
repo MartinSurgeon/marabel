@@ -14,12 +14,31 @@ class AssessmentScoreController
             $this->saveScore();
         }
 
-        global $activeTerm, $assessmentList, $selectedAssessment;
+        global $activeTerm, $assessmentList, $selectedAssessment, $assessmentTerms;
+
+        // Terms that have assessments, so earlier terms' results stay reachable
+        $assessmentTerms = DB::query(
+            "SELECT t.id, t.name, t.is_active, ay.year_name FROM terms t
+             JOIN academic_years ay ON t.academic_year_id = ay.id
+             WHERE t.is_active = 1 OR t.id IN (SELECT term_id FROM assessments)
+             ORDER BY ay.year_name DESC, t.term_number DESC"
+        );
+        $termId = (int)($_GET['term'] ?? 0);
         $activeTerm = DB::queryOne(
             "SELECT t.*, ay.year_name FROM terms t
              JOIN academic_years ay ON t.academic_year_id = ay.id
-             WHERE t.is_active = 1 LIMIT 1"
+             WHERE " . ($termId ? "t.id = ?" : "t.is_active = 1") . " LIMIT 1",
+            $termId ? [$termId] : []
         );
+        // An assessment link carries its own term
+        $linkedTerm = (int)DB::queryValue("SELECT term_id FROM assessments WHERE id = ?", [(int)($_GET['assessment'] ?? 0)]);
+        if ($linkedTerm && (!$activeTerm || $activeTerm['id'] != $linkedTerm)) {
+            $activeTerm = DB::queryOne(
+                "SELECT t.*, ay.year_name FROM terms t
+                 JOIN academic_years ay ON t.academic_year_id = ay.id WHERE t.id = ?",
+                [$linkedTerm]
+            );
+        }
 
         $assessmentList = $activeTerm ? DB::query(
             "SELECT * FROM assessments WHERE term_id = ?
@@ -144,14 +163,6 @@ class AssessmentScoreController
         $assessmentId = (int)($_POST['assessment_id'] ?? 0);
         $csId         = (int)($_POST['class_subject_id'] ?? 0);
         $studentId    = (int)($_POST['student_id'] ?? 0);
-        $rawValue     = trim((string)($_POST['value'] ?? ''));
-        $value        = $rawValue !== '' ? (float)$rawValue : null;
-
-        // Reject text like "abc" instead of silently saving it as 0
-        if ($rawValue !== '' && !is_numeric($rawValue)) {
-            $respond(['success' => false, 'message' => 'Score must be a number']);
-        }
-
         $assessment = DB::queryOne("SELECT * FROM assessments WHERE id = ?", [$assessmentId]);
         if (!$assessment || !$csId || !$studentId) {
             $respond(['success' => false, 'message' => 'Missing parameters']);
@@ -165,18 +176,24 @@ class AssessmentScoreController
             $respond(['success' => false, 'message' => 'Not permitted for this class/subject']);
         }
 
-        $inClass = DB::queryValue(
-            "SELECT COUNT(*) FROM students WHERE id = ? AND current_class_id = ? AND status = 'active'",
-            [$studentId, $cs['class_id']]
-        );
-        if (!$inClass) {
+        if (!Guard::studentInClass($studentId, (int)$cs['class_id'])) {
             $respond(['success' => false, 'message' => 'Student is not in this class']);
         }
 
-        $max = (float)$assessment['max_score'];
-        if ($value !== null && ($value < 0 || $value > $max)) {
-            $respond(['success' => false, 'message' => 'Score must be between 0 and ' . $max]);
+        $max    = (float)$assessment['max_score'];
+        $parsed = Guard::parseScore($_POST['value'] ?? '', $max);
+        if (!$parsed['ok']) {
+            $respond(['success' => false, 'message' => $parsed['message']]);
         }
+        $value = $parsed['value'];
+
+        $old = DB::queryValue(
+            "SELECT raw_score FROM assessment_scores WHERE assessment_id = ? AND student_id = ? AND class_subject_id = ?",
+            [$assessmentId, $studentId, $csId]
+        );
+        Audit::log('assessment_score_update', 'assessment_scores', $studentId,
+            ['assessment_id' => $assessmentId, 'class_subject_id' => $csId, 'raw_score' => $old === false ? null : $old],
+            ['assessment_id' => $assessmentId, 'class_subject_id' => $csId, 'raw_score' => $value]);
 
         try {
             if ($value === null) {
@@ -208,7 +225,8 @@ class AssessmentScoreController
                 'label'      => GradingEngine::getProficiencyLabel($grade, 'waec'),
             ]);
         } catch (\PDOException $e) {
-            $respond(['success' => false, 'message' => 'Database error: ' . $e->getMessage()]);
+            error_log('Assessment score save failed: ' . $e->getMessage());
+            $respond(['success' => false, 'message' => 'Could not save this score. Please try again.']);
         }
     }
 }

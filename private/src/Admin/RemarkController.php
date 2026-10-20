@@ -38,12 +38,14 @@ class RemarkController {
         }
 
         // 2. Fetch Classes for dropdown
+        // Only the term's own academic year, so each class appears once
         $classes = DB::query("
             SELECT c.id, c.class_name, c.section, sl.name as level_name
             FROM classes c
             JOIN school_levels sl ON sl.id = c.level_id
-            ORDER BY sl.sort_order, c.class_name
-        ");
+            WHERE c.academic_year_id = ?
+            ORDER BY sl.sort_order, c.class_name, c.section
+        ", [$term['academic_year_id']]);
 
         // 3. If class selected, fetch students and remarks
         $students = [];
@@ -98,7 +100,20 @@ class RemarkController {
             return;
         }
 
+        $classId = (int)DB::queryValue("SELECT current_class_id FROM students WHERE id = ? AND status = 'active'", [$sid]);
+        if (!$classId) {
+            echo json_encode(['success' => false, 'message' => 'Student not found']);
+            return;
+        }
+        if (Guard::isPublished($classId, $termId)) {
+            echo json_encode(['success' => false, 'message' => 'Results are published. Unpublish the class before changing remarks.']);
+            return;
+        }
+
         try {
+            $old = DB::queryValue("SELECT $field FROM student_remarks WHERE student_id = ? AND term_id = ?", [$sid, $termId]);
+            Audit::log('remark_update', 'student_remarks', $sid, ['term_id' => $termId, $field => $old === false ? null : $old], ['term_id' => $termId, $field => $val]);
+
             $exists = DB::queryOne("SELECT id FROM student_remarks WHERE student_id = ? AND term_id = ?", [$sid, $termId]);
             if ($exists) {
                 DB::execute(
@@ -113,7 +128,8 @@ class RemarkController {
             }
             echo json_encode(['success' => true]);
         } catch (Exception $e) {
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            error_log('Remark save failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Could not save. Please try again.']);
         }
     }
 

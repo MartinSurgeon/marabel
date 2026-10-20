@@ -101,74 +101,67 @@ class ScoreController
             exit;
         }
 
+        $respond = function (array $payload): never {
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode($payload);
+            exit;
+        };
+
         $studentId = (int)($_POST['student_id'] ?? 0);
         $csId      = (int)($_POST['class_subject_id'] ?? 0);
-        $termId    = (int)($_POST['term_id'] ?? 0);
         $field     = $_POST['field'] ?? '';
-        $value     = isset($_POST['value']) && $_POST['value'] !== '' ? (float)$_POST['value'] : null;
 
-        if (!$studentId || !$csId || !$termId || !$field) {
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Missing parameters']);
-            return;
+        if (!$studentId || !$csId || !$field) {
+            $respond(['success' => false, 'message' => 'Missing parameters']);
         }
 
-        // Check ownership (unless admin) and lock
-        $csRow = DB::queryOne("SELECT teacher_id, is_locked FROM class_subjects WHERE id = ?", [$csId]);
+        // Term, class and ownership come from the subject record, never from the browser
+        $csRow = DB::queryOne("SELECT class_id, term_id, teacher_id, is_locked FROM class_subjects WHERE id = ?", [$csId]);
         if (!$csRow || (Session::role() === 'teacher' && $csRow['teacher_id'] != Session::userId())) {
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'You are not assigned to this class/subject']);
-            exit;
+            $respond(['success' => false, 'message' => 'You are not assigned to this class/subject']);
         }
-        if ($csRow['is_locked']) {
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Records are locked']);
-            exit;
+        $termId = (int)$csRow['term_id'];
+
+        if ($csRow['is_locked'] || Guard::isPublished((int)$csRow['class_id'], $termId)) {
+            $respond(['success' => false, 'message' => 'Records are locked']);
+        }
+        if (!Guard::studentInClass($studentId, (int)$csRow['class_id'])) {
+            $respond(['success' => false, 'message' => 'This student is not in this class']);
         }
 
         $validFields = ['individual_test', 'group_work', 'class_test', 'project', 'raw_score'];
         if (!in_array($field, $validFields)) {
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Invalid field']);
-            exit;
+            $respond(['success' => false, 'message' => 'Invalid field']);
         }
 
-        // Range check
-        if ($value !== null) {
-            $max = ($field === 'raw_score') ? 100 : 15;
-            if ($value < 0 || $value > $max) {
-                ob_clean();
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => "Score must be between 0 and $max"]);
-                exit;
-            }
+        $parsed = Guard::parseScore($_POST['value'] ?? '', $field === 'raw_score' ? 100 : 15);
+        if (!$parsed['ok']) {
+            $respond(['success' => false, 'message' => $parsed['message']]);
         }
+        $value = $parsed['value'];
 
         try {
+            $table = $field === 'raw_score' ? 'exam_scores' : 'sba_component_scores';
+            $old   = DB::queryValue(
+                "SELECT $field FROM $table WHERE student_id = ? AND class_subject_id = ? AND term_id = ?",
+                [$studentId, $csId, $termId]
+            );
+
             if ($field === 'raw_score') {
                 $this->updateExamScore($studentId, $csId, $termId, $value);
             } else {
                 $this->updateSbaScore($studentId, $csId, $termId, $field, $value);
             }
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true]);
-            exit;
-        } catch (\PDOException $e) {
-            $msg = ($e->getCode() == '23000') ? 'Duplicate record detected' : 'Database error: ' . $e->getMessage();
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => $msg]);
-            exit;
-        } catch (\Exception $e) {
-            ob_clean();
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'System error: ' . $e->getMessage()]);
-            exit;
+
+            Audit::log('score_update', $table, $studentId,
+                ['class_subject_id' => $csId, 'term_id' => $termId, $field => $old === false ? null : $old],
+                ['class_subject_id' => $csId, 'term_id' => $termId, $field => $value]);
+
+            $respond(['success' => true]);
+        } catch (\Throwable $e) {
+            error_log('Score save failed: ' . $e->getMessage());
+            $respond(['success' => false, 'message' => 'Could not save this score. Please try again.']);
         }
     }
 

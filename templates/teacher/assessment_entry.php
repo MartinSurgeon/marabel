@@ -7,7 +7,7 @@
 $pageTitle = 'Speed Tests & Mocks';
 include __DIR__ . '/../layout/header.php';
 
-global $activeTerm, $assessmentList, $selectedAssessment, $assignedBundles, $classSub, $studentList, $scoreData;
+global $activeTerm, $assessmentList, $selectedAssessment, $assignedBundles, $classSub, $studentList, $scoreData, $assessmentTerms;
 $base  = defined('APP_BASE') ? APP_BASE : '';
 $types = AssessmentController::TYPES;
 $a     = $selectedAssessment;
@@ -19,6 +19,17 @@ $maxLabel = $a ? (float)$a['max_score'] : '';
 <div class="card flex flex-col items-center justify-center py-12 text-center" style="border-style:dashed;">
   <h3 style="font-weight:700; color:var(--clr-text);">No speed tests or mocks this term</h3>
   <p class="text-muted text-sm">The admin needs to create one before scores can be entered.</p>
+  <?php if (count($assessmentTerms) > 1): ?>
+  <form method="GET" action="<?= $base ?>/teacher/assessments" class="m-0 mt-4">
+    <select name="term" class="form-control" onchange="this.form.submit()" style="height:40px; min-width:220px;" aria-label="View another term">
+      <?php foreach ($assessmentTerms as $t): ?>
+      <option value="<?= $t['id'] ?>" <?= ($activeTerm && $t['id'] == $activeTerm['id']) ? 'selected' : '' ?>>
+        <?= htmlspecialchars($t['year_name'] . ' · ' . $t['name']) ?><?= $t['is_active'] ? ' (Active)' : '' ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </form>
+  <?php endif; ?>
 </div>
 
 <?php elseif (isset($classSub)): ?>
@@ -185,9 +196,15 @@ $maxLabel = $a ? (float)$a['max_score'] : '';
     <h1 class="m-0" style="font-size:var(--text-2xl); font-weight:800; letter-spacing:-0.03em; color:var(--clr-text);">Speed Tests &amp; Mocks</h1>
     <p class="text-muted m-0" style="font-size:var(--text-sm);">Choose an assessment, then a subject to record scores. Grades use the WAEC 1–9 scale.</p>
   </div>
-  <div style="font-size:13px; font-weight:700; color:var(--clr-primary); background:var(--clr-primary-50); padding:0.5rem 1rem; border-radius:var(--radius-full);">
-    <?= htmlspecialchars(($activeTerm['year_name'] ?? '') . ' · ' . ($activeTerm['name'] ?? '')) ?>
-  </div>
+  <form method="GET" action="<?= $base ?>/teacher/assessments" class="m-0">
+    <select name="term" class="form-control" onchange="this.form.submit()" style="height:40px; min-width:220px;" aria-label="Select term">
+      <?php foreach ($assessmentTerms as $t): ?>
+      <option value="<?= $t['id'] ?>" <?= $t['id'] == $activeTerm['id'] ? 'selected' : '' ?>>
+        <?= htmlspecialchars($t['year_name'] . ' · ' . $t['name']) ?><?= $t['is_active'] ? ' (Active)' : '' ?>
+      </option>
+      <?php endforeach; ?>
+    </select>
+  </form>
 </div>
 
 <!-- Assessment picker -->

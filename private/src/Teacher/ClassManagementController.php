@@ -47,7 +47,7 @@ class ClassManagementController {
 
         // 3. Handle AJAX interactions (Upserts)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH'])) {
-            $this->handleAjax($term['id']);
+            $this->handleAjax($term, (int)$class['id']);
             exit;
         }
 
@@ -97,9 +97,10 @@ class ClassManagementController {
     /**
      * Handle AJAX saves for attendance or remarks
      */
-    private function handleAjax(int $termId): void {
+    private function handleAjax(array $term, int $classId): void {
         header('Content-Type: application/json');
-        
+        $termId = (int)$term['id'];
+
         if (!CSRF::verify()) {
             echo json_encode(['success' => false, 'message' => 'CSRF validation failed']);
             return;
@@ -107,18 +108,33 @@ class ClassManagementController {
 
         $studentId = (int)($_POST['student_id'] ?? 0);
         $field     = $_POST['field'] ?? '';
-        $value     = $_POST['value'] ?? '';
+        $value     = trim((string)($_POST['value'] ?? ''));
 
         if (!$field || ($field !== 'save_predefined' && !$studentId)) {
             echo json_encode(['success' => false, 'message' => 'Missing parameters']);
             return;
         }
 
+        if ($field !== 'save_predefined') {
+            if (!Guard::studentInClass($studentId, $classId)) {
+                echo json_encode(['success' => false, 'message' => 'This student is not in your class.']);
+                return;
+            }
+            if (Guard::isPublished($classId, $termId)) {
+                echo json_encode(['success' => false, 'message' => 'Results are published. Ask the admin to unpublish before making changes.']);
+                return;
+            }
+            $error = $this->validate($field, $value, (int)$term['total_school_days']);
+            if ($error) {
+                echo json_encode(['success' => false, 'message' => $error]);
+                return;
+            }
+        }
+
         try {
             DB::beginTransaction();
             if ($field === 'days_present') {
-                $days = (int)$value;
-                $this->upsertAttendance($studentId, $termId, $days);
+                $this->upsertAttendance($studentId, $termId, $value === '' ? null : (int)$value);
             } elseif ($field === 'save_predefined') {
                 $category = $_POST['category'] ?? 'teacher';
                 $this->savePredefinedRemark($value, $category);
@@ -129,11 +145,33 @@ class ClassManagementController {
             echo json_encode(['success' => true]);
         } catch (Exception $e) {
             if (DB::inTransaction()) DB::rollBack();
-            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            error_log('Class management save failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Could not save. Please try again.']);
         }
     }
 
-    private function upsertAttendance(int $sid, int $tid, int $days): void {
+    /**
+     * Range rules for form-teacher fields. Returns an error message, or null if valid.
+     * An empty value clears the field.
+     */
+    private function validate(string $field, string $value, int $totalDays): ?string {
+        if ($value === '') return null;
+        if ($field === 'days_present') {
+            if (!ctype_digit($value) || (int)$value > $totalDays) {
+                return "Days present must be a whole number from 0 to {$totalDays}.";
+            }
+        } elseif (in_array($field, ['conduct_character', 'attitude'], true)) {
+            if (!in_array($value, ['1', '2', '3', '4', '5'], true)) {
+                return 'Rating must be from 1 to 5.';
+            }
+        }
+        return null;
+    }
+
+    private function upsertAttendance(int $sid, int $tid, ?int $days): void {
+        $old    = DB::queryValue("SELECT days_present FROM attendance WHERE student_id = ? AND term_id = ?", [$sid, $tid]);
+        Audit::log('attendance_update', 'attendance', $sid, ['term_id' => $tid, 'days_present' => $old === false ? null : $old], ['term_id' => $tid, 'days_present' => $days]);
+
         $exists = DB::queryOne("SELECT id FROM attendance WHERE student_id = ? AND term_id = ?", [$sid, $tid]);
         if ($exists) {
             DB::execute(
@@ -148,7 +186,7 @@ class ClassManagementController {
         }
     }
 
-    private function upsertRemark(int $sid, int $tid, string $field, string $val): void {
+    private function upsertRemark(int $sid, int $tid, string $field, ?string $val): void {
         // Allowed fields for teacher
         $allowed = [
             'conduct_character', 'attitude', 'teacher_remark'
@@ -156,6 +194,11 @@ class ClassManagementController {
         if (!in_array($field, $allowed)) {
             throw new Exception('Invalid field');
         }
+        // A cleared rating is "not set" (NULL), never 0
+        $val = ($val === '' && $field !== 'teacher_remark') ? null : $val;
+
+        $old = DB::queryValue("SELECT $field FROM student_remarks WHERE student_id = ? AND term_id = ?", [$sid, $tid]);
+        Audit::log('remark_update', 'student_remarks', $sid, ['term_id' => $tid, $field => $old === false ? null : $old], ['term_id' => $tid, $field => $val]);
 
         $exists = DB::queryOne("SELECT id FROM student_remarks WHERE student_id = ? AND term_id = ?", [$sid, $tid]);
         if ($exists) {

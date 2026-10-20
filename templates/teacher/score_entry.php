@@ -180,27 +180,27 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           </td>
           
           <td style="padding:0;">
-            <input type="number" step="1" min="0" max="15" 
+            <input type="number" step="any" min="0" max="15" 
                    class="score-input" data-field="class_test" 
-                   value="<?= isset($sba['class_test']) ? (int)$sba['class_test'] : '' ?>" 
+                   value="<?= isset($sba['class_test']) ? (float)$sba['class_test'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="1" min="0" max="15" 
+            <input type="number" step="any" min="0" max="15" 
                    class="score-input" data-field="group_work" 
-                   value="<?= isset($sba['group_work']) ? (int)$sba['group_work'] : '' ?>" 
+                   value="<?= isset($sba['group_work']) ? (float)$sba['group_work'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="1" min="0" max="15" 
+            <input type="number" step="any" min="0" max="15" 
                    class="score-input" data-field="project" 
-                   value="<?= isset($sba['project']) ? (int)$sba['project'] : '' ?>" 
+                   value="<?= isset($sba['project']) ? (float)$sba['project'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="padding:0;">
-            <input type="number" step="1" min="0" max="15" 
+            <input type="number" step="any" min="0" max="15" 
                    class="score-input" data-field="individual_test" 
-                   value="<?= isset($sba['individual_test']) ? (int)$sba['individual_test'] : '' ?>" 
+                   value="<?= isset($sba['individual_test']) ? (float)$sba['individual_test'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           
@@ -214,9 +214,9 @@ $base = defined('APP_BASE') ? APP_BASE : '';
           
           <!-- Exam -->
           <td style="padding:0; border-left:2px solid var(--clr-border);">
-            <input type="number" step="1" min="0" max="100" 
+            <input type="number" step="any" min="0" max="100" 
                    class="score-input" data-field="raw_score" 
-                   value="<?= isset($exam['raw_score']) ? (int)$exam['raw_score'] : '' ?>" 
+                   value="<?= isset($exam['raw_score']) ? (float)$exam['raw_score'] : '' ?>" 
                    onfocus="this.select()">
           </td>
           <td style="text-align:center; background:rgba(var(--clr-primary-rgb), 0.1); font-weight:800; color:var(--clr-primary-300);">

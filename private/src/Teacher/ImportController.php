@@ -203,6 +203,13 @@ class ImportController {
             $this->redirect('/teacher/import');
         }
 
+        // Locked or published results cannot be overwritten by an upload
+        $isLocked = (int)DB::queryValue("SELECT is_locked FROM class_subjects WHERE id = ?", [$csId]);
+        if ($isLocked || Guard::isPublished((int)$cs['class_id'], $termId)) {
+            Session::flash('import_error', 'Scores for this class are locked. Ask the admin to unlock them before importing.');
+            $this->redirect('/teacher/import');
+        }
+
         // Build a lookup: student_id_number → student DB id
         $students = DB::query(
             "SELECT id, student_id_number FROM students
