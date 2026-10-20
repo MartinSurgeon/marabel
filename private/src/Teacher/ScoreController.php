@@ -94,6 +94,13 @@ class ScoreController
         // don't corrupt the JSON response.
         ob_start();
 
+        if (!CSRF::verify()) {
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Session expired. Please reload the page.']);
+            exit;
+        }
+
         $studentId = (int)($_POST['student_id'] ?? 0);
         $csId      = (int)($_POST['class_subject_id'] ?? 0);
         $termId    = (int)($_POST['term_id'] ?? 0);
@@ -107,9 +114,15 @@ class ScoreController
             return;
         }
 
-        // Check if locked
-        $isLocked = DB::queryValue("SELECT is_locked FROM class_subjects WHERE id = ?", [$csId]);
-        if ($isLocked) {
+        // Check ownership (unless admin) and lock
+        $csRow = DB::queryOne("SELECT teacher_id, is_locked FROM class_subjects WHERE id = ?", [$csId]);
+        if (!$csRow || (Session::role() === 'teacher' && $csRow['teacher_id'] != Session::userId())) {
+            ob_clean();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'You are not assigned to this class/subject']);
+            exit;
+        }
+        if ($csRow['is_locked']) {
             ob_clean();
             header('Content-Type: application/json');
             echo json_encode(['success' => false, 'message' => 'Records are locked']);
