@@ -49,8 +49,10 @@ class BulkPrintController {
              $this->abort('Results for this class have not been published yet.');
         }
 
-        // On-the-fly computation ensures all aggregate scores and ranks are fresh
-        ResultCalculator::compute($classId, $termId);
+        // Draft previews are recomputed; published results are frozen
+        if (!$isPublished) {
+            ResultCalculator::compute($classId, $termId);
+        }
 
         // 2. Class Info
         $classInfo = DB::queryOne(
@@ -75,14 +77,18 @@ class BulkPrintController {
         );
         if (!$term) $this->abort('Term not found.');
 
-        // 4. Get active students in this class
+        // 4. Students who were in this class for this term (results recorded),
+        //    plus current members during the active term — so past terms
+        //    still print correctly after promotion
+        $termIsActive = (int)DB::queryValue("SELECT is_active FROM terms WHERE id = ?", [$termId]);
         $students = DB::query(
             "SELECT id, student_id_number, full_name, surname, gender,
                     date_of_birth, photo_path
-             FROM students 
-             WHERE current_class_id = ? AND status = 'active'
+             FROM students
+             WHERE id IN (SELECT student_id FROM student_aggregates WHERE class_id = ? AND term_id = ?)
+                OR (? = 1 AND current_class_id = ? AND status = 'active')
              ORDER BY surname ASC, full_name ASC",
-            [$classId]
+            [$classId, $termId, $termIsActive, $classId]
         );
 
         if (empty($students)) {

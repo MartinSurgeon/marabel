@@ -137,7 +137,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
           </td>
           <td><?= $s['linked_parents'] ? '<div style="font-size:11px; font-weight:600;">'.htmlspecialchars($s['linked_parents']).'</div>' : '<span class="text-muted italic block" style="font-size:11px;">None</span>' ?></td>
           <td><div style="font-weight:600;"><?= htmlspecialchars($s['class_name'] ?: 'Unassigned') ?></div><div style="font-size:11px; color:var(--clr-text-muted);"><?= htmlspecialchars($s['section'] ?: '') ?></div></td>
-          <td class="text-center"><span class="badge badge-<?= $s['status'] == 'active' ? 'success' : 'warning' ?>" style="font-size:10px;"><?= strtoupper($s['status']) ?></span></td>
+          <td class="text-center"><span class="badge badge-<?= $s['status'] == 'active' ? 'success' : ($s['status'] == 'graduated' ? 'info' : 'warning') ?>" style="font-size:10px;"><?= strtoupper($s['status']) ?></span></td>
           <td class="text-right pr-8">
             <div class="flex justify-end gap-2">
               <button class="btn btn-ghost btn-xs act-parent" data-id="<?= $s['id'] ?>" data-name="<?= htmlspecialchars($s['full_name'], ENT_QUOTES) ?>" style="color:var(--clr-primary);" title="Manage Parents">
@@ -216,6 +216,7 @@ table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control:before {
                         <option value="active">Active</option>
                         <option value="inactive">Inactive</option>
                         <option value="transferred">Transferred</option>
+                        <option value="graduated">Graduated</option>
                     </select>
                 </div>
             </div>

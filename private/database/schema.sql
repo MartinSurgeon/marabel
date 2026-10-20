@@ -125,7 +125,7 @@ CREATE TABLE students (
   current_class_id  INT UNSIGNED,
   academic_year_id  INT UNSIGNED,
   pin_hash          VARCHAR(255),          -- 4-digit PIN (bcrypt hashed)
-  status            ENUM('active','inactive','transferred') DEFAULT 'active',
+  status            ENUM('active','inactive','transferred','graduated') DEFAULT 'active',
   created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_student_id_number (student_id_number),
   FOREIGN KEY (current_class_id)  REFERENCES classes(id),
@@ -166,7 +166,9 @@ CREATE TABLE sba_component_scores (
   UNIQUE KEY uq_comp (student_id, class_subject_id, term_id),
   FOREIGN KEY (student_id)       REFERENCES students(id),
   FOREIGN KEY (class_subject_id) REFERENCES class_subjects(id),
-  FOREIGN KEY (term_id)          REFERENCES terms(id)
+  FOREIGN KEY (term_id)          REFERENCES terms(id),
+  CONSTRAINT chk_sba_ranges CHECK ((individual_test IS NULL OR individual_test BETWEEN 0 AND 15) AND (group_work IS NULL OR group_work BETWEEN 0 AND 15)
+    AND (class_test IS NULL OR class_test BETWEEN 0 AND 15) AND (project IS NULL OR project BETWEEN 0 AND 15))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE exam_scores (
@@ -181,7 +183,8 @@ CREATE TABLE exam_scores (
   UNIQUE KEY uq_exam (student_id, class_subject_id, term_id),
   FOREIGN KEY (student_id)       REFERENCES students(id),
   FOREIGN KEY (class_subject_id) REFERENCES class_subjects(id),
-  FOREIGN KEY (term_id)          REFERENCES terms(id)
+  FOREIGN KEY (term_id)          REFERENCES terms(id),
+  CONSTRAINT chk_exam_range CHECK (raw_score IS NULL OR raw_score BETWEEN 0 AND 100)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Cached computed values (regenerated on publish)
@@ -250,7 +253,8 @@ CREATE TABLE assessment_scores (
   UNIQUE KEY uq_assessment_score (assessment_id, student_id, class_subject_id),
   FOREIGN KEY (assessment_id)    REFERENCES assessments(id) ON DELETE CASCADE,
   FOREIGN KEY (student_id)       REFERENCES students(id),
-  FOREIGN KEY (class_subject_id) REFERENCES class_subjects(id)
+  FOREIGN KEY (class_subject_id) REFERENCES class_subjects(id),
+  CONSTRAINT chk_assessment_ranges CHECK ((percentage IS NULL OR percentage BETWEEN 0 AND 100) AND (grade IS NULL OR grade BETWEEN 1 AND 9))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
@@ -268,7 +272,9 @@ CREATE TABLE student_remarks (
   updated_by          INT UNSIGNED,
   updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_remark (student_id, term_id),
-  FOREIGN KEY (student_id) REFERENCES students(id)
+  FOREIGN KEY (student_id) REFERENCES students(id),
+  CONSTRAINT chk_conduct_range  CHECK (conduct_character IS NULL OR conduct_character BETWEEN 1 AND 5),
+  CONSTRAINT chk_attitude_range CHECK (attitude IS NULL OR attitude BETWEEN 1 AND 5)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE attendance (

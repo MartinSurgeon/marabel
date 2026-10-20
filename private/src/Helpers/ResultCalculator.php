@@ -21,6 +21,21 @@ class ResultCalculator {
             "SELECT id FROM students WHERE current_class_id = ? AND status = 'active'",
             [$classId]
         );
+        if (empty($students)) {
+            // The class has moved on (promotion/graduation): use who was scored in it that term
+            $students = DB::query(
+                "SELECT DISTINCT x.student_id AS id FROM (
+                     SELECT sc.student_id FROM sba_component_scores sc
+                     JOIN class_subjects cs ON cs.id = sc.class_subject_id
+                     WHERE cs.class_id = ? AND sc.term_id = ?
+                     UNION
+                     SELECT es.student_id FROM exam_scores es
+                     JOIN class_subjects cs ON cs.id = es.class_subject_id
+                     WHERE cs.class_id = ? AND es.term_id = ?
+                 ) x",
+                [$classId, $termId, $classId, $termId]
+            );
+        }
         $subjects = DB::query(
             "SELECT cs.id, cs.subject_id, s.subject_name 
              FROM class_subjects cs
@@ -176,13 +191,15 @@ class ResultCalculator {
 
         // 6. Class Positions
         $aggregates = DB::query(
-            "SELECT student_id, aggregate_score AS aggregate
+            "SELECT student_id, aggregate_score AS aggregate, aggregate_grade
              FROM student_aggregates WHERE class_id = ? AND term_id = ?",
             [$classId, $termId]
         );
 
         if (!empty($aggregates)) {
-            $ranked = GradingEngine::computeClassPositions($aggregates);
+            $ranked = $gradingSystem === 'waec'
+                ? GradingEngine::computeWaecPositions($aggregates)
+                : GradingEngine::computeClassPositions($aggregates);
             foreach ($ranked as $ra) {
                 DB::execute(
                     "UPDATE student_aggregates SET class_position = ?

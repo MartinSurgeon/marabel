@@ -39,7 +39,7 @@ class PortalController {
              LEFT JOIN classes c ON c.id = s.current_class_id
              LEFT JOIN school_levels sl ON sl.id = c.level_id
              WHERE sp.parent_user_id = ?
-               AND s.status = 'active'
+               AND s.status IN ('active', 'graduated')
              ORDER BY s.full_name",
             [$parentUserId]
         );
@@ -49,30 +49,33 @@ class PortalController {
         foreach ($children as $child) {
             $sid = $child['id'];
 
-            // All published terms this academic year
-            $terms = [];
-            if ($activeTerm) {
-                $terms = DB::query(
-                    "SELECT t.id, t.name, t.term_number
-                     FROM terms t
-                     WHERE t.academic_year_id = ?
-                     ORDER BY t.term_number",
-                    [$activeTerm['year_id']]
-                );
+            // This year's terms, plus every earlier term the child has results for
+            $terms = DB::query(
+                "SELECT t.id, t.name, t.term_number, ay.year_name, t.academic_year_id
+                 FROM terms t
+                 JOIN academic_years ay ON ay.id = t.academic_year_id
+                 WHERE t.academic_year_id = ?
+                    OR t.id IN (SELECT term_id FROM student_aggregates WHERE student_id = ?)
+                 ORDER BY ay.year_name DESC, t.term_number",
+                [$activeTerm['year_id'] ?? 0, $sid]
+            );
+            foreach ($terms as &$t) {
+                if ($t['academic_year_id'] != ($activeTerm['year_id'] ?? 0)) {
+                    $t['name'] .= ' (' . $t['year_name'] . ')';
+                }
             }
+            unset($t);
 
             $termScores = [];
             foreach ($terms as $term) {
-                // Check if class report card is published for this term
-                $published = null;
-                if ($child['class_id']) {
-                    $published = DB::queryOne(
-                        "SELECT is_published, published_at
-                         FROM report_card_locks
-                         WHERE class_id = ? AND term_id = ? AND is_published = 1",
-                        [$child['class_id'], $term['id']]
-                    );
-                }
+                // Published status belongs to the class the child was in THAT term
+                $termClassId = Guard::termClassId($sid, (int)$term['id']);
+                $published = $termClassId ? DB::queryOne(
+                    "SELECT is_published, published_at
+                     FROM report_card_locks
+                     WHERE class_id = ? AND term_id = ? AND is_published = 1",
+                    [$termClassId, $term['id']]
+                ) : null;
 
                 if (!$published) {
                     $termScores[$term['id']] = [
@@ -102,7 +105,7 @@ class PortalController {
 
                 // Aggregate + class position
                 $aggregate = DB::queryOne(
-                    "SELECT aggregate_score, class_position, number_of_subjects
+                    "SELECT aggregate_score, class_position, number_of_subjects, aggregate_grade
                      FROM student_aggregates
                      WHERE student_id = ? AND term_id = ?",
                     [$sid, $term['id']]

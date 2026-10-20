@@ -25,21 +25,28 @@ class ReportCardController {
             $this->abort('Missing student or term parameter.');
         }
 
-        // ── 1. Student info ────────────────────────────────────────────
+        // ── 1. Student info, with the class they were in FOR THIS TERM ──
+        // (not their current class — that changes after promotion/graduation)
+        $termClassId = Guard::termClassId($studentId, $termId);
         $student = DB::queryOne(
             "SELECT s.id, s.student_id_number, s.full_name, s.surname, s.gender,
                     s.date_of_birth, s.photo_path,
                     c.class_name, c.section, c.id as class_id, c.grading_system,
                     sl.name as level_name, sl.code as level_code
              FROM students s
-             LEFT JOIN classes c  ON c.id = s.current_class_id
+             LEFT JOIN classes c  ON c.id = ?
              LEFT JOIN school_levels sl ON sl.id = c.level_id
-             WHERE s.id = ? AND s.status = 'active'",
-            [$studentId]
+             WHERE s.id = ?",
+            [$termClassId, $studentId]
         );
 
         if (!$student) {
             $this->abort('Student not found.');
+        }
+
+        // Teachers may only open reports for classes they teach or manage
+        if ($role === 'teacher' && !Guard::teacherCanViewClass(Session::userId(), (int)$student['class_id'], $termId)) {
+            $this->abort('You are not assigned to this class.');
         }
 
         // ── 2. Term info ───────────────────────────────────────────────
@@ -88,8 +95,8 @@ class ReportCardController {
             }
         }
 
-        // ── 3.5. On-the-fly computation for Previews (Teachers/Admins) ──
-        if (in_array($role, ['admin', 'teacher'])) {
+        // ── 3.5. Draft previews are recomputed; published reports are frozen ──
+        if (in_array($role, ['admin', 'teacher']) && !$isPublished) {
             ResultCalculator::compute($student['class_id'], $termId);
         }
 

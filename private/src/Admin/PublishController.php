@@ -137,10 +137,14 @@ class PublishController {
         [$classId, $termId] = $this->requireClassTerm();
 
         // Pre-flight checks
-        $studentCount = DB::queryOne(
-            "SELECT COUNT(*) as cnt FROM students WHERE current_class_id = ? AND status = 'active'",
-            [$classId]
-        )['cnt'] ?? 0;
+        // Current members, or (for a class that has moved on) students scored in it that term
+        $studentCount = DB::queryValue(
+            "SELECT (SELECT COUNT(*) FROM students WHERE current_class_id = ? AND status = 'active')
+                  + (SELECT COUNT(DISTINCT es.student_id) FROM exam_scores es
+                     JOIN class_subjects cs ON cs.id = es.class_subject_id
+                     WHERE cs.class_id = ? AND es.term_id = ?)",
+            [$classId, $classId, $termId]
+        );
 
         $subjectCount = DB::queryOne(
             "SELECT COUNT(*) as cnt FROM class_subjects WHERE class_id = ? AND term_id = ?",

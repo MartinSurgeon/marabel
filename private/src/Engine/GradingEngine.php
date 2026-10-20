@@ -139,6 +139,40 @@ class GradingEngine {
     }
 
     /**
+     * Class positions for a WAEC-graded class: lowest Best-6 aggregate first
+     * (equal aggregates share a position). Students without a complete
+     * aggregate are ranked after them by total score.
+     *
+     * @param array $students  Array of ['student_id', 'aggregate', 'aggregate_grade']
+     * @return array  Same array with 'position' added
+     */
+    public static function computeWaecPositions(array $students): array {
+        usort($students, function ($a, $b) {
+            $ga = $a['aggregate_grade'];
+            $gb = $b['aggregate_grade'];
+            if (($ga === null) !== ($gb === null)) return $ga === null ? 1 : -1;
+            if ($ga !== null && (int)$ga !== (int)$gb) return (int)$ga <=> (int)$gb;
+            return (float)$b['aggregate'] <=> (float)$a['aggregate'];
+        });
+
+        $position = 0;
+        $last     = null;
+        foreach ($students as $i => &$student) {
+            $key = $student['aggregate_grade'] !== null
+                ? 'g' . (int)$student['aggregate_grade']
+                : 's' . (float)$student['aggregate'];
+            if ($key !== $last) {
+                $position = $i + 1;
+                $last     = $key;
+            }
+            $student['position'] = $position;
+        }
+        unset($student);
+
+        return $students;
+    }
+
+    /**
      * Compute positions for a specific subject within a class section
      * (ranks students by their overall_total for that subject).
      *

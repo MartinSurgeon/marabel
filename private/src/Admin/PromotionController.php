@@ -316,7 +316,7 @@ class PromotionController {
                 if ($status === 'promoted') {
                     if ($isTerminal) {
                         // Terminal students graduate and are archived
-                        DB::execute("UPDATE students SET status = 'inactive' WHERE id = ?", [$sid]);
+                        DB::execute("UPDATE students SET status = 'graduated' WHERE id = ?", [$sid]);
                         $graduated++;
                     } else {
                         // Move to next year and assigned target class
@@ -459,7 +459,7 @@ class PromotionController {
 
             if ($nextYearId) {
                 if ($status === 'promoted' && $isTerminal) {
-                    DB::execute("UPDATE students SET status = 'inactive' WHERE id = ?", [$studentId]);
+                    DB::execute("UPDATE students SET status = 'graduated' WHERE id = ?", [$studentId]);
                 } else {
                     $sql = "UPDATE students SET academic_year_id = ?, status = 'active'";
                     $p   = [$nextYearId];
