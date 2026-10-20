@@ -130,25 +130,7 @@ class ResultCalculator {
                 $aggGrade = null;
                 if ($gradingSystem === 'waec') {
                     // WAEC Aggregate (Best 6): 4 Core + 2 Best Electives
-                    $cores = ['English Language', 'Mathematics', 'Integrated Science', 'Social Studies'];
-                    $sGrades = $studentGrades[$sid] ?? [];
-
-                    $coreGrades = [];
-                    $elecGrades = [];
-                    foreach ($sGrades as $sName => $pLvl) {
-                        $numGrade = (int)$pLvl;
-                        if (in_array($sName, $cores)) {
-                            $coreGrades[] = $numGrade;
-                        } else {
-                            $elecGrades[] = $numGrade;
-                        }
-                    }
-
-                    if (count($coreGrades) >= 4) {
-                        sort($elecGrades);
-                        $best2Elec = array_slice($elecGrades, 0, 2);
-                        $aggGrade  = array_sum($coreGrades) + array_sum($best2Elec);
-                    }
+                    $aggGrade = GradingEngine::computeWaecAggregate($studentGrades[$sid] ?? []);
                 }
 
                 DB::execute(

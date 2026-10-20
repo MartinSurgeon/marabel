@@ -220,6 +220,40 @@ CREATE TABLE student_aggregates (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
+-- SPEED TESTS & MOCK EXAMS (WAEC-graded, separate from term SBA)
+-- ============================================================
+
+CREATE TABLE assessments (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  term_id           INT UNSIGNED NOT NULL,
+  assessment_type   ENUM('speed_test','mock') NOT NULL,
+  title             VARCHAR(100) NOT NULL,       -- e.g. "Mock 1"
+  assessment_date   DATE,
+  max_score         DECIMAL(6,2) NOT NULL DEFAULT 100.00,
+  is_locked         TINYINT(1) NOT NULL DEFAULT 0,
+  created_by        INT UNSIGNED,
+  created_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_term_type (term_id, assessment_type),
+  FOREIGN KEY (term_id) REFERENCES terms(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE assessment_scores (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  assessment_id     INT UNSIGNED NOT NULL,
+  student_id        INT UNSIGNED NOT NULL,
+  class_subject_id  INT UNSIGNED NOT NULL,
+  raw_score         DECIMAL(6,2) DEFAULT NULL,   -- out of assessments.max_score
+  percentage        DECIMAL(5,2) DEFAULT NULL,   -- raw ÷ max × 100
+  grade             TINYINT UNSIGNED DEFAULT NULL, -- WAEC 1–9
+  entered_by        INT UNSIGNED,
+  updated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_assessment_score (assessment_id, student_id, class_subject_id),
+  FOREIGN KEY (assessment_id)    REFERENCES assessments(id) ON DELETE CASCADE,
+  FOREIGN KEY (student_id)       REFERENCES students(id),
+  FOREIGN KEY (class_subject_id) REFERENCES class_subjects(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ============================================================
 -- REMARKS, ATTENDANCE & PROMOTION
 -- ============================================================
 

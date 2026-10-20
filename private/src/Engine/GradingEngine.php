@@ -167,6 +167,40 @@ class GradingEngine {
         return $studentScores;
     }
 
+    /**
+     * WAEC/BECE aggregate (Best 6): 4 core subjects + best 2 electives.
+     * Lower is better (6 = best possible, 54 = worst).
+     *
+     * @param array $gradesBySubject  [subject_name => grade (1–9)]
+     * @return int|null  Aggregate, or null if any core subject grade is missing
+     */
+    public static function computeWaecAggregate(array $gradesBySubject): ?int {
+        $cores = ['English Language', 'Mathematics', 'Integrated Science', 'Social Studies'];
+
+        $coreGrades = [];
+        $elecGrades = [];
+        foreach ($gradesBySubject as $subjectName => $grade) {
+            if (in_array($subjectName, $cores)) {
+                $coreGrades[] = (int)$grade;
+            } else {
+                $elecGrades[] = (int)$grade;
+            }
+        }
+
+        if (count($coreGrades) < 4) return null;
+
+        sort($elecGrades);
+        return array_sum($coreGrades) + array_sum(array_slice($elecGrades, 0, 2));
+    }
+
+    /**
+     * Convert a raw score to a whole-number percentage of its max.
+     */
+    public static function toPercentage(float $raw, float $max): float {
+        if ($max <= 0) return 0.0;
+        return round(($raw / $max) * 100, 0);
+    }
+
     public static function computeFull(
         ?float $indivTest,
         ?float $groupWork,
