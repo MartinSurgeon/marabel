@@ -167,13 +167,24 @@ class AcademicController {
             'year_id'     => (int)$_POST['academic_year_id'],
             'term_num'    => (int)$_POST['term_number'],
             'name'        => trim($_POST['name']),
-            'start_date'  => $_POST['start_date']  ?: null,
-            'end_date'    => $_POST['end_date']    ?: null,
-            'next_begins' => $_POST['next_term_begins'] ?: null,
+            'start_date'  => ($_POST['start_date'] ?? '')  ?: null,
+            'end_date'    => ($_POST['end_date'] ?? '')    ?: null,
+            'next_begins' => ($_POST['next_term_begins'] ?? '') ?: null,
             'days'        => (int)$_POST['total_school_days'],
         ];
 
         $id = $_POST['term_id'] ?? null;
+
+        // Each academic year can have only one Term 1, Term 2 and Term 3
+        $clash = DB::queryValue(
+            "SELECT id FROM terms WHERE academic_year_id = ? AND term_number = ? AND id <> ?",
+            [$data['year_id'], $data['term_num'], (int)$id]
+        );
+        if ($clash) {
+            Session::flash('error', "Term {$data['term_num']} already exists for this academic year. Edit the existing term instead.");
+            $this->back();
+        }
+
         if ($id) {
             DB::execute(
                 "UPDATE terms SET academic_year_id=?, term_number=?, name=?,

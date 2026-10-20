@@ -6,6 +6,9 @@
 
 class StudentController {
 
+    private const STATUSES = ['active', 'inactive', 'transferred', 'graduated'];
+    private const GENDERS  = ['Male', 'Female', 'Other'];
+
     public function handle(): void {
         $method = $_SERVER['REQUEST_METHOD'];
         $action = $_REQUEST['_action'] ?? '';
@@ -130,15 +133,24 @@ class StudentController {
             $this->redirect();
         }
 
+        // The academic year always comes from the chosen class, so the two can never disagree
+        $classYear = DB::queryValue("SELECT academic_year_id FROM classes WHERE id = ?", [(int)$_POST['current_class_id']]);
+        if (!$classYear) {
+            Session::flash('error', 'Please choose a valid class.');
+            $this->redirect();
+        }
+
+        $gender = $_POST['gender'] ?? '';
+        $status = $_POST['status'] ?? 'active';
         $data = [
             'student_id_number' => $submittedId,
             'full_name'         => trim($_POST['full_name']),
             'surname'           => trim($_POST['surname'] ?? ''),
-            'gender'            => $_POST['gender'] ?? null,
-            'date_of_birth'     => $_POST['date_of_birth'] ?: null,
+            'gender'            => in_array($gender, self::GENDERS, true) ? $gender : null,
+            'date_of_birth'     => ($_POST['date_of_birth'] ?? '') ?: null,
             'current_class_id'  => (int)$_POST['current_class_id'],
-            'academic_year_id'  => (int)$_POST['academic_year_id'],
-            'status'            => $_POST['status'] ?? 'active',
+            'academic_year_id'  => (int)$classYear,
+            'status'            => in_array($status, self::STATUSES, true) ? $status : 'active',
         ];
 
         $id = $_POST['student_id'] ?? null;
@@ -237,6 +249,10 @@ class StudentController {
     private function studentStatus(): void {
         $id     = (int)($_POST['student_id'] ?? 0);
         $status = $_POST['status'] ?? 'active';
+        if (!in_array($status, self::STATUSES, true)) {
+            Session::flash('error', 'Invalid status.');
+            $this->redirect();
+        }
         DB::execute("UPDATE students SET status = ? WHERE id = ?", [$status, $id]);
         Session::flash('success', "Student status updated to $status.");
         $this->redirect();
@@ -373,7 +389,8 @@ class StudentController {
         }
 
         // Build class lookup: "BASIC 1|" => id, "BASIC 5|A" => id, etc.
-        $allClasses = DB::query("SELECT id, class_name, section FROM classes");
+        // Only the chosen year's classes — every year has a "BASIC 9 A"
+        $allClasses = DB::query("SELECT id, class_name, section FROM classes WHERE academic_year_id = ?", [$academicYearId]);
         $classMap   = [];
         foreach ($allClasses as $cls) {
             $key = strtoupper(trim($cls['class_name'])) . '|' . strtoupper(trim($cls['section']));

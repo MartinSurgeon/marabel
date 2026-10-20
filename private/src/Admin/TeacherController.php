@@ -107,7 +107,7 @@ class TeacherController {
             'full_name' => trim($_POST['full_name']),
             'email'     => $email,
             'phone'     => trim($_POST['phone'] ?? ''),
-            'gender'    => $_POST['gender'] ?? null,
+            'gender'    => in_array($_POST['gender'] ?? '', ['Male', 'Female', 'Other'], true) ? $_POST['gender'] : null,
             'role'      => 'teacher',
         ];
 
@@ -259,19 +259,47 @@ class TeacherController {
 
         if ($teacherId && !empty($classIds) && !empty($subjectIds)) {
             $successCount = 0;
+            $skipped      = [];   // class already has a different subject with the same name
+            $reassigned   = [];   // previous teacher => [class subject, ...]
 
             try {
                 DB::beginTransaction();
 
                 foreach ($classIds as $cid) {
                     foreach ($subjectIds as $sid) {
+                        $pair = DB::queryOne(
+                            "SELECT c.class_name, c.section, s.subject_name
+                             FROM classes c, subjects s WHERE c.id = ? AND s.id = ?",
+                            [$cid, $sid]
+                        );
+                        if (!$pair) continue;
+                        $label = trim($pair['class_name'] . ' ' . ($pair['section'] ?? '')) . ' ' . $pair['subject_name'];
+
+                        // Subjects may be shared across levels, but a class must never end up
+                        // with two subjects of the same name (reports and aggregates key on the name)
+                        $sameName = DB::queryValue(
+                            "SELECT COUNT(*) FROM class_subjects cs JOIN subjects s ON s.id = cs.subject_id
+                             WHERE cs.class_id = ? AND cs.term_id = ? AND s.subject_name = ? AND s.id <> ?",
+                            [$cid, $termId, $pair['subject_name'], $sid]
+                        );
+                        if ($sameName) {
+                            $skipped[] = $label;
+                            continue;
+                        }
+
                         // Check if this class/subject/term combination already exists
                         $existing = DB::queryOne(
-                            "SELECT id FROM class_subjects WHERE class_id = ? AND subject_id = ? AND term_id = ? LIMIT 1",
+                            "SELECT cs.id, cs.teacher_id, u.full_name AS teacher_name
+                             FROM class_subjects cs LEFT JOIN users u ON u.id = cs.teacher_id
+                             WHERE cs.class_id = ? AND cs.subject_id = ? AND cs.term_id = ? LIMIT 1",
                             [$cid, $sid, $termId]
                         );
 
                         if ($existing) {
+                            if ($existing['teacher_id'] && (int)$existing['teacher_id'] !== $teacherId) {
+                                $reassigned[(int)$existing['teacher_id']]['name']     = $existing['teacher_name'];
+                                $reassigned[(int)$existing['teacher_id']]['labels'][] = $label;
+                            }
                             // Only update the teacher assignment — never insert a duplicate row
                             DB::execute(
                                 "UPDATE class_subjects SET teacher_id = ? WHERE id = ?",
@@ -299,8 +327,17 @@ class TeacherController {
                     
                     $msg = "You have been assigned new subject(s) in: " . implode(', ', $classNames) . ".";
                     Notification::send($teacherId, "New Subject Assignment", $msg, "success", "/teacher/scores");
-                    
-                    Session::flash('success', "Assigned {$successCount} subject/class combinations successfully.");
+
+                    $flash = "Assigned {$successCount} subject/class combinations successfully.";
+                    foreach ($reassigned as $prevId => $r) {
+                        $list = implode(', ', $r['labels']);
+                        $flash .= " Moved from {$r['name']}: {$list}.";
+                        Notification::send($prevId, "Subject Reassigned", "These subjects have been reassigned to another teacher: {$list}.", "warning", "/teacher/scores");
+                    }
+                    Session::flash('success', $flash);
+                }
+                if (!empty($skipped)) {
+                    Session::flash('warning', "Not assigned (the class already has a subject with this name): " . implode(', ', $skipped) . ".");
                 }
             } catch (\Throwable $e) {
                 if (DB::inTransaction()) DB::rollBack();
