@@ -273,9 +273,11 @@ class ClassController {
      */
     public static function autoLinkPromotedStudents(int $targetYearId): int {
         $promotedStudents = DB::query(
-            "SELECT s.id as student_id, sp.next_class_name
+            "SELECT s.id as student_id, sp.next_class_name, sp.target_class_id,
+                    IFNULL(fc.section, '') AS from_section
              FROM students s
              JOIN student_promotions sp ON sp.student_id = s.id
+             LEFT JOIN classes fc ON fc.id = sp.from_class_id
              WHERE s.academic_year_id = ? AND sp.promotion_status = 'promoted' AND sp.next_class_name IS NOT NULL AND sp.next_class_name != ''",
             [$targetYearId]
         );
@@ -283,9 +285,17 @@ class ClassController {
         $linked = 0;
         foreach ($promotedStudents as $ps) {
             $nextClass = trim($ps['next_class_name']);
+            // Prefer the class chosen at promotion; otherwise match name AND section, never just the name
             $targetClass = DB::queryOne(
-                "SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ? LIMIT 1",
-                [$nextClass, $targetYearId]
+                "SELECT id FROM classes WHERE id = ? AND academic_year_id = ?",
+                [(int)$ps['target_class_id'], $targetYearId]
+            ) ?? DB::queryOne(
+                "SELECT id FROM classes
+                 WHERE academic_year_id = ?
+                   AND (CONCAT(class_name, ' ', IFNULL(section, '')) = ?
+                        OR (class_name = ? AND IFNULL(section, '') = ?))
+                 LIMIT 1",
+                [$targetYearId, $nextClass, $nextClass, $ps['from_section']]
             );
             if ($targetClass) {
                 DB::execute(

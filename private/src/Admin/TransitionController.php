@@ -130,8 +130,8 @@ class TransitionController {
                 );
                 if (!$newId) {
                     $newId = DB::insert(
-                        "INSERT INTO classes (level_id, class_name, section, academic_year_id) VALUES (?, ?, ?, ?)",
-                        [$c['level_id'], $c['class_name'], $c['section'], $targetYearId]
+                        "INSERT INTO classes (level_id, class_name, section, academic_year_id, grading_system) VALUES (?, ?, ?, ?, ?)",
+                        [$c['level_id'], $c['class_name'], $c['section'], $targetYearId, $c['grading_system'] ?? 'proficiency']
                     );
                 }
                 $classMap[$c['id']] = (int)$newId;
@@ -145,46 +145,38 @@ class TransitionController {
                 }
             }
 
-            // 3. Promote Students
-            // We look at 'promoted' status in student_promotions for the source year
-            $promotions = DB::query("SELECT * FROM student_promotions WHERE academic_year_id = ? AND promotion_status = 'promoted'", [$sourceYearId]);
-            $promotedTotal = 0;
-
-            foreach ($promotions as $p) {
-                $studentId = $p['student_id'];
-                $nextClass = $p['next_class_name'];
-
-                // Find the new class ID by name in the target year
-                $targetClassId = DB::queryValue("SELECT id FROM classes WHERE class_name = ? AND academic_year_id = ?", [$nextClass, $targetYearId]);
-                
-                if ($targetClassId) {
-                    DB::execute(
-                        "UPDATE students SET academic_year_id = ?, current_class_id = ? WHERE id = ?",
-                        [$targetYearId, $targetClassId, $studentId]
-                    );
-                    $promotedTotal++;
-                } else {
-                    // Just update year if class not found (manual fix needed later)
-                    DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ?", [$targetYearId, $studentId]);
-                }
+            // 3 + 4. Place promoted and repeating students.
+            // The promotion step already chose each student's class (target_class_id);
+            // honour it so sections are never merged. Graduates stay in their final class.
+            $rows = DB::query(
+                "SELECT sp.student_id, sp.promotion_status, sp.target_class_id, sp.next_class_name, sp.from_class_id
+                 FROM student_promotions sp
+                 WHERE sp.academic_year_id = ? AND sp.promotion_status IN ('promoted','repeated')
+                 ORDER BY sp.set_at, sp.id",
+                [$sourceYearId]
+            );
+            $latest = [];
+            foreach ($rows as $p) {
+                $latest[$p['student_id']] = $p;   // last decision per student wins
             }
 
-            // 4. Handle Repeaters
-            $repeaters = DB::query("SELECT student_id FROM student_promotions WHERE academic_year_id = ? AND promotion_status = 'repeated'", [$sourceYearId]);
-            foreach ($repeaters as $r) {
-                $oldCid = DB::queryValue("SELECT current_class_id FROM students WHERE id = ?", [$r['student_id']]);
-                $oldClass = $oldCid ? DB::queryOne("SELECT class_name, section FROM classes WHERE id = ?", [$oldCid]) : null;
-                $oldClassName = $oldClass['class_name'] ?? '';
-                $oldSection   = $oldClass['section'] ?? '';
-                $newCid = DB::queryValue(
-                    "SELECT id FROM classes WHERE class_name = ? AND (section = ? OR (section IS NULL AND ? = '')) AND academic_year_id = ?",
-                    [$oldClassName, $oldSection, $oldSection, $targetYearId]
-                );
-                
-                if ($newCid) {
-                    DB::execute("UPDATE students SET current_class_id = ?, academic_year_id = ? WHERE id = ?", [$newCid, $targetYearId, $r['student_id']]);
+            $promotedTotal = 0;
+            $repeatedTotal = 0;
+            $unplaced      = 0;
+            foreach ($latest as $studentId => $p) {
+                if ($p['next_class_name'] === 'Graduated') continue;
+
+                $targetClassId = $this->resolveTargetClass($p, $targetYearId, $classMap);
+                if ($targetClassId) {
+                    DB::execute(
+                        "UPDATE students SET academic_year_id = ?, current_class_id = ? WHERE id = ? AND status = 'active'",
+                        [$targetYearId, $targetClassId, $studentId]
+                    );
+                    $p['promotion_status'] === 'promoted' ? $promotedTotal++ : $repeatedTotal++;
                 } else {
-                    DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ?", [$targetYearId, $r['student_id']]);
+                    // Never guess a class: move the year only and report for manual placement
+                    DB::execute("UPDATE students SET academic_year_id = ? WHERE id = ? AND status = 'active'", [$targetYearId, $studentId]);
+                    $unplaced++;
                 }
             }
 
@@ -210,15 +202,57 @@ class TransitionController {
             DB::execute("UPDATE terms SET is_active = 0");
             DB::execute("UPDATE terms SET is_active = 1 WHERE id = ?", [$targetTermId]);
 
+            Audit::log('year_transition', 'students', null,
+                ['source_year_id' => $sourceYearId],
+                ['target_year_id' => $targetYearId, 'target_term_id' => $targetTermId,
+                 'promoted' => $promotedTotal, 'repeated' => $repeatedTotal, 'unplaced' => $unplaced]);
+
             DB::commit();
             Session::updateActiveTerm();
             Notification::send(null, "Year Transition Complete", "Successfully transitioned to a new academic year. {$promotedTotal} students promoted.", 'success', '/admin/transition');
-            Session::flash('success', "Year transition complete! {$promotedTotal} students promoted. Classes and assignments migrated to the new session.");
+            $msg = "Year transition complete! {$promotedTotal} promoted and {$repeatedTotal} repeating students placed in their new classes.";
+            if ($unplaced > 0) {
+                $msg .= " {$unplaced} student(s) could not be matched to a class and need to be placed manually under Students.";
+            }
+            Session::flash($unplaced > 0 ? 'warning' : 'success', $msg);
         } catch (Exception $e) {
             DB::rollBack();
             Session::flash('error', 'Year transition failed: ' . $e->getMessage());
         }
         $this->redirect();
+    }
+
+    /**
+     * Find a student's class in the target year without guessing.
+     * Order: class chosen at promotion → same class/section for repeaters →
+     * exact name + section match. Returns null if there is no single clear match.
+     */
+    private function resolveTargetClass(array $p, int $targetYearId, array $classMap): ?int {
+        if (!empty($p['target_class_id'])) {
+            $inTarget = DB::queryValue(
+                "SELECT id FROM classes WHERE id = ? AND academic_year_id = ?",
+                [(int)$p['target_class_id'], $targetYearId]
+            );
+            if ($inTarget) return (int)$inTarget;
+        }
+
+        if ($p['promotion_status'] === 'repeated' && !empty($p['from_class_id']) && isset($classMap[$p['from_class_id']])) {
+            return $classMap[$p['from_class_id']];
+        }
+
+        $name = trim((string)$p['next_class_name']);
+        if ($name === '') return null;
+        $section = (string)DB::queryValue("SELECT IFNULL(section, '') FROM classes WHERE id = ?", [(int)$p['from_class_id']]);
+
+        // "BASIC 9 A" style names include the section; plain "BASIC 9" keeps the old section
+        $matches = DB::query(
+            "SELECT id FROM classes
+             WHERE academic_year_id = ?
+               AND (CONCAT(class_name, ' ', IFNULL(section, '')) = ?
+                    OR (class_name = ? AND IFNULL(section, '') = ?))",
+            [$targetYearId, $name, $name, $section]
+        );
+        return count($matches) === 1 ? (int)$matches[0]['id'] : null;
     }
 
     private function ajaxFetchTerms(int $yearId): never {
