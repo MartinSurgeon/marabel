@@ -7,3 +7,4 @@ debug.log
 
 private/tests/output/
 oaks/
+private/config/database.local.php

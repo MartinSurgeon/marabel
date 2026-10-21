@@ -36,7 +36,7 @@ RewriteRule ^(.*)$ index.php [QSA,L]
 </IfModule>
 
 # ── Block sensitive files (allow manifest.json for PWA) ──────────
-<FilesMatch "(composer\.json|package\.json|\.env|\.sql|\.log|\.bak|\.lock|\.md)$">
+<FilesMatch "(composer\.json|package\.json|\.env|\.sql|\.log|\.bak|\.lock|\.md|\.csv|\.xlsx|\.xls|\.phar|\.sh|\.zip|\.txt)$">
   <IfModule mod_authz_core.c>
     Require all denied
   </IfModule>
