@@ -23,12 +23,13 @@ class SMSController {
                 'send_broadcast' => $this->sendBroadcast(),
                 'update_settings' => $this->updateSettings(),
                 'delete_logs'     => $this->deleteLogs(),
-                default           => $this->redirect(),
+                'check_delivery'  => $this->checkDelivery(),
+                default          => $this->redirect(),
             };
         }
 
         // Prepare data for view
-        global $smsLogs, $classes, $totalSent, $recentLogs, $smsBalance, $pagination;
+        global $smsLogs, $classes, $totalSent, $recentLogs, $smsBalance, $pagination, $smsStats;
 
         // Pagination setup
         $limit = 20;
@@ -41,7 +42,17 @@ class SMSController {
         $smsLogs = DB::query("SELECT * FROM sms_logs ORDER BY sent_at DESC LIMIT ? OFFSET ?", [$limit, $offset]);
         $classes = DB::query("SELECT id, class_name, section FROM classes ORDER BY class_name");
         
-        $totalSent = DB::queryOne("SELECT COUNT(*) as c FROM sms_logs WHERE status = 'sent'")['c'] ?? 0;
+        $smsStats = ['delivered' => 0, 'pending' => 0, 'failed' => 0];
+        foreach (DB::query("SELECT status, COUNT(*) AS c FROM sms_logs GROUP BY status") as $row) {
+            $key = match ($row['status']) {
+                'delivered'                                    => 'delivered',
+                'pending'                                      => 'pending',
+                'undelivered', 'expired', 'rejected', 'failed' => 'failed',
+                default                                        => null,   // 'sent': old rows, never tracked
+            };
+            if ($key) $smsStats[$key] += (int)$row['c'];
+        }
+        $totalSent = $smsStats['delivered'];
         $recentLogs= array_slice($smsLogs, 0, 5);
 
         // Fetch real-time balance
@@ -67,6 +78,68 @@ class SMSController {
             DB::execute("DELETE FROM sms_logs WHERE id IN ($placeholders)", $ids);
             Session::flash('success', count($ids) . ' log(s) deleted successfully.');
         }
+        $this->redirect();
+    }
+
+    /**
+     * Ask the gateway for the delivery status of messages still waiting.
+     * Least-recently-checked first, so repeated clicks work through a backlog.
+     */
+    private function checkDelivery(): void {
+        try {
+            $rows = DB::query(
+                "SELECT id, batch_id, message_id FROM sms_logs
+                 WHERE status = 'pending' AND batch_id IS NOT NULL
+                   AND sent_at >= NOW() - INTERVAL 14 DAY
+                 ORDER BY status_checked_at ASC, id DESC
+                 LIMIT 30"
+            );
+        } catch (\PDOException $e) {
+            Session::flash('error', 'Delivery tracking is not set up on this database yet. Run private/database/sms_delivery_tracking.sql in phpMyAdmin first.');
+            $this->redirect();
+        }
+
+        if (empty($rows)) {
+            Session::flash('info', 'No messages are waiting for a delivery report.');
+            $this->redirect();
+        }
+
+        $counts = ['delivered' => 0, 'pending' => 0, 'failed' => 0];
+        $errors = 0;
+        $lastError = '';
+
+        foreach ($rows as $row) {
+            $res  = SMS::checkDelivery($row['batch_id']);
+            $code = null;
+            if ($res['success']) {
+                foreach ($res['destinations'] as $d) {
+                    if ($row['message_id'] && $d['message_id'] === $row['message_id']) { $code = $d['status_code']; break; }
+                }
+                if ($code === null && count($res['destinations']) === 1) $code = $res['destinations'][0]['status_code'];
+            } else {
+                $errors++;
+                $lastError = $res['message'];
+            }
+
+            if ($code) {
+                $status = SMS::statusBucket($code);
+                DB::execute(
+                    "UPDATE sms_logs SET status = ?, status_code = ?, status_checked_at = NOW() WHERE id = ?",
+                    [$status, $code, $row['id']]
+                );
+                $counts[in_array($status, ['delivered', 'pending'], true) ? $status : 'failed']++;
+            } else {
+                DB::execute("UPDATE sms_logs SET status_checked_at = NOW() WHERE id = ?", [$row['id']]);
+                if ($res['success']) $counts['pending']++;
+            }
+        }
+
+        $msg = "Checked " . count($rows) . " message(s): {$counts['delivered']} delivered, "
+             . "{$counts['pending']} still waiting, {$counts['failed']} not delivered.";
+        if ($errors > 0) {
+            $msg .= " {$errors} could not be checked ({$lastError}).";
+        }
+        Session::flash($counts['failed'] > 0 || $errors > 0 ? 'warning' : 'success', $msg);
         $this->redirect();
     }
 
@@ -127,9 +200,10 @@ class SMSController {
         }
 
         if ($sentCount > 0) {
-            Session::flash('success', "Message sent to {$sentCount} parent(s)." . ($failCount > 0 ? " ({$failCount} failed)" : ""));
+            Session::flash('success', "Message accepted for {$sentCount} parent(s). Use \"Check delivery\" below to see who received it."
+                . ($failCount > 0 ? " ({$failCount} rejected: see the history for the reason)" : ""));
         } else {
-            Session::flash('error', "Failed to send messages. Check logs.");
+            Session::flash('error', "No message was accepted. See the history below for the reason.");
         }
 
         $this->redirect();

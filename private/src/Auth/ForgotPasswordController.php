@@ -109,7 +109,8 @@ class ForgotPasswordController {
         try {
             SMS::send(
                 $user['phone'],
-                "Your {$schoolName} password reset code is: {$otp}. Valid for {$expMins} minutes. Do not share this code."
+                "Your {$schoolName} password reset code is: {$otp}. Valid for {$expMins} minutes. Do not share this code.",
+                'otp'
             );
         } catch (\Throwable $e) {
             error_log("ForgotPassword SMS failed for user #{$user['id']}: " . $e->getMessage());

@@ -6,11 +6,23 @@
 $pageTitle = 'SMS Centre';
 include __DIR__ . '/../layout/header.php';
 
-global $smsLogs, $classes, $totalSent, $recentLogs, $smsBalance;
+global $smsLogs, $classes, $totalSent, $recentLogs, $smsBalance, $smsStats;
 $logs    = $smsLogs ?? [];
 $choices = $classes ?? [];
 $balance = $smsBalance ?? ['success' => false];
+$stats   = $smsStats ?? ['delivered' => 0, 'pending' => 0, 'failed' => 0];
 $base    = defined('APP_BASE') ? APP_BASE : '';
+
+// sms_logs.status => [badge text, colour]
+$statusBadges = [
+    'delivered'   => ['DELIVERED',     'var(--clr-success)'],
+    'pending'     => ['WAITING',       '#d97706'],
+    'sent'        => ['NOT TRACKED',   '#64748b'],
+    'undelivered' => ['NOT DELIVERED', '#ef4444'],
+    'expired'     => ['EXPIRED',       '#ef4444'],
+    'rejected'    => ['REJECTED',      '#ef4444'],
+    'failed'      => ['FAILED',        '#ef4444'],
+];
 ?>
 
 <div class="flex justify-between items-center mb-8 gap-4 flex-wrap">
@@ -171,14 +183,18 @@ $base    = defined('APP_BASE') ? APP_BASE : '';
     <!-- Stats -->
     <div class="card" style="padding:1.5rem; background:#fff; border-radius:20px;">
         <h4 style="margin:0 0 1.25rem 0; font-size:13px; font-weight:800; color:var(--clr-text-muted); text-transform:uppercase; letter-spacing:0.05em;">Engagement Statistics</h4>
-        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:1rem;">
+        <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; gap:1rem;">
             <div style="background:var(--clr-surface-2); padding:1.25rem; border-radius:14px; text-align:center;">
-                <div style="font-size:20px; font-weight:900; color:var(--clr-text);"><?= number_format($totalSent) ?></div>
+                <div style="font-size:20px; font-weight:900; color:var(--clr-text);"><?= number_format($stats['delivered']) ?></div>
                 <div style="font-size:10px; font-weight:700; color:var(--clr-success); text-transform:uppercase;">Delivered</div>
             </div>
             <div style="background:var(--clr-surface-2); padding:1.25rem; border-radius:14px; text-align:center;">
-                <div style="font-size:20px; font-weight:900; color:var(--clr-text);">0</div>
-                <div style="font-size:10px; font-weight:700; color:#888; text-transform:uppercase;">Scheduled</div>
+                <div style="font-size:20px; font-weight:900; color:var(--clr-text);"><?= number_format($stats['pending']) ?></div>
+                <div style="font-size:10px; font-weight:700; color:#d97706; text-transform:uppercase;">Waiting</div>
+            </div>
+            <div style="background:var(--clr-surface-2); padding:1.25rem; border-radius:14px; text-align:center;">
+                <div style="font-size:20px; font-weight:900; color:var(--clr-text);"><?= number_format($stats['failed']) ?></div>
+                <div style="font-size:10px; font-weight:700; color:#ef4444; text-transform:uppercase;">Not Delivered</div>
             </div>
         </div>
     </div>
@@ -206,7 +222,13 @@ $base    = defined('APP_BASE') ? APP_BASE : '';
         <h3 style="font-weight:900; margin:0; font-size:1.1rem; letter-spacing:-0.02em;">Communication History</h3>
         <p style="font-size:11px; color:var(--clr-text-muted); margin:4px 0 0 0;">Review every SMS sent from this portal, including automated reports. Use checkboxes for bulk actions.</p>
       </div>
-      
+
+      <form method="POST" action="<?= $base ?>/admin/sms" onsubmit="Loader.show()" style="margin-left:auto; margin-right:1rem;">
+          <?= CSRF::field() ?>
+          <input type="hidden" name="_action" value="check_delivery">
+          <button type="submit" class="btn btn-ghost btn-sm" title="Ask the SMS gateway which waiting messages have reached the phone" style="border:1.5px solid var(--clr-border); background:#fff; font-weight:800; font-size:11px;">CHECK DELIVERY</button>
+      </form>
+
       <!-- Bulk Actions -->
       <div id="bulk-actions-bar" style="display:none; align-items:center; gap:1rem; background:rgba(239, 68, 68, 0.05); padding:8px 16px; border-radius:12px; border:1px solid rgba(239, 68, 68, 0.1);">
          <span style="font-size:12px; font-weight:800; color:#ef4444;"><span id="selection-count">0</span> Selected</span>
@@ -257,16 +279,24 @@ $base    = defined('APP_BASE') ? APP_BASE : '';
                       </span>
                    </td>
                    <td style="padding:1.25rem 1rem; text-align:center;">
-                      <?php if($log['status'] === 'sent'): ?>
-                         <div style="display:inline-flex; align-items:center; gap:6px; color:var(--clr-success); font-weight:900; font-size:10px;">
-                            <div style="width:6px; height:6px; background:currentColor; border-radius:50%;"></div>
-                            DELIVERED
-                         </div>
-                      <?php else: ?>
-                         <div style="display:inline-flex; align-items:center; gap:6px; color:#ef4444; font-weight:900; font-size:10px;">
-                            <div style="width:6px; height:6px; background:currentColor; border-radius:50%;"></div>
-                            FAILED
-                         </div>
+                      <?php
+                        [$badgeText, $badgeColor] = $statusBadges[$log['status']] ?? ['FAILED', '#ef4444'];
+                        if (!empty($log['status_code'])) {
+                            $reason = SMS::statusLabel((int)$log['status_code']);
+                        } elseif ($log['status'] === 'sent') {
+                            $reason = 'Sent before delivery tracking was added';
+                        } elseif ($log['status'] === 'failed') {
+                            $reason = $log['response_data'] ?? '';
+                        } else {
+                            $reason = '';
+                        }
+                      ?>
+                      <div style="display:inline-flex; align-items:center; gap:6px; color:<?= $badgeColor ?>; font-weight:900; font-size:10px;">
+                         <div style="width:6px; height:6px; background:currentColor; border-radius:50%;"></div>
+                         <?= $badgeText ?>
+                      </div>
+                      <?php if ($reason !== ''): ?>
+                         <div style="font-size:10px; color:var(--clr-text-muted); margin-top:4px; max-width:180px; margin-left:auto; margin-right:auto; line-height:1.3;"><?= htmlspecialchars(mb_strimwidth($reason, 0, 90, '…')) ?></div>
                       <?php endif; ?>
                    </td>
                    <td style="padding:1.25rem 1rem; text-align:right;">

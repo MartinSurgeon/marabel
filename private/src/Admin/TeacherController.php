@@ -166,23 +166,30 @@ class TeacherController {
                 );
 
                 // 3. Send SMS with credentials if phone number is provided
-                $smsNotice = '';
+                $smsNotice  = '';
+                $smsWarning = '';
                 $phone = trim($data['phone'] ?? '');
                 if (!empty($phone)) {
                     $schoolName = Config::get('school_name', defined('SCHOOL_NAME') ? SCHOOL_NAME : 'Uaddara Basic School');
                     $firstName = explode(' ', trim($data['full_name']))[0];
-                    $smsMessage = "Hello {$firstName}, welcome to {$schoolName}! Your teacher account is ready.\nYou can log in with your email ({$data['email']}) or phone ({$phone}).\nPassword: password123\nPlease log in and change your password in your profile settings if you want.";
-                    
+                    // One SMS segment (160 chars): cheaper, and long multi-part
+                    // messages are more likely to be held by network filters.
+                    $smsMessage = "Hi {$firstName}, your {$schoolName} teacher account is ready. Log in with {$phone} or your email. Password: password123. Please change it after login.";
+                    if (mb_strlen($smsMessage) > 160) {
+                        // Long name: drop the school name, the sender ID already shows who it is from
+                        $smsMessage = "Hi {$firstName}, your teacher account is ready. Log in with {$phone} or your email. Password: password123. Please change it after login.";
+                    }
+
                     try {
                         $smsResult = SMS::send($phone, $smsMessage, 'broadcast');
                         if (!empty($smsResult['success'])) {
-                            $smsNotice = " Login credentials sent via SMS to {$phone}.";
+                            $smsNotice = " Login SMS handed to the network for {$phone}. Use SMS Centre > Check delivery to confirm it arrived.";
                         } else {
                             $err = $smsResult['message'] ?? 'SMS delivery failed';
-                            $smsNotice = " (SMS could not be sent: {$err})";
+                            $smsWarning = "The welcome SMS to {$phone} was not sent ({$err}). Give the teacher their login details another way.";
                         }
                     } catch (\Throwable $ex) {
-                        $smsNotice = " (SMS error: " . $ex->getMessage() . ")";
+                        $smsWarning = "The welcome SMS to {$phone} was not sent (" . $ex->getMessage() . "). Give the teacher their login details another way.";
                         error_log("Teacher welcome SMS error: " . $ex->getMessage());
                     }
                 } else {
@@ -190,6 +197,7 @@ class TeacherController {
                 }
 
                 Session::flash('success', "Teacher created successfully with default password: password123.{$smsNotice}");
+                if ($smsWarning) Session::flash('warning', $smsWarning);
             }
         } catch (\Throwable $e) {
             if (DB::inTransaction()) DB::rollBack();

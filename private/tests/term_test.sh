@@ -67,7 +67,7 @@ student_login() {  # student_login <jar> <student_id_number>
 echo "Preparing $TEST_DB from $REAL_DB (read-only dump)…"
 "$MYSQL" -uroot -e "DROP DATABASE IF EXISTS $TEST_DB; CREATE DATABASE $TEST_DB CHARACTER SET utf8mb4;" || exit 1
 "$MYSQLDUMP" -uroot "$REAL_DB" | "$MYSQL" -uroot "$TEST_DB" || exit 1
-for m in "$ROOT"/private/database/create_assessments.sql "$ROOT"/private/database/fix_data_integrity.sql; do
+for m in "$ROOT"/private/database/create_assessments.sql "$ROOT"/private/database/fix_data_integrity.sql "$ROOT"/private/database/sms_delivery_tracking.sql; do
   [ -f "$m" ] && { "$MYSQL" -uroot "$TEST_DB" < "$m" || echo "  (migration $(basename "$m") reported errors)"; }
 done
 
@@ -232,6 +232,18 @@ get admin "/report?student=$AK&term=$TM" > "$OUT/oldreport.html"
 is "Old report shows the class the child was in that term" "$(grep -c 'BASIC 8' "$OUT/oldreport.html" | awk '{print ($1>0)?1:0}')" "1"
 get subj "/teacher/assessments?term=$TM" > "$OUT/oldmocks.html"
 is "Teacher can still view last term's mocks" "$(grep -c 'Mock 1' "$OUT/oldmocks.html" | awk '{print ($1>0)?1:0}')" "1"
+
+echo; echo "SMS DELIVERY TRACKING (fake log rows only — no SMS is sent)"
+q "INSERT INTO sms_logs (recipient_phone, message, sms_type, status) VALUES ('0200000001','old row','broadcast','sent');
+   INSERT INTO sms_logs (recipient_phone, message, sms_type, status, status_code) VALUES ('0200000002','rejected row','broadcast','rejected',2128);
+   INSERT INTO sms_logs (recipient_phone, message, sms_type, status, batch_id) VALUES ('0200000003','waiting row','broadcast','pending','test-not-a-real-batch');"
+SMSID=$(q "SELECT id FROM sms_logs WHERE batch_id='test-not-a-real-batch'")
+get admin /admin/sms > "$OUT/sms.html"
+is "SMS history says why a message was rejected" "$(grep -c 'Sender ID is not registered' "$OUT/sms.html" | awk '{print ($1>0)?1:0}')" "1"
+is "Old untracked SMS are not shown as delivered" "$(grep -c 'NOT TRACKED' "$OUT/sms.html" | awk '{print ($1>0)?1:0}')" "1"
+form admin /admin/sms _action=check_delivery
+is "Check delivery runs and reports back" "$(grep -c 'Checked [0-9]* message' "$OUT/last.html" | awk '{print ($1>0)?1:0}')" "1"
+is "A checked message is stamped so the next click moves on" "$(q "SELECT status_checked_at IS NOT NULL FROM sms_logs WHERE id=$SMSID")" "1"
 
 echo; echo "EVERY PAGE OPENS (admin, subject teacher, form teacher)"
 BAD=""

@@ -356,9 +356,14 @@ CREATE TABLE sms_logs (
   sms_type         ENUM('otp','report_card','broadcast','reminder') NOT NULL,
   sent_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   status           VARCHAR(50),
+  batch_id         VARCHAR(64),
+  message_id       VARCHAR(64),
+  status_code      SMALLINT UNSIGNED,
+  status_checked_at TIMESTAMP NULL DEFAULT NULL,
   response_data    TEXT,
   INDEX idx_phone (recipient_phone),
-  INDEX idx_type  (sms_type)
+  INDEX idx_type  (sms_type),
+  INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================
